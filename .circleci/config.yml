@@ -21,8 +21,9 @@ jobs:
       - run: curl https://glide.sh/get | sh
       - run: printenv	
       - run: cd $IMPORT_PATH && rake ci
-      - run: cd $IMPORT_PATH/packaging && build_staging_package.sh
-      - run: cd $IMPORT_PATH/packaging && publish_staging_package.sh
+      - run: ls -la $IMPORT_PATH/packaging
+      - run: cd $IMPORT_PATH/packaging && ./build_staging_package.sh
+      - run: cd $IMPORT_PATH/packaging && ./publish_staging_package.sh
 
 workflows:
   version: 2

@@ -2,6 +2,7 @@ dd-process-agent
 vendor/
 
 .vscode
+.idea
 *.exe
 *.syso
 agent/windows_resources/process-agent-msg.rc

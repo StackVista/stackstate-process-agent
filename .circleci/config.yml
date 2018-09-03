@@ -1,4 +1,21 @@
 version: 2
+
+references:
+
+  workspace_root: &workspace_root
+    /tmp/workspace
+
+  attach_workspace: &attach_workspace
+    attach_workspace:
+      at: *workspace_root
+
+  restore_repo: &restore_repo
+    restore_cache:
+      keys:
+        - v1-repo-{{ .Branch }}-{{ .Revision }}
+        - v1-repo-{{ .Branch }}
+        - v1-repo
+
 jobs:
   build:
     docker:
@@ -8,6 +25,7 @@ jobs:
       - GOPATH: /home/circleci/project/.go_workspace
       - BASH_ENV: /home/circleci/project/.bashrc
     steps:
+      - *restore_repo
       - checkout
       - run: sudo apt-get install -q -y ca-certificates
       - run: touch $BASH_ENV
@@ -21,6 +39,19 @@ jobs:
       - run: curl https://glide.sh/get | sh
       - run: printenv
       - run: cd $IMPORT_PATH && rake ci
+      - save_cache:
+          key: v1-repo-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - .
+      - run:
+          name: Move compiled binaries to workspace
+          command: |
+            mkdir -p /tmp/workspace/binaries
+            mv $IMPORT_PATH/process-agent /tmp/workspace/binaries
+      - persist_to_workspace:
+          root: *workspace_root
+          paths:
+            - binaries
 
   package:
     docker:
@@ -29,11 +60,19 @@ jobs:
       - GOPATH: /home/circleci/project/.go_workspace
       - BASH_ENV: /home/circleci/project/.bashrc
     steps:
-      - run: gem install --no-ri --no-rdoc fpm
-      - run: gem install --no-ri --no-rdoc deb-s3
       - run: touch $BASH_ENV
       - run: echo 'export IMPORT_PATH=$GOPATH/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME' >> $BASH_ENV
       - run: echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BASH_ENV && source $BASH_ENV
+      - *attach_workspace
+      - *restore_repo
+      - run: rsync -azC --delete ./ $IMPORT_PATH
+      - run:
+          name: Restore compiled binaries from workspace
+          command: |
+            set -exu
+            mv /tmp/workspace/binaries/* $IMPORT_PATH
+      - run: gem install --no-ri --no-rdoc fpm
+      - run: gem install --no-ri --no-rdoc deb-s3
       - run: ls -la $IMPORT_PATH
       - run: ls -la $IMPORT_PATH/packaging
       - run: cd $IMPORT_PATH/packaging && ./build_staging_package.sh

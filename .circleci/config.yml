@@ -59,7 +59,7 @@ jobs:
       - GOPATH: /home/circleci/project/.go_workspace
       - BASH_ENV: /home/circleci/project/.bashrc
     steps:
-      - run: sudo apt-get install -y -q rsync
+      - run: sudo apt-get install -y -q rsync rpm
       - run: touch $BASH_ENV
       - run: echo 'export IMPORT_PATH=$GOPATH/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME' >> $BASH_ENV
       - run: echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BASH_ENV && source $BASH_ENV

@@ -22,7 +22,7 @@ jobs:
       - run: printenv	
       - run: cd $IMPORT_PATH && rake ci
       - run: cd $IMPORT_PATH/packaging && build_staging_package.sh
-      - run  cd $IMPORT_PATH/packaging && publish_staging_package.sh
+      - run: cd $IMPORT_PATH/packaging && publish_staging_package.sh
 
 workflows:
   version: 2

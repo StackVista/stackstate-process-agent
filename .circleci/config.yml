@@ -19,7 +19,7 @@ jobs:
       - run: sudo tar -C /usr/local -xzf download/$GODIST --mode='a+rwX'
       - run: rsync -azC --delete ./ $IMPORT_PATH
       - run: curl https://glide.sh/get | sh
-      - run: printenv	
+      - run: printenv
       - run: cd $IMPORT_PATH && rake ci
 
   package:
@@ -45,6 +45,6 @@ workflows:
   build_and_test:
     jobs:
       - build
-      - package
+      - package:
           requires:
             - build

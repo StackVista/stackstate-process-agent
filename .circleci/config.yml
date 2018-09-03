@@ -9,6 +9,7 @@ jobs:
       - BASH_ENV: /home/circleci/project/.bashrc
     steps:
       - checkout
+      - run: sudo apt-get install -q -y ca-certificates
       - run: touch $BASH_ENV
       - run: echo 'export IMPORT_PATH=$GOPATH/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME' >> $BASH_ENV
       - run: echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BASH_ENV && source $BASH_ENV

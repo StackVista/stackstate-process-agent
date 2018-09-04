@@ -1,7 +1,7 @@
 #!/bin/sh
 
-PIDFILE=/opt/dd-process-agent/run/dd-process-agent.pid
-DAEMON=/opt/dd-process-agent/bin/dd-process-agent
+PIDFILE=/opt/sts-process-agent/run/sts-process-agent.pid
+DAEMON=/opt/sts-process-agent/bin/sts-process-agent
 
 # Source functions library.
 . /etc/init.d/functions
@@ -10,12 +10,12 @@ makePid() {
     echo `ps auxf | grep -v grep | grep $1 | awk '{print $2}'` > $PIDFILE
 }
 
-echo "Adding dd-process-agent to start on boot..."
-chkconfig --add dd-process-agent
+echo "Adding sts-process-agent to start on boot..."
+chkconfig --add sts-process-agent
 
-echo "Starting dd-process-agent"
+echo "Starting sts-process-agent"
 export DD_PROCESS_AGENT_ENABLED=true
-daemon --pidfile $PIDFILE --user dd-agent "exec $DAEMON >> /var/log/dd-process-agent.log 2>&1 &"
+daemon --pidfile $PIDFILE --user dd-agent "exec $DAEMON >> /var/log/sts-process-agent.log 2>&1 &"
 [ $? -eq 0 ] && makePid $DAEMON
 
 exit $?

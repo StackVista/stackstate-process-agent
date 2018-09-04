@@ -1,9 +1,9 @@
 #!/bin/sh
 
 
-echo "Removing dd-process-agent to start on boot..."
-chkconfig --del dd-process-agent
+echo "Removing sts-process-agent to start on boot..."
+chkconfig --del sts-process-agent
 
-echo "Trying to stop dd-process-agent with init.d"
-/etc/init.d/dd-process-agent stop || true
+echo "Trying to stop sts-process-agent with init.d"
+/etc/init.d/sts-process-agent stop || true
 exit 0

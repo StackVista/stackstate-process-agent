@@ -11,14 +11,14 @@ FILENAME="process-agent-amd64-$PROCESS_AGENT_VERSION"
 WORKSPACE=${WORKSPACE:-$PWD/../}
 agent_path="$WORKSPACE"
 
-mkdir -p "$agent_path/packaging/debian/package/opt/dd-process-agent/bin/"
-mkdir -p "$agent_path/packaging/debian/package/opt/dd-process-agent/run/"
-mkdir -p "$agent_path/packaging/rpm/package/opt/dd-process-agent/bin/"
-mkdir -p "$agent_path/packaging/rpm/package/opt/dd-process-agent/run/"
+mkdir -p "$agent_path/packaging/debian/package/opt/sts-process-agent/bin/"
+mkdir -p "$agent_path/packaging/debian/package/opt/sts-process-agent/run/"
+mkdir -p "$agent_path/packaging/rpm/package/opt/sts-process-agent/bin/"
+mkdir -p "$agent_path/packaging/rpm/package/opt/sts-process-agent/run/"
 
 # copy the binary
-cp "$agent_path/process-agent" "$agent_path/packaging/debian/package/opt/dd-process-agent/bin/sts-process-agent"
-cp "$agent_path/process-agent" "$agent_path/packaging/rpm/package/opt/dd-process-agent/bin/sts-process-agent"
+cp "$agent_path/process-agent" "$agent_path/packaging/debian/package/opt/sts-process-agent/bin/sts-process-agent"
+cp "$agent_path/process-agent" "$agent_path/packaging/rpm/package/opt/sts-process-agent/bin/sts-process-agent"
 
 # make debian package using fpm
 echo "Building debian package..."

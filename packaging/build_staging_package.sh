@@ -1,6 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
-PROCESS_AGENT_VERSION=${CIRCLE_SHA1:-0.0.0}
+if [ -z ${PROCESS_AGENT_VERSION+x} ]; then
+	# Pick the latest tag by default for our version.
+	PROCESS_AGENT_VERSION=$(./version.sh)
+	# But we will be building from the master branch in this case.
+fi
+echo $PROCESS_AGENT_VERSION
+FILENAME="process-agent-amd64-$PROCESS_AGENT_VERSION"
+
 WORKSPACE=${WORKSPACE:-$PWD/../}
 agent_path="$WORKSPACE"
 

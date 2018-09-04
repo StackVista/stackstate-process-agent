@@ -1,6 +1,9 @@
 #!/bin/sh
 
-PROCESS_AGENT_VERSION=${CIRCLE_SHA1:-0.0.0}
+if [ -z ${STS_AWS_BUCKET+x} ]; then
+	echo "Missing AGENT_S3_BUCKET in environment"
+	exit 1;
+fi
 WORKSPACE=${WORKSPACE:-$PWD/../}
 agent_path="$WORKSPACE"
 

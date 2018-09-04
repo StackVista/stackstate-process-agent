@@ -1,7 +1,7 @@
 #!/bin/sh -x
 
-INSTALL_DIR=/opt/dd-process-agent
-LOG_DIR=/var/log/dd-process-agent.log
+INSTALL_DIR=/opt/sts-process-agent
+LOG_DIR=/var/log/sts-process-agent.log
 
 getent group dd-agent >/dev/null || groupadd -r dd-agent
 getent passwd dd-agent >/dev/null || \
@@ -16,5 +16,5 @@ else
     chown -R dd-agent:dd-agent ${LOG_DIR}
 fi
 
-echo "Adding dd-process-agent to start on boot..."
-chkconfig --add dd-process-agent
+echo "Adding sts-process-agent to start on boot..."
+chkconfig --add sts-process-agent

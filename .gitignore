@@ -3,6 +3,7 @@ vendor/
 
 .vscode
 .idea
+.bashrc
 *.exe
 *.syso
 agent/windows_resources/process-agent-msg.rc

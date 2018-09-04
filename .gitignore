@@ -1,5 +1,6 @@
 dd-process-agent
 vendor/
+download/
 
 .vscode
 .idea

@@ -10,6 +10,7 @@
 ### END INIT INFO
 
 # Author: DataDog, Inc <package@datadoghq.com>
+# Author: StackState
 
 # source functions library
 . /lib/lsb/init-functions
@@ -17,8 +18,8 @@
 PATH=$PATH:/sbin
 PIDFILE=/opt/sts-process-agent/run/sts-process-agent.pid
 DAEMON=/opt/sts-process-agent/bin/sts-process-agent
-CONFIG=/etc/dd-agent/sts-process-agent.ini
-export DD_PROCESS_AGENT_ENABLED=true
+CONFIG=/etc/sts-agent/sts-process-agent.ini
+export STS_PROCESS_AGENT_ENABLED=true
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
@@ -30,7 +31,7 @@ start() {
     fi
     echo 'Starting sts-process-agent...' >&2
     start-stop-daemon --start --quiet --oknodo --background \
-        --make-pidfile --pidfile $PIDFILE --chuid dd-agent \
+        --make-pidfile --pidfile $PIDFILE --chuid sts-agent \
         --startas /bin/bash -- -c \
         "exec $DAEMON -config=$CONFIG >> /var/log/sts-process-agent.log 2>&1"
 }

@@ -23,7 +23,7 @@ cp "$agent_path/process-agent" "$agent_path/packaging/rpm/package/opt/sts-proces
 # make debian package using fpm
 echo "Building debian package..."
 cd $agent_path/packaging/debian
-fpm -s dir -t deb -v "$PROCESS_AGENT_VERSION" -n sts-process-agent --license="Simplified BSD License" --maintainer="StackVista" --vendor "StackVista" \
+fpm -s dir -t deb -v "$PROCESS_AGENT_VERSION" -n sts-process-agent --license="Simplified BSD License" --maintainer="StackState" --vendor "StackState" \
 --url="https://www.stackstate.com/" --category Network --description "An agent for collecting and submitting process information to StackState (https://www.stackstate.com/)" \
  -a "amd64" --before-remove dd-process-agent.prerm --after-install dd-process-agent.postinst --after-upgrade dd-process-agent.postup \
  --before-upgrade dd-process-agent.preup --deb-init sts-process-agent.init -C $agent_path/packaging/debian/package .
@@ -31,7 +31,7 @@ fpm -s dir -t deb -v "$PROCESS_AGENT_VERSION" -n sts-process-agent --license="Si
 # make rpm package using fpm
 echo "Building rpm package..."
 cd $agent_path/packaging/rpm
-fpm -s dir -t rpm -v "$PROCESS_AGENT_VERSION" -n sts-process-agent --license="Simplified BSD License" --maintainer="StackVista" --vendor "StackVista" \
+fpm -s dir -t rpm -v "$PROCESS_AGENT_VERSION" -n sts-process-agent --license="Simplified BSD License" --maintainer="StackState" --vendor "StackState" \
 --url="https://www.stackstate.com/" --category Network --description "An agent for collecting and submitting process information to StackState (https://www.stackstate.com/)" \
  -a "amd64" --rpm-init sts-process-agent.init --before-remove dd-process-agent.prerm --after-install dd-process-agent.postinst --after-upgrade dd-process-agent.postup \
  --before-upgrade dd-process-agent.preup -C $agent_path/packaging/rpm/package .

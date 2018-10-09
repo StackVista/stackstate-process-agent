@@ -15,8 +15,8 @@
 
 PIDFILE=/opt/sts-process-agent/run/sts-process-agent.pid
 DAEMON=/opt/sts-process-agent/bin/sts-process-agent
-CONFIG=/etc/dd-agent/sts-process-agent.ini
-export DD_PROCESS_AGENT_ENABLED=true
+CONFIG=/etc/sts-agent/sts-process-agent.ini
+export STS_PROCESS_AGENT_ENABLED=true
 
 # Source functions library.
 . /etc/init.d/functions
@@ -34,7 +34,7 @@ start() {
             exit 2;
     else
         echo "Starting sts-process-agent"
-        daemon --pidfile $PIDFILE --user dd-agent "exec $DAEMON -config=$CONFIG >> /var/log/sts-process-agent.log 2>&1 &"
+        daemon --pidfile $PIDFILE --user sts-agent "exec $DAEMON -config=$CONFIG >> /var/log/sts-process-agent.log 2>&1 &"
         [ $? -eq 0 ] && makePid $DAEMON
     fi
     echo

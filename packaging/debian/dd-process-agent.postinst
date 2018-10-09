@@ -3,27 +3,27 @@
 INSTALL_DIR=/opt/sts-process-agent
 LOG_DIR=/var/log/sts-process-agent.log
 
-# added dd-agent group if not exists
-getent group dd-agent >/dev/null || (echo "Creating dd-agent group" && addgroup --system dd-agent --quiet)
-# check if dd-agent user exists
-id -u dd-agent >/dev/null 2>&1
+# added sts-agent group if not exists
+getent group sts-agent >/dev/null || (echo "Creating sts-agent group" && addgroup --system sts-agent --quiet)
+# check if sts-agent user exists
+id -u sts-agent >/dev/null 2>&1
 USER_EXISTS=$?
 if [ ! $USER_EXISTS -eq 0 ]; then
-    echo "Creating dd-agent user"
-    adduser --system dd-agent --disabled-login --shell /bin/bash --home ${INSTALL_DIR} --no-create-home --group --quiet
-elif id -nG dd-agent | grep --invert-match --word-regexp --quiet 'dd-agent'; then
-    # User exists but is not part of the dd-agent group
-    echo "Adding dd-agent user to dd-agent group"
-    usermod -g dd-agent dd-agent
+    echo "Creating sts-agent user"
+    adduser --system sts-agent --disabled-login --shell /bin/bash --home ${INSTALL_DIR} --no-create-home --group --quiet
+elif id -nG sts-agent | grep --invert-match --word-regexp --quiet 'sts-agent'; then
+    # User exists but is not part of the sts-agent group
+    echo "Adding sts-agent user to sts-agent group"
+    usermod -g sts-agent sts-agent
 fi
 
 # set proper rights to dd-agent user
-chown -R dd-agent:dd-agent ${INSTALL_DIR}
+chown -R sts-agent:sts-agent ${INSTALL_DIR}
 if [ -f $LOG_DIR ]; then
-    chown -R dd-agent:dd-agent ${LOG_DIR}
+    chown -R sts-agent:sts-agent ${LOG_DIR}
 else
     touch ${LOG_DIR}
-    chown -R dd-agent:dd-agent ${LOG_DIR}
+    chown -R sts-agent:sts-agent ${LOG_DIR}
 fi
 
 echo "Adding sts-process-agent to start on boot..."

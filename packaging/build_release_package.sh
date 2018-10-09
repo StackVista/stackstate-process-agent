@@ -50,24 +50,24 @@ glide install
 echo "Building binaries..."
 PROCESS_AGENT_STATIC=true rake build_ddpkg
 
-mkdir -p "$agent_path/packaging/debian/package/opt/dd-process-agent/bin/"
-mkdir -p "$agent_path/packaging/debian/package/opt/dd-process-agent/run/"
-mkdir -p "$agent_path/packaging/rpm/package/opt/dd-process-agent/bin/"
-mkdir -p "$agent_path/packaging/rpm/package/opt/dd-process-agent/run/"
+mkdir -p "$agent_path/packaging/debian/package/opt/sts-process-agent/bin/"
+mkdir -p "$agent_path/packaging/debian/package/opt/sts-process-agent/run/"
+mkdir -p "$agent_path/packaging/rpm/package/opt/sts-process-agent/bin/"
+mkdir -p "$agent_path/packaging/rpm/package/opt/sts-process-agent/run/"
 
 # copy the binary
-cp "$agent_path/dd-process-agent" "$agent_path/packaging/debian/package/opt/dd-process-agent/bin/dd-process-agent"
-cp "$agent_path/dd-process-agent" "$agent_path/packaging/rpm/package/opt/dd-process-agent/bin/dd-process-agent"
+cp "$agent_path/sts-process-agent" "$agent_path/packaging/debian/package/opt/sts-process-agent/bin/sts-process-agent"
+cp "$agent_path/sts-process-agent" "$agent_path/packaging/rpm/package/opt/sts-process-agent/bin/sts-process-agent"
 
 # make debian package using fpm
 echo "Building debian package..."
 cd $agent_path/packaging/debian
-fpm -s dir -t deb -v "$PROCESS_AGENT_VERSION" -n dd-process-agent --license="Simplified BSD License" --maintainer="DataDog" --vendor "DataDog" \
---url="https://www.datadoghq.com" --category Network --description "An agent for collecting and submitting process information to Datadog (https://www.datadoghq.com)" \
+fpm -s dir -t deb -v "$PROCESS_AGENT_VERSION" -n sts-process-agent --license="Simplified BSD License" --maintainer="StackState" --vendor "StackState" \
+--url="https://www.stackstate.com/" --category Network --description "An agent for collecting and submitting process information to StackState (https://www.stackstate.com/)" \
  -a "amd64" --before-remove dd-process-agent.prerm --after-install dd-process-agent.postinst --after-upgrade dd-process-agent.postup \
  --before-upgrade dd-process-agent.preup --deb-init dd-process-agent.init -C $agent_path/packaging/debian/package .
 
-deb_package_name=dd-process-agent_${PROCESS_AGENT_VERSION}_amd64.deb
+deb_package_name=sts-process-agent_${PROCESS_AGENT_VERSION}_amd64.deb
 # sign the debian package
 echo "Signing the deb package $deb_package_name..."
 export WORKSPACE
@@ -76,14 +76,14 @@ $agent_path/packaging/sign_debian_package
 # make rpm package using fpm
 echo "Building rpm package..."
 cd $agent_path/packaging/rpm
-fpm -s dir -t rpm -v "$PROCESS_AGENT_VERSION" -n dd-process-agent --license="Simplified BSD License" --maintainer="DataDog" --vendor "DataDog" \
---url="https://www.datadoghq.com" --category Network --description "An agent for collecting and submitting process information to Datadog (https://www.datadoghq.com)" \
+fpm -s dir -t rpm -v "$PROCESS_AGENT_VERSION" -n sts-process-agent --license="Simplified BSD License" --maintainer="StackState" --vendor "StackState" \
+--url="https://www.stackstate.com/" --category Network --description "An agent for collecting and submitting process information to StackState (https://www.stackstate.com/)" \
  -a "amd64" --rpm-init dd-process-agent.init --before-remove dd-process-agent.prerm --after-install dd-process-agent.postinst --after-upgrade dd-process-agent.postup \
  --before-upgrade dd-process-agent.preup -C $agent_path/packaging/rpm/package .
 
 # sign the rpm package
 cp ./.rpmmacros ~/
-rpm_package_name=dd-process-agent-${PROCESS_AGENT_VERSION}-1.x86_64.rpm
+rpm_package_name=sts-process-agent-${PROCESS_AGENT_VERSION}-1.x86_64.rpm
 echo "Signing the rpm package $rpm_package_name..."
 $agent_path/packaging/sign_rpm_package
 

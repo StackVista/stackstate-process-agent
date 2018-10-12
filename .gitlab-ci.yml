@@ -26,7 +26,9 @@ build:
     - echo "export PROCESS_AGENT_VERSION=$(packaging/version.sh)" >> $BASH_ENV
     - echo "export EBPF=${EBPF:-true}" >> $BASH_ENV
     - echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BASH_ENV && source $BASH_ENV
-    - apt-get update && apt-get -y install linux-headers-$(uname -r) rsync rake
+    - uname -a
+#    - apt-get update && apt-get -y install linux-headers-$(uname -r) rsync rake
+    - apt-get update && apt-get -y install rsync rake
     - curl https://glide.sh/get | sh
     - go get golang.org/x/tools/cmd/gorename
     - go get golang.org/x/tools/cmd/eg

@@ -7,7 +7,7 @@ stages:
 variables:
   SRC_PATH: /src/github.com/StackVista/stackstate-process-agent
   STS_REPO_BRANCH_NAME: $CI_COMMIT_REF_NAME
-  BASH_ENV: ~/.bashrc
+  BASH_ENV: /root/.bashrc
 
 build:
   image: stackstate/stackstate-agent-runner-circle:latest

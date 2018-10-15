@@ -46,7 +46,7 @@ jobs:
       - run: go get golang.org/x/lint/golint
       - run: printenv
       - run: cd $IMPORT_PATH && rake ci
-      - run: cd packaging && apply_branding.sh
+      - run: cd packaging && ./apply_branding.sh
       - run: cd $IMPORT_PATH && rake build
       - run:
           name: Move compiled binaries to workspace

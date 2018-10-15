@@ -36,6 +36,7 @@ build:
     - go get golang.org/x/tools/cmd/eg
     - go get golang.org/x/lint/golint
     - printenv
+    - go version
     - cd $IMPORT_PATH && rake ci
     - cd packaging && ./apply_branding.sh
     - cd $IMPORT_PATH && rake build

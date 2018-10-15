@@ -11,6 +11,7 @@ variables:
 
 build:
   image: stackstate/stackstate-agent-runner-circle:latest
+  stage: build
   before_script:
     - mkdir -p /go/src/github.com/StackVista
     - ln -s $CI_PROJECT_DIR  /go/src/github.com/StackVista/stackstate-process-agent

@@ -10,15 +10,15 @@ variables:
   BASH_ENV: /root/.bashrc
 
 build:
-  image: circleci/buildpack-deps:xenial #stackstate/stackstate-agent-runner-circle:latest
+  image: stackstate/stackstate-agent-runner-circle:latest
   stage: build
   before_script:
     - mkdir -p /go/src/github.com/StackVista
     - ln -s $CI_PROJECT_DIR  /go/src/github.com/StackVista/stackstate-process-agent
     - curl -sL -o /usr/local/bin/gimme https://raw.githubusercontent.com/travis-ci/gimme/master/gimme
     - chmod +x /usr/local/bin/gimme
-    - gimme 1.10.1
-    - source ~/.gimme/envs/go1.10.1.env
+    - gimme 1.10.3
+    - source ~/.gimme/envs/go1.10.3.env
   script:
     - apt-get install -q -y ca-certificates
     - touch $BASH_ENV

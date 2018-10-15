@@ -10,7 +10,7 @@ variables:
   BASH_ENV: /root/.bashrc
 
 build:
-  image: stackstate/stackstate-agent-runner-circle:latest
+  image: circleci/buildpack-deps:xenial #stackstate/stackstate-agent-runner-circle:latest
   stage: build
   before_script:
     - mkdir -p /go/src/github.com/StackVista

@@ -43,6 +43,7 @@ jobs:
             - .
       - run: rsync -azC --delete ./ $IMPORT_PATH
       - run: curl https://glide.sh/get | sh
+      - run: go get golang.org/x/lint/golint
       - run: printenv
       - run: cd $IMPORT_PATH && rake ci
       - run:

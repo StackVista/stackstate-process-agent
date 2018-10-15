@@ -34,6 +34,8 @@ build:
     - go get golang.org/x/tools/cmd/eg
     - printenv
     - cd $IMPORT_PATH && rake ci
+    - packaging/apply_branding.sh
+    - rake build
 
 #  tags:
 #  - sts-aws

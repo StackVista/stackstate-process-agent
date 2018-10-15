@@ -30,12 +30,14 @@ build:
     - uname -a
 #    - apt-get update && apt-get -y install linux-headers-$(uname -r) rsync rake
     - apt-get update && apt-get -y install rsync rake
+    - rsync -azC --delete ./ $IMPORT_PATH
     - curl https://glide.sh/get | sh
     - go get golang.org/x/tools/cmd/gorename
     - go get golang.org/x/tools/cmd/eg
+    - go get golang.org/x/lint/golint
     - printenv
-    - cd $IMPORT_PATH && rake build
-    - packaging/apply_branding.sh
+    - cd $IMPORT_PATH && rake ci
+    - cd packaging && ./apply_branding.sh
     - cd $IMPORT_PATH && rake build
 
 #  tags:

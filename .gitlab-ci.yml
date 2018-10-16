@@ -40,6 +40,10 @@ build:
     - cd $IMPORT_PATH && rake ci
     - cd packaging && ./apply_branding.sh
     - cd $IMPORT_PATH && rake build
+  artifacts:
+    paths:
+        - $IMPORT_PATH/process-agent
+    expire_in: 2 week
 
 #  tags:
 #  - sts-aws

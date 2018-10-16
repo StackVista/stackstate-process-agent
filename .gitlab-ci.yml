@@ -40,8 +40,6 @@ build:
     - cd $IMPORT_PATH && rake ci
     - cd packaging && ./apply_branding.sh
     - cd $IMPORT_PATH && rake build
-    - ls -la $IMPORT_PATH
-    - cp $IMPORT_PATH/process-agent $CI_PROJECT_DIR/process-agent
   artifacts:
     paths:
         - $CI_PROJECT_DIR/process-agent

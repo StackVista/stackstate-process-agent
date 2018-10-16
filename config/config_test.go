@@ -148,8 +148,8 @@ func TestConfigNewIfExists(t *testing.T) {
 		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0200) // write only
 		assert.Nil(t, err)
 		f.Close()
-    conf, err = NewIfExists(filename)
-//  [VS]  &config.File{instance:(*ini.File)(0xc4204013b0), Path:"/tmp/process-agent-test-config.ini"}
+		conf, err = NewIfExists(filename)
+		//  [VS]  &config.File{instance:(*ini.File)(0xc4204013b0), Path:"/tmp/process-agent-test-config.ini"}
 		assert.NotNil(t, conf)
 		assert.Nil(t, err)
 		os.Remove(filename)

@@ -40,9 +40,13 @@ build:
     - cd $IMPORT_PATH && rake ci
     - cd packaging && ./apply_branding.sh
     - cd $IMPORT_PATH && rake build
+    - gem install --no-ri --no-rdoc fpm
+    - gem install --no-ri --no-rdoc deb-s3
+    - cd $IMPORT_PATH/packaging && ./build_staging_package.sh
   artifacts:
     paths:
         - $CI_PROJECT_DIR/process-agent
+        - $CI_PROJECT_DIR/packaging/debian/*.deb
     expire_in: 2 week
 
 #  tags:

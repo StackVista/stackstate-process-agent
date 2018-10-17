@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/user"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -139,7 +140,10 @@ func TestConfigNewIfExists(t *testing.T) {
 	// The file exists but cannot be read for another reason: an error is
 	// returned.
 	var filename string
-	if runtime.GOOS != "windows" {
+	// [BS] This test does not work as root, because root can read everything
+	curUser, err := user.Current()
+	assert.Nil(t, err)
+	if runtime.GOOS != "windows" && curUser.Uid != "0" {
 
 		//go doesn't honor the file permissions, so skip this test on Windows
 

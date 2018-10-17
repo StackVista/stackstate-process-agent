@@ -150,9 +150,9 @@ func TestConfigNewIfExists(t *testing.T) {
 		f.Close()
 		conf, err = NewIfExists(filename)
 		//  [VS]  &config.File{instance:(*ini.File)(0xc4204013b0), Path:"/tmp/process-agent-test-config.ini"}
-		// assert.NotNil(t, conf)
-		// assert.Nil(t, err)
-		// os.Remove(filename)
+		assert.NotNil(t, err)
+		assert.Nil(t, conf)
+		os.Remove(filename)
 	}
 }
 

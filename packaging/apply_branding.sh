@@ -31,6 +31,12 @@ gofmt -l $REPLACE_MODE -r '"DD_NETWORK_TRACING_ENABLED" -> "STS_NETWORK_TRACING_
 gofmt -l $REPLACE_MODE -r '"DD_NETTRACER_SOCKET" -> "STS_NETTRACER_SOCKET"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_PROCESS_AGENT_URL is invalid: %s" -> "STS_PROCESS_AGENT_URL is invalid: %s"' $REPLACE_SCOPE
 
+# config_nix.go
+gofmt -l $REPLACE_MODE -r '"/var/log/datadog/process-agent.log" -> "/var/log/stackstate/process-agent.log"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/embedded/bin/python" -> "/opt/stackstate-agent/embedded/bin/python"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"PYTHONPATH=/opt/datadog-agent/agent" -> "PYTHONPATH=/opt/stackstate-agent/agent"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/bin/agent/agent" -> "/opt/stackstate-agent/bin/agent/agent"' $REPLACE_SCOPE
+
 
 echo "Checking replacements..."
 

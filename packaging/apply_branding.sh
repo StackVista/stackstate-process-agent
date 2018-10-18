@@ -42,6 +42,7 @@ gofmt -l $REPLACE_MODE -r '"/etc/datadog-agent/datadog.yaml" -> "/etc/stackstate
 gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/bin/agent/agent" -> "/opt/stackstate-agent/bin/agent/agent"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"Path to dd-agent config" -> "Path to sts-agent config"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"Path to datadog.yaml config" -> "Path to stackstate.yaml config"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"/etc/dd-agent/datadog.conf" -> "/etc/sts-agent/stackstate.conf"' $REPLACE_SCOPE
 
 
 

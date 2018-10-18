@@ -36,6 +36,15 @@ gofmt -l $REPLACE_MODE -r '"/var/log/datadog/process-agent.log" -> "/var/log/sta
 gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/embedded/bin/python" -> "/opt/stackstate-agent/embedded/bin/python"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"PYTHONPATH=/opt/datadog-agent/agent" -> "PYTHONPATH=/opt/stackstate-agent/agent"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/bin/agent/agent" -> "/opt/stackstate-agent/bin/agent/agent"' $REPLACE_SCOPE
+#  console changes
+
+gofmt -l $REPLACE_MODE -r '"/etc/datadog-agent/datadog.yaml" -> "/etc/stackstate-agent/stackstate.yaml"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/bin/agent/agent" -> "/opt/stackstate-agent/bin/agent/agent"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"Path to dd-agent config" -> "Path to sts-agent config"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"Path to datadog.yaml config" -> "Path to stackstate.yaml config"' $REPLACE_SCOPE
+
+
+
 
 
 echo "Checking replacements..."

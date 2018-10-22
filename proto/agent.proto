@@ -126,13 +126,6 @@ message Process {
 	uint64 involuntaryCtxSwitches = 17;
 	bytes byteKey = 18;
 	bytes containerByteKey = 19;
-	repeated Listener listeners = 50;
-}
-
-message Listener {
-	string ip = 1;
-	int32 port = 2;
-	string namespace = 3;
 }
 
 message Command {
@@ -328,6 +321,7 @@ message Connection {
 	ConnectionFamily family = 10;
 	ConnectionType type = 11;
 	int64 pidCreateTime = 12;
+	bool incoming = 51;
 	string namespace = 50; // local
 }
 

@@ -1,18 +1,17 @@
 package checks
 
 import (
-	"regexp"
+	// "regexp"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/DataDog/gopsutil/cpu"
+	// "github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
-	"github.com/StackVista/stackstate-process-agent/config"
+	//	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/DataDog/datadog-agent/pkg/util/containers"
+	// "github.com/DataDog/datadog-agent/pkg/util/containers"
 )
 
 func makeProcess(pid int32, cmdline string) *process.FilledProcess {
@@ -35,7 +34,7 @@ func makeProcess(pid int32, cmdline string) *process.FilledProcess {
 // 	lastRun := time.Now().Add(-5 * time.Second)
 // 	syst1, syst2 := cpu.TimesStat{}, cpu.TimesStat{}
 // 	cfg := config.NewDefaultAgentConfig()
-// 
+//
 // 	for i, tc := range []struct {
 // 		cur, last      []*process.FilledProcess
 // 		maxSize        int
@@ -82,7 +81,7 @@ func makeProcess(pid int32, cmdline string) *process.FilledProcess {
 // 		}
 // 		cfg.Blacklist = bl
 // 		cfg.MaxPerMessage = tc.maxSize
-// 
+//
 // 		cur := make(map[int32]*process.FilledProcess)
 // 		for _, c := range tc.cur {
 // 			cur[c.Pid] = c
@@ -91,7 +90,7 @@ func makeProcess(pid int32, cmdline string) *process.FilledProcess {
 // 		for _, c := range tc.last {
 // 			last[c.Pid] = c
 // 		}
-// 
+//
 // 		chunked := fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun)
 // 		assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
 // 		total := 0
@@ -99,7 +98,7 @@ func makeProcess(pid int32, cmdline string) *process.FilledProcess {
 // 			total += len(c)
 // 		}
 // 		assert.Equal(t, tc.expectedTotal, total, "total test %d", i)
-// 
+//
 // 		chunkedStat := fmtProcessStats(cfg, cur, last, containers, syst2, syst1, lastRun)
 // 		assert.Len(t, chunkedStat, tc.expectedChunks, "len stat %d", i)
 // 		total = 0
@@ -107,10 +106,11 @@ func makeProcess(pid int32, cmdline string) *process.FilledProcess {
 // 			total += len(c)
 // 		}
 // 		assert.Equal(t, tc.expectedTotal, total, "total stat test %d", i)
-// 
+//
 // 	}
 // }
-// 
+//
+
 func TestPercentCalculation(t *testing.T) {
 	// Capping at NUM CPU * 100 if we get odd values for delta-{Proc,Time}
 	assert.True(t, floatEquals(calculatePct(100, 50, 1), 100))

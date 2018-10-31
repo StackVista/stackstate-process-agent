@@ -38,8 +38,10 @@ gofmt -l $REPLACE_MODE -r '"PYTHONPATH=/opt/datadog-agent/agent" -> "PYTHONPATH=
 gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/bin/agent/agent" -> "/opt/stackstate-agent/bin/agent/agent"' $REPLACE_SCOPE
 
 # config
-gofmt -l $REPLACE_MODE -r '"dd_agent_bin" -> "sts_agent_bin"' $REPLACE_SCOPE
-gofmt -l $REPLACE_MODE -r '"dd_agent_env" -> "sts_agent_env"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '`yaml:"dd_agent_bin"` -> `yaml:"sts_agent_bin"`' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '`yaml:"dd_agent_env"` -> `yaml:"sts_agent_env"`' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '`yaml:"process_dd_url"` -> `yaml:"process_sts_url"`' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"invalid process_dd_url: %s" -> "invalid process_sts_url: %s"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"dd_agent_py" -> "sts_agent_py"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"dd_agent_py_env" -> "sts_agent_py_env"' $REPLACE_SCOPE
 

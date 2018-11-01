@@ -47,7 +47,7 @@ jobs:
       - run: printenv
       - run: go version
       - run: cd $IMPORT_PATH && rake ci
-      - run: cd packaging && ./apply_branding.sh
+      - run: cd $IMPORT_PATH/packaging && ./apply_branding.sh
       - run: cd $IMPORT_PATH && rake build
       - run:
           name: Move compiled binaries to workspace

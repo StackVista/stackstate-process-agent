@@ -7,7 +7,6 @@ def go_build(program, opts={})
   opts = {
     :cmd => default_cmd,
     :race => false,
-    :race => false,
     :add_build_vars => true,
     :static => false,
     :os => "",

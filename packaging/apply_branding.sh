@@ -64,9 +64,9 @@ rgrep --include=*.go "\"DD_"  $PWD/../agent $PWD/../config $PWD/../checks
 
 RESULT=$?
 if [ $RESULT -eq 0 ]; then
-  echo "Check result for found DD_, adjust branding logic"
+  echo "Please fix branding: there is still something using DD_ prefix"
   exit 1
 else
-  echo "Looks ok, return code $RESULT"
+  echo "Branding was successful, return code $RESULT"
 fi
 

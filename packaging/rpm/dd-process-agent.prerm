@@ -1,9 +1,0 @@
-#!/bin/sh
-
-
-echo "Removing sts-process-agent to start on boot..."
-chkconfig --del sts-process-agent
-
-echo "Trying to stop sts-process-agent with init.d"
-/etc/init.d/sts-process-agent stop || true
-exit 0

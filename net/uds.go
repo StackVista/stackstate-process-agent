@@ -7,7 +7,7 @@ import (
 
 	log "github.com/cihub/seelog"
 
-	"github.com/DataDog/datadog-process-agent/config"
+	"github.com/StackVista/stackstate-process-agent/config"
 )
 
 // UDSListener (Unix Domain Socket Listener)

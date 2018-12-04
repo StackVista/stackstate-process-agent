@@ -12,8 +12,8 @@ import (
 
 	log "github.com/cihub/seelog"
 
-	"github.com/DataDog/datadog-agent/pkg/pidfile"
-	"github.com/DataDog/datadog-process-agent/config"
+	"github.com/Stackstate/stackstate-agent/pkg/pidfile"
+	"github.com/StackVista/stackstate-process-agent/config"
 )
 
 // Flag values

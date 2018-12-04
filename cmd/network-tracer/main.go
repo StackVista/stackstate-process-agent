@@ -13,7 +13,7 @@ import (
 	log "github.com/cihub/seelog"
 
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/Stackstate/stackstate-agent/pkg/pidfile"
+	"github.com/StackVista/stackstate-agent/pkg/pidfile"
 )
 
 // Flag values

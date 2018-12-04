@@ -7,8 +7,8 @@
   revision = "771928d86fa878b9d62f073a7a6f91ee0a358105"
 
 [[constraint]]
-  name = "github.com/DataDog/tcptracer-bpf"
-  revision = "e67093561a9e7e3cd7380d68d5022a1626ce32b2"
+  name = "github.com/StackVista/tcptracer-bpf"
+  revision = "1fba650acaa806c730818c630c94eb595bcd4f94"
 
 [[constraint]]
   name = "github.com/DataDog/zstd"

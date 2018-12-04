@@ -10,7 +10,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mailru/easyjson"
 
-	"github.com/DataDog/tcptracer-bpf/pkg/tracer"
+	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/net"
 )

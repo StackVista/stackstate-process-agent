@@ -90,13 +90,6 @@
   revision = "771928d86fa878b9d62f073a7a6f91ee0a358105"
 
 [[projects]]
-  digest = "1:e812ef308bb3a98d6d4df315d16bdc6e90cab8dfbb6ebbc15e830d4a214d3005"
-  name = "github.com/DataDog/tcptracer-bpf"
-  packages = ["pkg/tracer"]
-  pruneopts = ""
-  revision = "e67093561a9e7e3cd7380d68d5022a1626ce32b2"
-
-[[projects]]
   digest = "1:874c0d49e5c272ae160b7c26d2ad2a1e21b54565fc3a84efb8014a0afcf4e63f"
   name = "github.com/DataDog/zstd"
   packages = ["."]
@@ -118,6 +111,24 @@
   packages = ["."]
   pruneopts = ""
   revision = "b12b22c5341f0c26d88c4d66176330500e84db68"
+
+[[projects]]
+  digest = "1:349d92689d2fc6ec373b138d03a02b5b2659b640db5e7f1d40cffde135669b52"
+  name = "github.com/StackVista/stackstate-agent"
+  packages = [
+    "pkg/pidfile",
+    "pkg/tagger",
+  ]
+  pruneopts = ""
+  revision = "6f2d901aeb19f0c0a4e09f149c7cc5a084d2f708"
+  version = "6.6.0"
+
+[[projects]]
+  digest = "1:2349146cd8891b196a27aa917a9b69c8aa7a789dffbfc075b22ebf75663df5fc"
+  name = "github.com/StackVista/tcptracer-bpf"
+  packages = ["pkg/tracer"]
+  pruneopts = ""
+  revision = "1fba650acaa806c730818c630c94eb595bcd4f94"
 
 [[projects]]
   digest = "1:63776251fbaa60062742412a9d2fa1e4b7cd24bcf5527fa9656b314ea8d60913"
@@ -994,9 +1005,11 @@
     "github.com/DataDog/gopsutil/host",
     "github.com/DataDog/gopsutil/mem",
     "github.com/DataDog/gopsutil/process",
-    "github.com/DataDog/tcptracer-bpf/pkg/tracer",
     "github.com/DataDog/zstd",
     "github.com/StackExchange/wmi",
+    "github.com/StackVista/stackstate-agent/pkg/pidfile",
+    "github.com/StackVista/stackstate-agent/pkg/tagger",
+    "github.com/StackVista/tcptracer-bpf/pkg/tracer",
     "github.com/cihub/seelog",
     "github.com/go-ini/ini",
     "github.com/gogo/protobuf/jsonpb",

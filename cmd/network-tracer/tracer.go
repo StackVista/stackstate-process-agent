@@ -10,9 +10,9 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mailru/easyjson"
 
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/net"
+	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 )
 
 // ErrTracerUnsupported is the unsupported error prefix, for error-class matching from callers

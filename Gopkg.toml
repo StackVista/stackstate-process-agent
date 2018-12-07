@@ -8,7 +8,7 @@
 
 [[constraint]]
   name = "github.com/StackVista/tcptracer-bpf"
-  revision = "1fba650acaa806c730818c630c94eb595bcd4f94"
+  revision = "ad328f148811f40b530e13466299f4c8343aa7fd"
 
 [[constraint]]
   name = "github.com/DataDog/zstd"

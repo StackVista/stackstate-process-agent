@@ -78,6 +78,8 @@ type YamlAgentConfig struct {
 	Network struct {
 		// A string indicating the enabled state of the network tracer.
 		NetworkTracingEnabled string `yaml:"network_tracing_enabled"`
+		// A string indicating whether we use /proc to get the initial connections
+		NetworkInitialConnectionFromProc string `yaml:"initial_connections_from_proc"`
 		// The full path to the location of the unix socket where network traces will be accessed
 		UnixSocketPath string `yaml:"nettracer_socket"`
 		// The full path to the file where network-tracer logs will be written.
@@ -220,6 +222,9 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	if enabled, _ := isAffirmative(networkConf.Network.NetworkTracingEnabled); enabled {
 		agentConf.EnabledChecks = append(agentConf.EnabledChecks, "connections")
 		agentConf.EnableNetworkTracing = enabled
+	}
+	if procEnabled, _ := isAffirmative(networkConf.Network.NetworkInitialConnectionFromProc); procEnabled {
+		agentConf.NetworkInitialConnectionsFromProc = procEnabled
 	}
 	if socketPath := networkConf.Network.UnixSocketPath; socketPath != "" {
 		agentConf.NetworkTracerSocketPath = socketPath

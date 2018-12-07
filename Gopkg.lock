@@ -124,11 +124,15 @@
   version = "6.6.0"
 
 [[projects]]
-  digest = "1:2349146cd8891b196a27aa917a9b69c8aa7a789dffbfc075b22ebf75663df5fc"
+  digest = "1:592209e2e2e1173b76613c8ea7e489dc52ffc838a211048a952513d1adfbe0b6"
   name = "github.com/StackVista/tcptracer-bpf"
-  packages = ["pkg/tracer"]
+  packages = [
+    "pkg/tracer",
+    "pkg/tracer/common",
+    "pkg/tracer/procspy",
+  ]
   pruneopts = ""
-  revision = "1fba650acaa806c730818c630c94eb595bcd4f94"
+  revision = "ad328f148811f40b530e13466299f4c8343aa7fd"
 
 [[projects]]
   digest = "1:63776251fbaa60062742412a9d2fa1e4b7cd24bcf5527fa9656b314ea8d60913"
@@ -1010,6 +1014,7 @@
     "github.com/StackVista/stackstate-agent/pkg/pidfile",
     "github.com/StackVista/stackstate-agent/pkg/tagger",
     "github.com/StackVista/tcptracer-bpf/pkg/tracer",
+    "github.com/StackVista/tcptracer-bpf/pkg/tracer/common",
     "github.com/cihub/seelog",
     "github.com/go-ini/ini",
     "github.com/gogo/protobuf/jsonpb",

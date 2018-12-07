@@ -64,7 +64,7 @@ func (nt *NetworkTracer) Run() {
 	http.HandleFunc("/status", func(w http.ResponseWriter, req *http.Request) {})
 
 	http.HandleFunc("/connections", func(w http.ResponseWriter, req *http.Request) {
-		cs, err := nt.tracer.GetActiveConnections()
+		cs, err := nt.tracer.GetConnections()
 
 		if err != nil {
 			log.Errorf("unable to retrieve connections: %s", err)

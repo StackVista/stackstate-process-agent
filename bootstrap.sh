@@ -41,7 +41,7 @@ do
             sudo apt-get update \
                 && sudo apt-get install -y postgresql postgresql-contrib
             ;;
-        "postgres")
+        "tomcat")
             echo "Installing Tomcat..."
             sudo apt-get update \
                 && sudo groupadd tomcat \

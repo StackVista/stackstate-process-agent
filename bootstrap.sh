@@ -19,6 +19,54 @@ sudo add-apt-repository ppa:masterminds/glide
 
 sudo apt-get update && sudo apt-get install -y mercurial golang-1.10-go docker-ce glide gogoprotobuf
 
+# Install additional dependencies to test with the process agent
+arr=($@)
+## now loop through the above array
+for i in "${arr[@]}"
+do
+    case $i in
+        "java")
+            echo "Installing Java..."
+            sudo apt-get update \
+                && sudo apt-get install -y openjdk-8-jdk
+            ;;
+        "mysql")
+            echo "Installing MySQL..."
+            sudo apt-get update \
+                && sudo apt-get install -y mysql-server \
+                && systemctl status mysql.service
+            ;;
+        "postgres")
+            echo "Installing Postgres..."
+            sudo apt-get update \
+                && sudo apt-get install -y postgresql postgresql-contrib
+            ;;
+        "postgres")
+            echo "Installing Tomcat..."
+            sudo apt-get update \
+                && sudo groupadd tomcat \
+                && sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat \
+                && cd /tmp \
+                && curl -O http://apache.cs.uu.nl/tomcat/tomcat-9/v9.0.13/bin/apache-tomcat-9.0.13.tar.gz \
+                && sudo mkdir /opt/tomcat \
+                && sudo tar xzvf apache-tomcat-9*tar.gz -C /opt/tomcat --strip-components=1 \
+                && cd /opt/tomcat \
+                && sudo chgrp -R tomcat /opt/tomcat \
+                && sudo chmod -R g+r conf \
+                && sudo chmod g+x conf \
+                && sudo chown -R tomcat webapps/ work/ temp/ logs/ \
+                && sudo -su tomcat \
+                && /opt/tomcat/bin/startup.sh \
+                && exit
+            ;;
+        *)
+            echo "Not supported"
+            ;; 
+    esac
+   # or do whatever with individual element of the array
+done
+
+
 # INSTALL PROTOBUF
 # Make sure you grab the latest version
 curl -OL https://github.com/google/protobuf/releases/download/v3.3.0/protoc-3.3.0-linux-x86_64.zip

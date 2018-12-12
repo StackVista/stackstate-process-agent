@@ -36,8 +36,8 @@ do
                 && sudo apt-get install -y mysql-server \
                 && systemctl status mysql.service
             ;;
-        "postgres")
-            echo "Installing Postgres..."
+        "postgresql")
+            echo "Installing Postgresql..."
             sudo apt-get update \
                 && sudo apt-get install -y postgresql postgresql-contrib
             ;;
@@ -54,13 +54,11 @@ do
                 && sudo chgrp -R tomcat /opt/tomcat \
                 && sudo chmod -R g+r conf \
                 && sudo chmod g+x conf \
-                && sudo chown -R tomcat webapps/ work/ temp/ logs/ \
-                && sudo -su tomcat \
-                && /opt/tomcat/bin/startup.sh \
-                && exit
+                && sudo chown -R tomcat bin/ webapps/ work/ temp/ logs/ \
+                && sudo -u tomcat /opt/tomcat/bin/startup.sh
             ;;
         *)
-            echo "Not supported"
+            echo "${i} is not supported"
             ;; 
     esac
    # or do whatever with individual element of the array

@@ -2,7 +2,7 @@
 
 # https://regex-golang.appspot.com/assets/html/index.html
 
-export REPLACE_SCOPE="../config ../agent ../checks"
+export REPLACE_SCOPE="../config ../cmd ../checks"
 export REPLACE_MODE=-w # "-d"
 
 gofmt -l $REPLACE_MODE -r '"DD_HOSTNAME" -> "STS_HOSTNAME"'  $REPLACE_SCOPE
@@ -28,8 +28,13 @@ gofmt -l $REPLACE_MODE -r '"DD_CONTAINER_CACHE_DURATION" -> "STS_CONTAINER_CACHE
 gofmt -l $REPLACE_MODE -r '"DD_PROCESS_AGENT_CONTAINER_SOURCE" -> "STS_PROCESS_AGENT_CONTAINER_SOURCE"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_NETWORK_TRACING_ENABLED" -> "STS_NETWORK_TRACING_ENABLED"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_NETWORK_TRACING_ENABLED" -> "STS_NETWORK_TRACING_ENABLED"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"DD_SITE" -> "STS_SITE"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"DD_USE_LOCAL_NETWORK_TRACER" -> "STS_USE_LOCAL_NETWORK_TRACER"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_NETTRACER_SOCKET" -> "STS_NETTRACER_SOCKET"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_PROCESS_AGENT_URL is invalid: %s" -> "STS_PROCESS_AGENT_URL is invalid: %s"' $REPLACE_SCOPE
+# known
+sed -i 's/DD_SITE/STS_SITE/g' ../config/config_test.go
+
 
 # config_nix.go
 gofmt -l $REPLACE_MODE -r '"/var/log/datadog/process-agent.log" -> "/var/log/stackstate-agent/process-agent.log"' $REPLACE_SCOPE
@@ -40,8 +45,8 @@ gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/bin/agent/agent" -> "/opt/stackst
 # config
 gofmt -l $REPLACE_MODE -r '`yaml:"dd_agent_bin"` -> `yaml:"sts_agent_bin"`' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '`yaml:"dd_agent_env"` -> `yaml:"sts_agent_env"`' $REPLACE_SCOPE
-gofmt -l $REPLACE_MODE -r '`yaml:"process_dd_url"` -> `yaml:"process_sts_url"`' $REPLACE_SCOPE
-gofmt -l $REPLACE_MODE -r '"invalid process_dd_url: %s" -> "invalid process_sts_url: %s"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"process_config.process_dd_url" -> "process_config.process_sts_url"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"error parsing process_dd_url: %s" -> "error parsing process_sts_url: %s"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"dd_agent_py" -> "sts_agent_py"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"dd_agent_py_env" -> "sts_agent_py_env"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"ddconfig" -> "stsconfig"' $REPLACE_SCOPE
@@ -61,7 +66,7 @@ gofmt -l $REPLACE_MODE -r '"/etc/dd-agent/datadog.conf" -> "/etc/stackstate-agen
 echo "Checking replacements..."
 
 which rgrep
-rgrep --include=*.go "\"DD_"  $PWD/../agent $PWD/../config $PWD/../checks
+rgrep --include=*.go "\"DD_"  $PWD/../cmd $PWD/../config $PWD/../checks
 
 RESULT=$?
 if [ $RESULT -eq 0 ]; then

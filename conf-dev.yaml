@@ -1,4 +1,4 @@
-log_level: info
+log_level: debug
 
 api_key: API_KEY
 process_agent_enabled: true
@@ -12,8 +12,10 @@ process_config:
   process_dd_url: http://192.168.56.1:7077/stsAgent
 
   queue_size: 10
-  network_tracing_enabled: 'true'
   intervals:
-    container: 25
-    process: 30
-    connections: 20
+    container: 8
+    process: 5
+    connections: 5
+network_tracer_config:
+  network_tracing_enabled: 'true'
+  initial_connections_from_proc: 'true'

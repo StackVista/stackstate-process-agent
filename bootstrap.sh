@@ -17,7 +17,7 @@ sudo add-apt-repository \
 sudo add-apt-repository ppa:gophers/archive
 sudo add-apt-repository ppa:masterminds/glide
 
-sudo apt-get update && sudo apt-get install -y mercurial golang-1.10-go docker-ce glide gogoprotobuf
+sudo apt-get update && sudo apt-get install -y mercurial golang-1.10-go docker-ce glide
 
 # Install additional dependencies to test with the process agent
 arr=($@)
@@ -59,11 +59,12 @@ do
             ;;
         *)
             echo "${i} is not supported"
-            ;; 
+            ;;
     esac
-   # or do whatever with individual element of the array
 done
 
+# Add vagrant user to docker group
+sudo usermod -aG docker vagrant
 
 # INSTALL PROTOBUF
 # Make sure you grab the latest version
@@ -85,5 +86,12 @@ sudo rm -rf	protoc3/
 # Move go to /usr/bin/go
 sudo cp /usr/lib/go-1.10/bin/go /usr/bin/go
 
-# Add GOPATH to env 
-echo "GOPATH=/opt/stackstate-go" > /etc/environment
+# Define GOPATH and add it to profile
+export GOPATH="/opt/stackstate-go"
+echo "GOPATH=\$GOPATH" >> ~/.profile
+echo "PATH=\$PATH:\$GOPATH/bin" >> ~/.profile
+
+source ~/.profile
+
+# Install the gogo-proto binaries from the vendor directory to make sure we have the correct version
+cd /opt/stackstate-go/src/github.com/StackVista/stackstate-process-agent/vendor/github.com/gogo/protobuf && make install

@@ -3,7 +3,7 @@ Vagrant.configure("2") do |config|
   vm_mem = ENV["MEM"] || 512
   processes_to_install = ENV["PROCESSES"] || ""
 
-  config.vm.define "process-agent-1" do |agent1|
+  config.vm.define "process-agent-test" do |agent1|
     agent1.vm.box = "ubuntu/bionic64"
     agent1.vm.hostname = 'process-agent'
     agent1.vm.box_url = "ubuntu/bionic64"
@@ -16,11 +16,11 @@ Vagrant.configure("2") do |config|
     agent1.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--memory", vm_mem]
-      v.customize ["modifyvm", :id, "--name", "process-agent-1"]
+      v.customize ["modifyvm", :id, "--name", "process-agent-test"]
     end
   end
 
-  config.vm.define "process-agent-2" do |agent2|
+  config.vm.define "process-agent-clean" do |agent2|
     agent2.vm.box = "ubuntu/xenial64"
     agent2.vm.hostname = 'agent2'
     agent2.vm.box_url = "ubuntu/xenial64"
@@ -32,7 +32,7 @@ Vagrant.configure("2") do |config|
     agent2.vm.provider :virtualbox do |v|
       v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       v.customize ["modifyvm", :id, "--memory", vm_mem]
-      v.customize ["modifyvm", :id, "--name", "process-agent-2"]
+      v.customize ["modifyvm", :id, "--name", "process-agent-clean"]
     end
   end
 

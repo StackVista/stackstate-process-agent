@@ -10,11 +10,12 @@
   revision = "75cd24fc2f2c2a2088577d12123ddee5f54e0675"
 
 [[projects]]
-  digest = "1:457212d305ca8e8f68765cc6adb4e259a3aecc6513d79066736fbccbefc32485"
+  branch = "master"
+  digest = "1:ad9ae5215fc93bd23bf7152f1bb5710c73efbc06d2adf9f63a89dfbe295e39ee"
   name = "github.com/CharlyF/custom-metrics-apiserver"
   packages = ["pkg/provider"]
   pruneopts = ""
-  revision = "56ec6921a4cfec971e5a8c89d5f4629c17cbb21a"
+  revision = "2655ce32a120457c5dfbd6e2c25a64c3139857fb"
 
 [[projects]]
   digest = "1:e614c1c911617d660f569202b4680239069793b7ca473a8c3e644240551b12b0"
@@ -132,7 +133,7 @@
     "pkg/tracer/procspy",
   ]
   pruneopts = ""
-  revision = "2cb24ca6fdf8f3e61c3485d26264ac4e7bc47cdf"
+  revision = "ad328f148811f40b530e13466299f4c8343aa7fd"
 
 [[projects]]
   digest = "1:63776251fbaa60062742412a9d2fa1e4b7cd24bcf5527fa9656b314ea8d60913"

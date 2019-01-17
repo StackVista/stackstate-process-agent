@@ -63,7 +63,7 @@ build_exe:
   script:
     - cd %GOPATH%\src\github.com\StackVista\stackstate-process-agent
     - call rake deps
-    - call rake build windres=true
+    - call rake build windres=true --trace
   after_script:
     - copy %GOPATH%\src\github.com\StackVista\stackstate-process-agent\process-agent.exe
   artifacts:

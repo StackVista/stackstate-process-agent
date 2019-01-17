@@ -63,7 +63,7 @@ build_exe:
   script:
     - cd %GOPATH%\src\github.com\StackVista\stackstate-process-agent
     - call rake deps
-    - call rake build windres=true --trace
+    - call .gitlab-scripts/windows_build.cmd
   after_script:
     - copy %GOPATH%\src\github.com\StackVista\stackstate-process-agent\process-agent.exe
   artifacts:
@@ -79,6 +79,5 @@ pre_release_exe:
     - build_exe
   script:
     - aws.exe s3 cp  process-agent.exe s3://stackstate-process-agent-2-test
-
   tags:
     - sts_windows

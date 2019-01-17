@@ -2,10 +2,6 @@
 
 package net
 
-import (
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
-)
-
 // RemoteNetTracerUtil is only implemented on linux
 type RemoteNetTracerUtil struct{}
 
@@ -21,7 +17,7 @@ func GetRemoteNetworkTracerUtil() (*RemoteNetTracerUtil, error) {
 
 // GetConnections is only implemented on linux
 func (r *RemoteNetTracerUtil) GetConnections() ([]tracer.ConnectionStats, error) {
-	return nil, tracer.ErrNotImplemented
+	return nil, common.ErrNotImplemented
 }
 
 // ShouldLogTracerUtilError is only implemented on linux

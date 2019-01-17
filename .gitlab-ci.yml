@@ -78,7 +78,7 @@ pre_release_exe:
   dependencies:
     - build_exe
   script:
-    - rake windows-versioned-artifact
+    - call rake windows-versioned-artifact
     - aws.exe s3 cp  process-agent.exe s3://stackstate-process-agent-2-test
     - aws.exe s3 cp  stackstate-process-agent*.exe s3://stackstate-process-agent-2-test
   tags:

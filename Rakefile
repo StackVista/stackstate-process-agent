@@ -136,7 +136,7 @@ task :err do
 end
 
 task 'windows-versioned-artifact' do
-  process_agent_version = `git describe --tags`.strip!
+  process_agent_version = `packaging/version.sh`.strip!
   system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end
 

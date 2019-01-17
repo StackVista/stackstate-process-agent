@@ -3,6 +3,7 @@
 package net
 
 import (
+	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	tracerCommon "github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 )
 

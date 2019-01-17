@@ -51,7 +51,7 @@ build:
         - $CI_PROJECT_DIR/packaging/debian/*.deb
     expire_in: 2 week
 
-
+# Gitlab dedicated runner in a Windows VM
 build_exe:
   stage: build
   allow_failure: false

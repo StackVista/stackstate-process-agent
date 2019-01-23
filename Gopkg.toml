@@ -1,6 +1,6 @@
 [[constraint]]
-  name = "github.com/DataDog/datadog-agent"
-  revision = "020e0e819623b29ca1d36ec7e39ed4c2186ce635"
+  name = "github.com/StackVista/stackstate-agent"
+  revision = "3185a432dfed61437a6c62ed5622006d9027f513"
 
 [[constraint]]
   name = "github.com/DataDog/gopsutil"
@@ -24,3 +24,7 @@
 
 [[constraint]]
   name = "golang.org/x/sys"
+
+[[override]]
+  name = "gopkg.in/yaml.v2"
+  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"

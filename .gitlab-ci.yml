@@ -10,7 +10,7 @@ variables:
   STS_REPO_BRANCH_NAME: $CI_COMMIT_REF_NAME
   BASH_ENV: /root/.bashrc
 
-build:
+build_linux:
   image: stackstate/stackstate-agent-runner-circle:process-agent-go1_10_1-0.0.1
   stage: build
   before_script:
@@ -52,7 +52,7 @@ build:
     expire_in: 2 week
 
 # Gitlab dedicated runner in a Windows VM
-build_exe:
+build_windows:
   stage: build
   allow_failure: false
   before_script:
@@ -73,7 +73,7 @@ build_exe:
   tags:
     - sts_windows
 
-pre_release_exe:
+pre_release_windows:
   stage: pre_release
   dependencies:
     - build_exe

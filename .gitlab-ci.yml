@@ -76,7 +76,7 @@ build_windows:
 pre_release_windows:
   stage: pre_release
   dependencies:
-    - build_exe
+    - build_windows
   script:
     - call rake windows-versioned-artifact
     - aws.exe s3 cp . s3://stackstate-process-agent-2-test --recursive --exclude "*" --include "*.exe"

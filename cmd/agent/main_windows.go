@@ -19,22 +19,18 @@ import (
 
 var elog debug.Log
 
-const ServiceName = "datadog-process-agent"
+const ServiceName = "stackstate-process-agent"
 
 // opts are the command-line options
-var defaultConfigPath = "c:\\programdata\\datadog\\datadog.yaml"
-var defaultOldConfigPath = "c:\\programdata\\datadog\\datadog.conf"
-var defaultConfdPath = "c:\\programdata\\datadog\\conf.d"
+var defaultConfigPath = "c:\\programdata\\stackstate\\stackstate.yaml"
+var defaultOldConfigPath = "c:\\programdata\\stackstate\\stackstate.conf"
+var defaultConfdPath = "c:\\programdata\\stackstate\\conf.d"
 
 var winopts struct {
 	installService   bool
 	uninstallService bool
 	startService     bool
 	stopService      bool
-}
-
-func init() {
-	fmt.Printf("main_windows.init()")
 }
 
 type myservice struct{}
@@ -114,7 +110,7 @@ func EnableLoggingToFile() {
 
 // main is the main application entry point
 func main() {
-	flag.StringVar(&opts.configPath, "config", defaultConfigPath, "Path to datadog.yaml config")
+	flag.StringVar(&opts.configPath, "config", defaultConfigPath, "Path to stackstate.yaml config")
 	flag.StringVar(&opts.ddConfigPath, "ddconfig", defaultOldConfigPath, "Path to dd-agent config")
 	flag.BoolVar(&opts.info, "info", false, "Show info about running process agent and exit")
 	flag.BoolVar(&opts.version, "version", false, "Print the version and exit")
@@ -133,7 +129,7 @@ func main() {
 		fmt.Printf("failed to determine if we are running in an interactive session: %v", err)
 	}
 	if !isIntSess {
-		runService(false)
+		runService(true)
 		return
 	}
 	// sigh.  Go doesn't have boolean xor operator.  The options are mutually exclusive,

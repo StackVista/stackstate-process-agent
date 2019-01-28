@@ -40,7 +40,7 @@ Vagrant.configure("2") do |config|
     agent1.vm.box = "gusztavvargadr/w16s"
     agent1.vm.hostname = 'process-agent-win'
 
-    agent1.vm.network :private_network, ip: "192.168.56.101"
+    agent1.vm.network :private_network, ip: "192.168.56.103"
 
     config.vm.synced_folder "../../../..", "/opt/stackstate-go"
     config.vm.provision "shell", path: "bootstrap.ps1"

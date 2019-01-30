@@ -1,6 +1,11 @@
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
-choco install -y git hg golang dep ruby msys2 netcat
+choco install -y git
+choco install -y hg --version 4.6.1
+choco install -y golang --version 1.10.4
+choco install -y dep
+choco install -y ruby --version 2.4.3.1
+choco install -y msys2 netcat
 
 [string]$source  = 'C:\vagrant'
 [string]$destination = 'C:\opt\stackstate-go\src\github.com\StackVista\stackstate-process-agent'

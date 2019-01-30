@@ -1,6 +1,6 @@
 Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
-choco install -y git hg golang dep ruby msys2 mingw netcat
+choco install -y git hg golang dep ruby msys2 netcat
 
 [string]$source  = 'C:\vagrant'
 [string]$destination = 'C:\opt\stackstate-go\src\github.com\StackVista\stackstate-process-agent'
@@ -21,3 +21,5 @@ if (Get-Command rake -errorAction SilentlyContinue)
 } else {
     C:\tools\ruby26\bin\gem.cmd install rake
 }
+
+ridk install 1 2 3

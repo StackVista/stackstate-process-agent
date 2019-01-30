@@ -56,7 +56,10 @@ build_windows:
   stage: build
   allow_failure: false
   before_script:
-    - call .gitlab-scripts/windows_bootstrap.cmd
+    - if exist %GOPATH%\src\github.com\StackVista\stackstate-process-agent rd /s/q %GOPATH%\src\github.com\StackVista\stackstate-process-agent
+    - mkdir %GOPATH%\src\github.com\StackVista\stackstate-process-agent
+    - xcopy /q/h/e/s * %GOPATH%\src\github.com\StackVista\stackstate-process-agent
+    - cd %GOPATH%\src\github.com\StackVista\stackstate-process-agent
   script:
     - cd %GOPATH%\src\github.com\StackVista\stackstate-process-agent
     - call rake deps

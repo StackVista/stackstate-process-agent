@@ -102,6 +102,7 @@ pre_release_linux:
     - echo "export EBPF=${EBPF:-true}" >> $BASH_ENV
     - echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BASH_ENV && source $BASH_ENV
     - uname -a
+    - apt-get -y -q install s3cmd
     - gem install --no-ri --no-rdoc fpm
     - gem install --no-ri --no-rdoc deb-s3
   script:

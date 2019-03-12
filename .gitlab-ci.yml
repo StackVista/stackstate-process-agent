@@ -7,7 +7,9 @@ stages:
 
 variables:
   SRC_PATH: /src/github.com/StackVista/stackstate-process-agent
+  STS_AWS_BUCKET: stackstate-process-agent-2-test
   STS_REPO_BRANCH_NAME: $CI_COMMIT_REF_NAME
+  CIRCLE_BRANCH: $CI_COMMIT_REF_NAME
   BASH_ENV: /root/.bashrc
 
 build_linux:

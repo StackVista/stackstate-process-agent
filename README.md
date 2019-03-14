@@ -67,6 +67,12 @@ You can up the memory and pre-install some processes at boot of the Vagrant vm w
 $ MEM="2048" PROCESSES="java mysql postgresql tomcat" vagrant up process-agent-test
 ```
 
+## Slack
+
+For using slack notify on failed nightly builds, we need to define webhooks and target channels
+SLACKTEE_WEBHOOK_URL https://hooks.slack.com/services/hoho/hihi/haha
+SLACKTEE_CHANNEL  notifications
+
 ## Testing
 
 Instructions related to manual testing can be found in [Testing.md](Testing.md)

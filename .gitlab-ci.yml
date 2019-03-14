@@ -3,6 +3,7 @@ stages:
 - build
 - pre_release
 #- publish
+- finally
 
 
 variables:
@@ -107,3 +108,11 @@ pre_release_linux:
     - ls -la $IMPORT_PATH
     - ls -la $IMPORT_PATH/packaging
     - cd $IMPORT_PATH/packaging && ./publish_staging_package.sh
+
+notify:slack:
+  stage: finally
+  script:
+    - echo "sts-process-agent nightly build on \`$CI_BUILD_REF_NAME\` failed! Commit \`$(git log -1 --oneline)\`" | ./gitlab-scripts/slack_tee.sh
+#  when: on_failure
+  # only:
+  #   - schedules

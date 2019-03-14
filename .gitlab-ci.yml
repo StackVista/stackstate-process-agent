@@ -111,8 +111,9 @@ pre_release_linux:
 
 notify:slack:
   stage: finally
+  image: stackstate/stackstate-agent-runner-circle:process-agent-go1_10_1-0.0.1
   script:
-    - echo "sts-process-agent nightly build on \`$CI_BUILD_REF_NAME\` failed! Commit \`$(git log -1 --oneline)\`" | ./gitlab-scripts/slack_tee.sh
+    - echo "sts-process-agent nightly build on \`$CI_BUILD_REF_NAME\` failed! Commit \`$(git log -1 --oneline)\`" | ./.gitlab-scripts/slack_tee.sh
 #  when: on_failure
   # only:
   #   - schedules

@@ -109,5 +109,3 @@ pre_release_linux:
     - ls -la $IMPORT_PATH
     - ls -la $IMPORT_PATH/packaging
     - cd $IMPORT_PATH/packaging && ./publish_staging_package.sh
-#  except:
-#    - schedules

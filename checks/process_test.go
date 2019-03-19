@@ -175,49 +175,29 @@ func TestProcessFiltering(t *testing.T) {
 		amountTopIOUsage int
 		amountTopMemoryUsage int
 	}{
+		// expects all the processes to be present and chunked into 3 processes per chunk
 		{
-			cur:            []*process.FilledProcess{p[0], p[1], p[2]},
-			last:           []*process.FilledProcess{p[0], p[1], p[2]},
+			cur:            p,
+			last:           p,
 			maxSize:        3,
 			blacklist:      []string{},
-			expectedTotal:  3,
-			expectedChunks: 3,
-			amountTopCPUPercentageUsage: 1,
-			amountTopIOUsage: 1,
-			amountTopMemoryUsage: 1,
+			expectedTotal:  21,
+			expectedChunks: 7,
+			amountTopCPUPercentageUsage: 2,
+			amountTopIOUsage: 2,
+			amountTopMemoryUsage: 2,
 		},
+		// expects all the processes to be present and chunked into 3 processes per chunk
 		{
-			cur:            []*process.FilledProcess{p[0], p[1], p[2]},
-			last:           []*process.FilledProcess{p[0], p[2]},
-			maxSize:        1,
-			blacklist:      []string{},
-			expectedTotal:  2,
-			expectedChunks: 2,
-			amountTopCPUPercentageUsage: 1,
-			amountTopIOUsage: 1,
-			amountTopMemoryUsage: 1,
-		},
-		{
-			cur:            []*process.FilledProcess{p[0], p[1], p[2], p[3]},
-			last:           []*process.FilledProcess{p[0], p[1], p[2], p[3]},
-			maxSize:        10,
-			blacklist:      []string{"git", "datadog"},
-			expectedTotal:  2,
-			expectedChunks: 1,
-			amountTopCPUPercentageUsage: 1,
-			amountTopIOUsage: 1,
-			amountTopMemoryUsage: 1,
-		},
-		{
-			cur:            []*process.FilledProcess{p[0], p[1], p[2], p[3]},
-			last:           []*process.FilledProcess{p[0], p[1], p[2], p[3]},
-			maxSize:        10,
-			blacklist:      []string{"git", "datadog", "foo", "mine"},
-			expectedTotal:  0,
-			expectedChunks: 0,
-			amountTopCPUPercentageUsage: 1,
-			amountTopIOUsage: 1,
-			amountTopMemoryUsage: 1,
+			cur:            p,
+			last:           p,
+			maxSize:        3,
+			blacklist:      []string{ "resource process" },
+			expectedTotal:  11,
+			expectedChunks: 4,
+			amountTopCPUPercentageUsage: 2,
+			amountTopIOUsage: 2,
+			amountTopMemoryUsage: 2,
 		},
 	} {
 		bl := make([]*regexp.Regexp, 0, len(tc.blacklist))
@@ -242,7 +222,7 @@ func TestProcessFiltering(t *testing.T) {
 
 		chunked := fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun)
 
-		fmt.Println("-------------------")
+		fmt.Println("---------chunked----------")
 		fmt.Printf("%v\n", chunked)
 		fmt.Println("-------------------")
 
@@ -254,6 +234,11 @@ func TestProcessFiltering(t *testing.T) {
 		assert.Equal(t, tc.expectedTotal, total, "total test %d", i)
 
 		chunkedStat := fmtProcessStats(cfg, cur, last, containers, syst2, syst1, lastRun)
+
+		fmt.Println("---------chunkedStat----------")
+		fmt.Printf("%v\n", chunkedStat)
+		fmt.Println("-------------------")
+
 		assert.Len(t, chunkedStat, tc.expectedChunks, "len stat %d", i)
 		total = 0
 		for _, c := range chunkedStat {

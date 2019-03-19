@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"sort"
 	"time"
 
 	"github.com/DataDog/gopsutil/cpu"
@@ -106,14 +107,14 @@ func fmtProcessStats(
 		}
 	}
 
-	chunked := make([][]*model.ProcessStat, 0)
-	chunk := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
+	// Take all process and format them to the model.Process type
+	formattedProcesses := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
 	for _, fp := range procs {
-		if skipProcess(cfg, fp, lastProcs) {
+		if _, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
 			continue
 		}
 
-		chunk = append(chunk, &model.ProcessStat{
+		formattedProcesses = append(formattedProcesses, &model.ProcessStat{
 			Pid:                    fp.Pid,
 			CreateTime:             fp.CreateTime,
 			Memory:                 formatMemory(fp),
@@ -127,14 +128,87 @@ func fmtProcessStats(
 			InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
 			ContainerId:            cidByPid[fp.Pid],
 		})
-		if len(chunk) == cfg.MaxPerMessage {
-			chunked = append(chunked, chunk)
-			chunk = make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
+	}
+
+	// Top Percentage Using Processes, insert into chuncked slice and strip from chunk slice
+	sort.Slice(formattedProcesses, func(i, j int) bool {
+		return formattedProcesses[i].Cpu.TotalPct > formattedProcesses[j].Cpu.TotalPct
+	})
+	var cpuSortedProcs, remainingProcesses []*model.ProcessStat
+	if len(formattedProcesses) <= cfg.AmountTopCPUPercentageUsage {
+		cpuSortedProcs, remainingProcesses = formattedProcesses, make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
+	} else {
+		cpuSortedProcs, remainingProcesses = formattedProcesses[:cfg.AmountTopCPUPercentageUsage], formattedProcesses[cfg.AmountTopCPUPercentageUsage:]
+	}
+
+	// Top Read IO Using Processes, insert into chuncked slice and strip from chunk slice
+	sort.Slice(remainingProcesses, func(i, j int) bool {
+		return remainingProcesses[i].IoStat.ReadRate > remainingProcesses[j].IoStat.ReadRate
+	})
+	var ioReadSortedProcs []*model.ProcessStat
+	if len(remainingProcesses) <= cfg.AmountTopIOUsage {
+		ioReadSortedProcs, remainingProcesses = remainingProcesses, make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
+	} else {
+		ioReadSortedProcs, remainingProcesses = remainingProcesses[:cfg.AmountTopIOUsage], remainingProcesses[cfg.AmountTopIOUsage:]
+	}
+
+	// Top Write IO Using Processes, insert into chuncked slice and strip from chunk slice
+	sort.Slice(remainingProcesses, func(i, j int) bool {
+		return remainingProcesses[i].IoStat.WriteRate > remainingProcesses[j].IoStat.WriteRate
+	})
+	var ioWriteSortedProcs []*model.ProcessStat
+	if len(remainingProcesses) <= cfg.AmountTopIOUsage {
+		ioWriteSortedProcs, remainingProcesses = remainingProcesses, make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
+	} else {
+		ioWriteSortedProcs, remainingProcesses = remainingProcesses[:cfg.AmountTopIOUsage], remainingProcesses[cfg.AmountTopIOUsage:]
+	}
+
+	// Top Memory Using Processes, insert into chuncked slice and strip from chunk slice
+	sort.Slice(remainingProcesses, func(i, j int) bool {
+		return remainingProcesses[i].Memory.Rss > remainingProcesses[j].Memory.Rss
+	})
+	var memorySortedProcs []*model.ProcessStat
+	if len(remainingProcesses) <= cfg.AmountTopMemoryUsage {
+		memorySortedProcs, remainingProcesses = remainingProcesses, make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
+	} else {
+		memorySortedProcs, remainingProcesses = remainingProcesses[:cfg.AmountTopMemoryUsage], remainingProcesses[cfg.AmountTopMemoryUsage:]
+	}
+
+	// Take the remainingProcesses of the process and strip all processes that should be skipped
+	filteredProcessStats := remainingProcesses[:0]
+	for _, proc := range remainingProcesses {
+		if skipCompleteProcessStat(cfg, proc, lastProcs) {
+			continue
 		}
+
+		filteredProcessStats = append(filteredProcessStats, proc)
 	}
-	if len(chunk) > 0 {
-		chunked = append(chunked, chunk)
+
+	processStatsToInclude := append(
+		append(
+			append(
+				append(cpuSortedProcs, ioReadSortedProcs...),
+				ioWriteSortedProcs...),
+			memorySortedProcs...),
+		filteredProcessStats...)
+
+	return chunkProcessStats(processStatsToInclude, cfg.MaxPerMessage, make([][]*model.ProcessStat, 0))
+}
+
+func skipCompleteProcessStat(cfg *config.AgentConfig, fp *model.ProcessStat, lastProcs map[int32]*process.FilledProcess) bool {
+	if filledProc, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
+		return true
+	} else {
+		return skipProcess(cfg, filledProc, lastProcs)
 	}
+}
+
+func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chunked [][]*model.ProcessStat) [][]*model.ProcessStat {
+	for maxPerMessage < len(processStats) {
+		processStats, chunked = processStats[maxPerMessage:], append(chunked, processStats[0:maxPerMessage:maxPerMessage])
+	}
+	chunked = append(chunked, processStats)
+
 	return chunked
 }
 

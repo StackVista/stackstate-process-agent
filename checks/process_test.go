@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"fmt"
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
@@ -24,6 +25,20 @@ func makeProcess(pid int32, cmdline string) *process.FilledProcess {
 		Cmdline:     strings.Split(cmdline, " "),
 		MemInfo:     &process.MemoryInfoStat{},
 		CtxSwitches: &process.NumCtxSwitchesStat{},
+	}
+}
+
+func makeProcessWithResource(pid int32, cmdline string, resMemory, readBytes, writeBytes uint64, userCpu, systemCpu float64) *process.FilledProcess {
+	return &process.FilledProcess{
+		Pid:         pid,
+		Cmdline:     strings.Split(cmdline, " "),
+		MemInfo:     &process.MemoryInfoStat{ RSS: resMemory },
+		CtxSwitches: &process.NumCtxSwitchesStat{},
+		IOStat: &process.IOCountersStat{ ReadBytes: readBytes, WriteBytes: writeBytes },
+		CpuTime: cpu.TimesStat{
+			User: userCpu, System: systemCpu, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+			GuestNice: 0, Idle: 0, Stolen: 0,
+		},
 	}
 }
 
@@ -96,6 +111,140 @@ func TestProcessChunking(t *testing.T) {
 		}
 
 		chunked := fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun)
+
+		assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
+		total := 0
+		for _, c := range chunked {
+			total += len(c)
+		}
+		assert.Equal(t, tc.expectedTotal, total, "total test %d", i)
+
+		chunkedStat := fmtProcessStats(cfg, cur, last, containers, syst2, syst1, lastRun)
+		assert.Len(t, chunkedStat, tc.expectedChunks, "len stat %d", i)
+		total = 0
+		for _, c := range chunkedStat {
+			total += len(c)
+		}
+		assert.Equal(t, tc.expectedTotal, total, "total stat test %d", i)
+
+	}
+}
+
+func TestProcessFiltering(t *testing.T) {
+	p := []*process.FilledProcess{
+		// generic processes
+		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),
+		makeProcessWithResource(2, "mine-bitcoins -all -x", 0, 0, 0, 0, 0),
+		makeProcessWithResource(3, "datadog-process-agent -ddconfig datadog.conf", 0, 0, 0, 0, 0),
+		makeProcessWithResource(4, "foo -bar -bim", 0, 0, 0, 0, 0),
+		// resource intensive processes
+		// cpu resource intensive processes
+		makeProcessWithResource(5, "cpu resource process 1", 0, 0, 0, 50, 60),
+		makeProcessWithResource(6, "cpu resource process 2", 0, 0, 0, 100, 102),
+		makeProcessWithResource(7, "cpu resource process 3", 0, 0, 0, 101, 100),
+		makeProcessWithResource(8, "cpu resource process 4", 0, 0, 0, 60, 50),
+		makeProcessWithResource(9, "cpu resource process 5", 0, 0, 0, 90, 20),
+		// memory resource intensive processes
+		makeProcessWithResource(10, "memory resource process 1", 50, 0, 0, 0, 0),
+		makeProcessWithResource(11, "memory resource process 2", 150, 0, 0, 0, 0),
+		makeProcessWithResource(12, "memory resource process 3", 100, 0, 0, 0, 0),
+		makeProcessWithResource(13, "memory resource process 4", 200, 0, 0, 0, 0),
+		// read io resource intensive processes
+		makeProcessWithResource(14, "read io resource process 1", 0, 80, 0, 0, 0),
+		makeProcessWithResource(15, "read io resource process 2", 0, 40, 0, 0, 0),
+		makeProcessWithResource(16, "read io resource process 3", 0, 120, 0, 0, 0),
+		makeProcessWithResource(17, "read io resource process 4", 0, 90, 0, 0, 0),
+		// write io resource intensive processes
+		makeProcessWithResource(18, "write io resource process 1", 0, 0, 20, 0, 0),
+		makeProcessWithResource(19, "write io resource process 2", 0, 0, 60, 0, 0),
+		makeProcessWithResource(20, "write io resource process 3", 0, 0, 80, 0, 0),
+		makeProcessWithResource(21, "write io resource process 4", 0, 0, 70, 0, 0),
+	}
+	containers := []*containers.Container{}
+	lastRun := time.Now().Add(-5 * time.Second)
+	syst1, syst2 := cpu.TimesStat{}, cpu.TimesStat{}
+	cfg := config.NewDefaultAgentConfig()
+
+	for i, tc := range []struct {
+		cur, last      []*process.FilledProcess
+		maxSize        int
+		blacklist      []string
+		expectedTotal  int
+		expectedChunks int
+		amountTopCPUPercentageUsage int
+		amountTopIOUsage int
+		amountTopMemoryUsage int
+	}{
+		{
+			cur:            []*process.FilledProcess{p[0], p[1], p[2]},
+			last:           []*process.FilledProcess{p[0], p[1], p[2]},
+			maxSize:        3,
+			blacklist:      []string{},
+			expectedTotal:  3,
+			expectedChunks: 3,
+			amountTopCPUPercentageUsage: 1,
+			amountTopIOUsage: 1,
+			amountTopMemoryUsage: 1,
+		},
+		{
+			cur:            []*process.FilledProcess{p[0], p[1], p[2]},
+			last:           []*process.FilledProcess{p[0], p[2]},
+			maxSize:        1,
+			blacklist:      []string{},
+			expectedTotal:  2,
+			expectedChunks: 2,
+			amountTopCPUPercentageUsage: 1,
+			amountTopIOUsage: 1,
+			amountTopMemoryUsage: 1,
+		},
+		{
+			cur:            []*process.FilledProcess{p[0], p[1], p[2], p[3]},
+			last:           []*process.FilledProcess{p[0], p[1], p[2], p[3]},
+			maxSize:        10,
+			blacklist:      []string{"git", "datadog"},
+			expectedTotal:  2,
+			expectedChunks: 1,
+			amountTopCPUPercentageUsage: 1,
+			amountTopIOUsage: 1,
+			amountTopMemoryUsage: 1,
+		},
+		{
+			cur:            []*process.FilledProcess{p[0], p[1], p[2], p[3]},
+			last:           []*process.FilledProcess{p[0], p[1], p[2], p[3]},
+			maxSize:        10,
+			blacklist:      []string{"git", "datadog", "foo", "mine"},
+			expectedTotal:  0,
+			expectedChunks: 0,
+			amountTopCPUPercentageUsage: 1,
+			amountTopIOUsage: 1,
+			amountTopMemoryUsage: 1,
+		},
+	} {
+		bl := make([]*regexp.Regexp, 0, len(tc.blacklist))
+		for _, s := range tc.blacklist {
+			bl = append(bl, regexp.MustCompile(s))
+		}
+		cfg.Blacklist = bl
+		cfg.MaxPerMessage = tc.maxSize
+
+		cfg.AmountTopCPUPercentageUsage = tc.amountTopCPUPercentageUsage
+		cfg.AmountTopMemoryUsage = tc.amountTopMemoryUsage
+		cfg.AmountTopIOUsage = tc.amountTopIOUsage
+
+		cur := make(map[int32]*process.FilledProcess)
+		for _, c := range tc.cur {
+			cur[c.Pid] = c
+		}
+		last := make(map[int32]*process.FilledProcess)
+		for _, c := range tc.last {
+			last[c.Pid] = c
+		}
+
+		chunked := fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun)
+
+		fmt.Println("-------------------")
+		fmt.Printf("%v\n", chunked)
+		fmt.Println("-------------------")
 
 		assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
 		total := 0

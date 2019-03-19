@@ -33,10 +33,6 @@ var winopts struct {
 	stopService      bool
 }
 
-func init() {
-	fmt.Printf("main_windows.init()")
-}
-
 type myservice struct{}
 
 func (m *myservice) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {

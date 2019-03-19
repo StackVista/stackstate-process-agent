@@ -51,28 +51,34 @@ gofmt -l $REPLACE_MODE -r '"dd_agent_py" -> "sts_agent_py"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"dd_agent_py_env" -> "sts_agent_py_env"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"ddconfig" -> "stsconfig"' $REPLACE_SCOPE
 
-#  console changes
-
+# console changes
 gofmt -l $REPLACE_MODE -r '"/etc/datadog-agent/datadog.yaml" -> "/etc/stackstate-agent/stackstate.yaml"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"/opt/datadog-agent/bin/agent/agent" -> "/opt/stackstate-agent/bin/agent/agent"' $REPLACE_SCOPE
-gofmt -l $REPLACE_MODE -r '"Path to dd-agent config" -> "Path to stackstate-agent config"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"Path to dd-agent config" -> "Path to sts-agent config"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"Path to datadog.yaml config" -> "Path to stackstate.yaml config"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"/etc/dd-agent/datadog.conf" -> "/etc/stackstate-agent/stackstate.conf"' $REPLACE_SCOPE
 
+# windows changes
+gofmt -l $REPLACE_MODE -r '"datadog-process-agent" -> "stackstate-process-agent"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"c:\\programdata\\datadog\\datadog.yaml" -> "c:\\programdata\\stackstate\\stackstate.yaml"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"c:\\programdata\\datadog\\datadog.conf" -> "c:\\programdata\\stackstate\\stackstate.conf"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"c:\\programdata\\datadog\\conf.d" -> "c:\\programdata\\stackstate\\conf.d"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"c:\\programdata\\datadog\\logs\\process-agent.log" -> "c:\\programdata\\stackstate\\logs\\process-agent.log"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"c:\\Program Files\\Datadog\\Datadog Agent\\embedded\\agent.exe" -> "c:\\Program Files\\StackState\\StackState Agent\\embedded\\agent.exe"' $REPLACE_SCOPE
+sed -i 's/DataDog/StackState/g' ../cmd/agent/main_windows.go
 
+UNAME="$(uname)"
+if [[ $UNAME != MSYS* ]]; then
+    echo "Checking replacements..."
 
+    which rgrep
+    rgrep --include=*.go "\"DD_"  $PWD/../cmd $PWD/../config $PWD/../checks
 
-
-echo "Checking replacements..."
-
-which rgrep
-rgrep --include=*.go "\"DD_"  $PWD/../cmd $PWD/../config $PWD/../checks
-
-RESULT=$?
-if [ $RESULT -eq 0 ]; then
-  echo "Please fix branding: there is still something using DD_ prefix"
-  exit 1
-else
-  echo "Branding was successful, return code $RESULT"
+    RESULT=$?
+    if [ $RESULT -eq 0 ]; then
+      echo "Please fix branding: there is still something using DD_ prefix"
+      exit 1
+    else
+      echo "Branding was successful, return code $RESULT"
+    fi
 fi
-

@@ -16,7 +16,12 @@ process_config:
     container: 8
     process: 5
     connections: 5
-  #   A list of regex patterns that will exclude a process if matched.
+  #
+  process_inclusions:
+    amount_top_cpu_pct_usage: 5
+    amount_top_io_usage: 5
+    amount_top_mem_usage: 3
+  # A list of regex patterns that will exclude a process if matched.
   blacklist_patterns:
     # Linux Specific patterns
     - "^-bash"

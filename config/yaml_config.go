@@ -42,6 +42,13 @@ type YamlAgentConfig struct {
 			ProcessRealTime   int `yaml:"process_realtime"`
 			Connections       int `yaml:"connections"`
 		} `yaml:"intervals"`
+		// The inclusion amounts for the top resource consuming processes. These processes will be included regardless
+		// of being included in the blacklist patterns.
+		ProcessInclusions struct {
+			AmountTopCPUPercentageUsage         int `yaml:"amount_top_cpu_pct_usage"`
+			AmountTopIOUsage           int `yaml:"amount_top_io_usage"`
+			AmountTopMemoryUsage int `yaml:"amount_top_mem_usage"`
+		} `yaml:"process_inclusions"`
 		// A list of regex patterns that will exclude a process if matched.
 		BlacklistPatterns []string `yaml:"blacklist_patterns"`
 		// Enable/Disable the DataScrubber to obfuscate process args
@@ -153,6 +160,20 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		log.Infof("Overriding connections check interval to %ds", yc.Process.Intervals.Connections)
 		agentConf.CheckIntervals["connections"] = time.Duration(yc.Process.Intervals.Connections) * time.Second
 	}
+
+	if yc.Process.ProcessInclusions.AmountTopCPUPercentageUsage != 0 {
+		log.Infof("Overriding top CPU percentage using processes inclusions to %d", yc.Process.ProcessInclusions.AmountTopCPUPercentageUsage)
+		agentConf.AmountTopCPUPercentageUsage = yc.Process.ProcessInclusions.AmountTopCPUPercentageUsage
+	}
+	if yc.Process.ProcessInclusions.AmountTopIOUsage != 0 {
+		log.Infof("Overriding top IO using processes inclusions to %d", yc.Process.ProcessInclusions.AmountTopIOUsage)
+		agentConf.AmountTopIOUsage = yc.Process.ProcessInclusions.AmountTopIOUsage
+	}
+	if yc.Process.ProcessInclusions.AmountTopMemoryUsage != 0 {
+		log.Infof("Overriding top memory using processes inclusions to %d", yc.Process.ProcessInclusions.AmountTopMemoryUsage)
+		agentConf.AmountTopMemoryUsage = yc.Process.ProcessInclusions.AmountTopMemoryUsage
+	}
+
 	blacklist := make([]*regexp.Regexp, 0, len(yc.Process.BlacklistPatterns))
 	for _, b := range yc.Process.BlacklistPatterns {
 		r, err := regexp.Compile(b)

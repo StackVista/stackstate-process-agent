@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"sort"
 	"sync"
 	"time"
 
@@ -125,17 +126,17 @@ func fmtProcesses(
 		}
 	}
 
-	chunked := make([][]*model.Process, 0)
-	chunk := make([]*model.Process, 0, cfg.MaxPerMessage)
+	// Take all process and format them to the model.Process type
+	formattedProcesses := make([]*model.Process, 0, cfg.MaxPerMessage)
 	for _, fp := range procs {
-		if skipProcess(cfg, fp, lastProcs) {
-			continue
-		}
-
 		// Hide blacklisted args if the Scrubber is enabled
 		fp.Cmdline = cfg.Scrubber.ScrubProcessCommand(fp)
 
-		chunk = append(chunk, &model.Process{
+		if _, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
+			continue
+		}
+
+		formattedProcesses = append(formattedProcesses, &model.Process{
 			Pid:                    fp.Pid,
 			Command:                formatCommand(fp),
 			User:                   formatUser(fp),
@@ -149,17 +150,63 @@ func fmtProcesses(
 			InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
 			ContainerId:            cidByPid[fp.Pid],
 		})
-		// STS: for now we disable chunking until we support chunked receiving. Otherwise ppid
-		// get separated
-		if len(chunk) == cfg.MaxPerMessage {
-			break
+	}
+
+	// Top Percentage Using Processes, insert into chuncked slice and strip from chunk slice
+	sort.Slice(formattedProcesses, func(i, j int) bool {
+		return formattedProcesses[i].Cpu.TotalPct > formattedProcesses[j].Cpu.TotalPct
+	})
+	cpuSortedProcs, remainingProcesses := formattedProcesses[:cfg.AmountTopCPUPercentageUsage], formattedProcesses[cfg.AmountTopCPUPercentageUsage:]
+
+	// Top Read IO Using Processes, insert into chuncked slice and strip from chunk slice
+	sort.Slice(remainingProcesses, func(i, j int) bool {
+		return remainingProcesses[i].IoStat.ReadRate > remainingProcesses[j].IoStat.ReadRate
+	})
+	ioReadSortedProcs, remainingProcesses := remainingProcesses[:cfg.AmountTopIOUsage], remainingProcesses[cfg.AmountTopIOUsage:]
+
+	// Top Write IO Using Processes, insert into chuncked slice and strip from chunk slice
+	sort.Slice(remainingProcesses, func(i, j int) bool {
+		return remainingProcesses[i].IoStat.WriteRate > remainingProcesses[j].IoStat.WriteRate
+	})
+	ioWriteSortedProcs, remainingProcesses := remainingProcesses[:cfg.AmountTopIOUsage], remainingProcesses[cfg.AmountTopIOUsage:]
+
+	// Top Memory Using Processes, insert into chuncked slice and strip from chunk slice
+	sort.Slice(remainingProcesses, func(i, j int) bool {
+		return remainingProcesses[i].Memory.Rss > remainingProcesses[j].Memory.Rss
+	})
+	memorySortedProcs, remainingProcesses := remainingProcesses[:cfg.AmountTopMemoryUsage], remainingProcesses[cfg.AmountTopMemoryUsage:]
+
+	// Take the remainingProcesses of the process and strip all processes that should be skipped
+	filteredProcesses := remainingProcesses[:0]
+	for _, proc := range remainingProcesses {
+		if skipCompleteProcess(cfg, proc, lastProcs) {
+			continue
 		}
+
+		filteredProcesses = append(filteredProcesses, proc)
 	}
-	if len(chunk) > 0 {
-		chunked = append(chunked, chunk)
-	}
+
+	processesToInclude := append(
+		append(
+			append(
+				append(cpuSortedProcs, ioReadSortedProcs...),
+			ioWriteSortedProcs...),
+		memorySortedProcs...),
+	filteredProcesses...)
+
 	cfg.Scrubber.IncrementCacheAge()
-	return chunked
+	return chunkProcesses(processesToInclude, cfg.MaxPerMessage, make([][]*model.Process, 0))
+}
+
+func chunkProcesses(processes []*model.Process, maxPerMessage int, chunked [][]*model.Process) [][]*model.Process {
+
+	if len(processes) == 0 {
+		return chunked
+	} else if len(processes) > maxPerMessage {
+		return chunkProcesses(processes[maxPerMessage:], maxPerMessage, append(chunked, processes[:maxPerMessage]))
+	}
+
+	return append(chunked, processes)
 }
 
 func formatCommand(fp *process.FilledProcess) *model.Command {
@@ -229,8 +276,29 @@ func formatMemory(fp *process.FilledProcess) *model.MemoryStat {
 	return ms
 }
 
+// checks if the process was in the previous collected processes
+func pidMissingInLastProcs(pid int32, lastProcs map[int32]*process.FilledProcess) (*process.FilledProcess, bool) {
+	lastProcess, ok := lastProcs[pid]
+
+	if !ok {
+		// Skipping any processes that didn't exist in the previous run.
+		// This means short-lived processes (<2s) will never be captured.
+		return nil, true
+	}
+
+	return lastProcess, false
+}
+
 // skipProcess will skip a given process if it's blacklisted or hasn't existed
 // for multiple collections.
+func skipCompleteProcess(cfg *config.AgentConfig, fp *model.Process, lastProcs map[int32]*process.FilledProcess) bool {
+	if filledProc, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
+		return true
+	} else {
+		return skipProcess(cfg, filledProc, lastProcs)
+	}
+}
+
 func skipProcess(
 	cfg *config.AgentConfig,
 	fp *process.FilledProcess,
@@ -242,12 +310,9 @@ func skipProcess(
 	if config.IsBlacklisted(fp.Cmdline, cfg.Blacklist) {
 		return true
 	}
-	if _, ok := lastProcs[fp.Pid]; !ok {
-		// Skipping any processes that didn't exist in the previous run.
-		// This means short-lived processes (<2s) will never be captured.
-		return true
-	}
-	return false
+
+	_, ok := pidMissingInLastProcs(fp.Pid, lastProcs)
+	return ok
 }
 
 func (p *ProcessCheck) createTimesforPIDs(pids []uint32) map[uint32]int64 {

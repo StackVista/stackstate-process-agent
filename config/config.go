@@ -81,6 +81,11 @@ type AgentConfig struct {
 	StatsdHost    string
 	StatsdPort    int
 
+	// Top resource using process inclusion amounts
+	AmountTopCPUPercentageUsage int
+	AmountTopIOUsage int
+	AmountTopMemoryUsage int
+
 	// Network collection configuration
 	EnableNetworkTracing              bool
 	EnableLocalNetworkTracer          bool // To have the network tracer embedded in the process-agent
@@ -169,6 +174,11 @@ func NewDefaultAgentConfig() *AgentConfig {
 		// Statsd for internal instrumentation
 		StatsdHost: "127.0.0.1",
 		StatsdPort: 8125,
+
+		// Top resource using process inclusion amounts
+		AmountTopCPUPercentageUsage: 0,
+		AmountTopIOUsage: 0,
+		AmountTopMemoryUsage: 0,
 
 		// Path and environment for the dd-agent embedded python
 		DDAgentPy:    defaultDDAgentPy,

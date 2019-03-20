@@ -214,6 +214,11 @@ func sortAndTakeTopNProcessStats(processStats []*model.ProcessStat, sortingFunc 
 
 // Chunks processes into predefined max per message size
 func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chunked [][]*model.ProcessStat) [][]*model.ProcessStat {
+	// checks the length of the processStats otherwise it appends an empty array to the chunked
+	if len(processStats) == 0 {
+		return chunked
+	}
+
 	for maxPerMessage < len(processStats) {
 		processStats, chunked = processStats[maxPerMessage:], append(chunked, processStats[0:maxPerMessage:maxPerMessage])
 	}

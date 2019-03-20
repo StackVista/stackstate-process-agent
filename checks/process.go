@@ -231,6 +231,11 @@ func sortAndTakeTopN(processes []*model.Process, sortingFunc func(processes []*m
 
 // Chunks processes into predefined max per message size
 func chunkProcesses(processes []*model.Process, maxPerMessage int, chunked [][]*model.Process) [][]*model.Process {
+	// checks the length of the processes otherwise it appends an empty array to the chunked
+	if len(processes) == 0 {
+		return chunked
+	}
+
 	for maxPerMessage < len(processes) {
 		processes, chunked = processes[maxPerMessage:], append(chunked, processes[0:maxPerMessage:maxPerMessage])
 	}

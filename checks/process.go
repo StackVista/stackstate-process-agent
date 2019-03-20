@@ -132,6 +132,8 @@ func fmtProcesses(
 		// Hide blacklisted args if the Scrubber is enabled
 		fp.Cmdline = cfg.Scrubber.ScrubProcessCommand(fp)
 
+		// Skipping any processes that didn't exist in the previous run.
+		// This means short-lived processes (<2s) will never be captured.
 		if _, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
 			continue
 		}
@@ -152,49 +154,45 @@ func fmtProcesses(
 		})
 	}
 
-	// Top Percentage Using Processes, insert into chuncked slice and strip from chunk slice
-	sort.Slice(formattedProcesses, func(i, j int) bool {
-		return formattedProcesses[i].Cpu.TotalPct > formattedProcesses[j].Cpu.TotalPct
-	})
-	var cpuSortedProcs, remainingProcesses []*model.Process
-	if len(formattedProcesses) <= cfg.AmountTopCPUPercentageUsage {
-		cpuSortedProcs, remainingProcesses = formattedProcesses, make([]*model.Process, 0, cfg.MaxPerMessage)
-	} else {
-		cpuSortedProcs, remainingProcesses = formattedProcesses[:cfg.AmountTopCPUPercentageUsage], formattedProcesses[cfg.AmountTopCPUPercentageUsage:]
-	}
+	// Top Percentage Using Processes, insert into chunked slice and strip from chunk slice
+	percentageSort := func(processes []*model.Process) func(i, j int) bool {
+		sortingFunc := func(i, j int) bool {
+			return processes[i].Cpu.TotalPct > processes[j].Cpu.TotalPct
+		}
 
-	// Top Read IO Using Processes, insert into chuncked slice and strip from chunk slice
-	sort.Slice(remainingProcesses, func(i, j int) bool {
-		return remainingProcesses[i].IoStat.ReadRate > remainingProcesses[j].IoStat.ReadRate
-	})
-	var ioReadSortedProcs []*model.Process
-	if len(remainingProcesses) <= cfg.AmountTopIOUsage {
-		ioReadSortedProcs, remainingProcesses = remainingProcesses, make([]*model.Process, 0, cfg.MaxPerMessage)
-	} else {
-		ioReadSortedProcs, remainingProcesses = remainingProcesses[:cfg.AmountTopIOUsage], remainingProcesses[cfg.AmountTopIOUsage:]
+		return sortingFunc
 	}
+	cpuSortedProcs, remainingProcesses := sortAndTakeTopN(formattedProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
 
-	// Top Write IO Using Processes, insert into chuncked slice and strip from chunk slice
-	sort.Slice(remainingProcesses, func(i, j int) bool {
-		return remainingProcesses[i].IoStat.WriteRate > remainingProcesses[j].IoStat.WriteRate
-	})
-	var ioWriteSortedProcs []*model.Process
-	if len(remainingProcesses) <= cfg.AmountTopIOUsage {
-		ioWriteSortedProcs, remainingProcesses = remainingProcesses, make([]*model.Process, 0, cfg.MaxPerMessage)
-	} else {
-		ioWriteSortedProcs, remainingProcesses = remainingProcesses[:cfg.AmountTopIOUsage], remainingProcesses[cfg.AmountTopIOUsage:]
-	}
+	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice
+	readIOSort := func(processes []*model.Process) func(i, j int) bool {
+		sortingFunc := func(i, j int) bool {
+			return processes[i].IoStat.ReadRate > processes[j].IoStat.ReadRate
+		}
 
-	// Top Memory Using Processes, insert into chuncked slice and strip from chunk slice
-	sort.Slice(remainingProcesses, func(i, j int) bool {
-		return remainingProcesses[i].Memory.Rss > remainingProcesses[j].Memory.Rss
-	})
-	var memorySortedProcs []*model.Process
-	if len(remainingProcesses) <= cfg.AmountTopMemoryUsage {
-		memorySortedProcs, remainingProcesses = remainingProcesses, make([]*model.Process, 0, cfg.MaxPerMessage)
-	} else {
-		memorySortedProcs, remainingProcesses = remainingProcesses[:cfg.AmountTopMemoryUsage], remainingProcesses[cfg.AmountTopMemoryUsage:]
+		return sortingFunc
 	}
+	ioReadSortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, readIOSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+
+	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
+	writeIOSort := func(processes []*model.Process) func(i, j int) bool {
+		sortingFunc := func(i, j int) bool {
+			return processes[i].IoStat.WriteRate > processes[j].IoStat.WriteRate
+		}
+
+		return sortingFunc
+	}
+	ioWriteSortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, writeIOSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+
+	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
+	memorySort := func(processes []*model.Process) func(i, j int) bool {
+		sortingFunc := func(i, j int) bool {
+			return processes[i].Memory.Rss > processes[j].Memory.Rss
+		}
+
+		return sortingFunc
+	}
+	memorySortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, memorySort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
 
 	// Take the remainingProcesses of the process and strip all processes that should be skipped
 	filteredProcesses := remainingProcesses[:0]
@@ -218,6 +216,20 @@ func fmtProcesses(
 	return chunkProcesses(processesToInclude, cfg.MaxPerMessage, make([][]*model.Process, 0))
 }
 
+// sorts the provided array with the specific sorting func and takes the top n process and return the remaining
+func sortAndTakeTopN(processes []*model.Process, sortingFunc func(processes []*model.Process) func(i, j int) bool , n, defaultSize int) ([]*model.Process, []*model.Process) {
+	sort.Slice(processes, sortingFunc(processes))
+	var topNProcesses, remainingProcesses []*model.Process
+	if len(processes) <= n {
+		topNProcesses, remainingProcesses = processes, make([]*model.Process, 0, defaultSize)
+	} else {
+		topNProcesses, remainingProcesses = processes[:n], processes[n:]
+	}
+
+	return topNProcesses, remainingProcesses
+}
+
+// Chunks processes into predefined max per message size
 func chunkProcesses(processes []*model.Process, maxPerMessage int, chunked [][]*model.Process) [][]*model.Process {
 	for maxPerMessage < len(processes) {
 		processes, chunked = processes[maxPerMessage:], append(chunked, processes[0:maxPerMessage:maxPerMessage])

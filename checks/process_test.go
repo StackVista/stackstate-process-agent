@@ -1,11 +1,12 @@
 package checks
 
 import (
-	"fmt"
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"regexp"
+	"sort"
+
 	// "regexp"
 	"runtime"
 	"strings"
@@ -28,13 +29,13 @@ func makeProcess(pid int32, cmdline string) *process.FilledProcess {
 	}
 }
 
-func makeProcessWithResource(pid int32, cmdline string, resMemory, readBytes, writeBytes uint64, userCpu, systemCpu float64) *process.FilledProcess {
+func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCpu, systemCpu float64) *process.FilledProcess {
 	return &process.FilledProcess{
 		Pid:         pid,
 		Cmdline:     strings.Split(cmdline, " "),
 		MemInfo:     &process.MemoryInfoStat{ RSS: resMemory },
 		CtxSwitches: &process.NumCtxSwitchesStat{},
-		IOStat: &process.IOCountersStat{ ReadBytes: readBytes, WriteBytes: writeBytes },
+		IOStat: &process.IOCountersStat{ ReadCount: readCount, WriteCount: writeCount },
 		CpuTime: cpu.TimesStat{
 			User: userCpu, System: systemCpu, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
 			GuestNice: 0, Idle: 0, Stolen: 0,
@@ -131,7 +132,7 @@ func TestProcessChunking(t *testing.T) {
 }
 
 func TestProcessFiltering(t *testing.T) {
-	p := []*process.FilledProcess{
+	pNow := []*process.FilledProcess{
 		// generic processes
 		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),
 		makeProcessWithResource(2, "mine-bitcoins -all -x", 0, 0, 0, 0, 0),
@@ -139,11 +140,11 @@ func TestProcessFiltering(t *testing.T) {
 		makeProcessWithResource(4, "foo -bar -bim", 0, 0, 0, 0, 0),
 		// resource intensive processes
 		// cpu resource intensive processes
-		makeProcessWithResource(5, "cpu resource process 1", 0, 0, 0, 50, 60),
-		makeProcessWithResource(6, "cpu resource process 2", 0, 0, 0, 100, 102),
-		makeProcessWithResource(7, "cpu resource process 3", 0, 0, 0, 101, 100),
-		makeProcessWithResource(8, "cpu resource process 4", 0, 0, 0, 60, 50),
-		makeProcessWithResource(9, "cpu resource process 5", 0, 0, 0, 90, 20),
+		makeProcessWithResource(5, "cpu resource process 1", 0, 0, 0, 20, 20),
+		makeProcessWithResource(6, "cpu resource process 2", 0, 0, 0, 35, 60),
+		makeProcessWithResource(7, "cpu resource process 3", 0, 0, 0, 11, 15),
+		makeProcessWithResource(8, "cpu resource process 4", 0, 0, 0, 26, 12),
+		makeProcessWithResource(9, "cpu resource process 5", 0, 0, 0, 21, 16),
 		// memory resource intensive processes
 		makeProcessWithResource(10, "memory resource process 1", 50, 0, 0, 0, 0),
 		makeProcessWithResource(11, "memory resource process 2", 150, 0, 0, 0, 0),
@@ -160,9 +161,44 @@ func TestProcessFiltering(t *testing.T) {
 		makeProcessWithResource(20, "write io resource process 3", 0, 0, 80, 0, 0),
 		makeProcessWithResource(21, "write io resource process 4", 0, 0, 70, 0, 0),
 	}
+	pLast := []*process.FilledProcess{
+		// generic processes
+		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),
+		makeProcessWithResource(2, "mine-bitcoins -all -x", 0, 0, 0, 0, 0),
+		makeProcessWithResource(3, "datadog-process-agent -ddconfig datadog.conf", 0, 0, 0, 0, 0),
+		makeProcessWithResource(4, "foo -bar -bim", 0, 0, 0, 0, 0),
+		// resource intensive processes
+		// cpu resource intensive processes
+		makeProcessWithResource(5, "cpu resource process 1", 0, 0, 0, 4, 10),
+		makeProcessWithResource(6, "cpu resource process 2", 0, 0, 0, 4, 10),
+		makeProcessWithResource(7, "cpu resource process 3", 0, 0, 0, 4, 10),
+		makeProcessWithResource(8, "cpu resource process 4", 0, 0, 0, 4, 10),
+		makeProcessWithResource(9, "cpu resource process 5", 0, 0, 0, 4, 10),
+		// memory resource intensive processes
+		makeProcessWithResource(10, "memory resource process 1", 50, 0, 0, 0, 0),
+		makeProcessWithResource(11, "memory resource process 2", 150, 0, 0, 0, 0),
+		makeProcessWithResource(12, "memory resource process 3", 100, 0, 0, 0, 0),
+		makeProcessWithResource(13, "memory resource process 4", 200, 0, 0, 0, 0),
+		// read io resource intensive processes
+		makeProcessWithResource(14, "read io resource process 1", 0, 10, 0, 0, 0),
+		makeProcessWithResource(15, "read io resource process 2", 0, 10, 0, 0, 0),
+		makeProcessWithResource(16, "read io resource process 3", 0, 10, 0, 0, 0),
+		makeProcessWithResource(17, "read io resource process 4", 0, 10, 0, 0, 0),
+		// write io resource intensive processes
+		makeProcessWithResource(18, "write io resource process 1", 0, 0, 10, 0, 0),
+		makeProcessWithResource(19, "write io resource process 2", 0, 0, 10, 0, 0),
+		makeProcessWithResource(20, "write io resource process 3", 0, 0, 10, 0, 0),
+		makeProcessWithResource(21, "write io resource process 4", 0, 0, 10, 0, 0),
+	}
 	containers := []*containers.Container{}
 	lastRun := time.Now().Add(-5 * time.Second)
-	syst1, syst2 := cpu.TimesStat{}, cpu.TimesStat{}
+	syst1, syst2 := cpu.TimesStat{
+		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+		GuestNice: 0, Idle: 0, Stolen: 0,
+	}, cpu.TimesStat{
+		User: 20, System: 40, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+		GuestNice: 0, Idle: 0, Stolen: 0,
+	}
 	cfg := config.NewDefaultAgentConfig()
 
 	for i, tc := range []struct {
@@ -174,11 +210,12 @@ func TestProcessFiltering(t *testing.T) {
 		amountTopCPUPercentageUsage int
 		amountTopIOUsage int
 		amountTopMemoryUsage int
+		expectedPids []int32
 	}{
 		// expects all the processes to be present and chunked into 3 processes per chunk
 		{
-			cur:            p,
-			last:           p,
+			cur:            pNow,
+			last:           pLast,
 			maxSize:        3,
 			blacklist:      []string{},
 			expectedTotal:  21,
@@ -186,18 +223,34 @@ func TestProcessFiltering(t *testing.T) {
 			amountTopCPUPercentageUsage: 2,
 			amountTopIOUsage: 2,
 			amountTopMemoryUsage: 2,
+			expectedPids: []int32 { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 },
 		},
-		// expects all the processes to be present and chunked into 3 processes per chunk
+		// expects all the processes not listed in the blacklist to be present as well as the top resource consuming
+		// processes regardless of whether they are blacklisted or not
 		{
-			cur:            p,
-			last:           p,
+			cur:            pNow,
+			last:           pLast,
 			maxSize:        3,
 			blacklist:      []string{ "resource process" },
-			expectedTotal:  11,
+			expectedTotal:  12,
 			expectedChunks: 4,
 			amountTopCPUPercentageUsage: 2,
 			amountTopIOUsage: 2,
 			amountTopMemoryUsage: 2,
+			expectedPids: []int32 { 1, 2, 3, 4, 5, 6, 11, 13, 16, 17, 20, 21 },
+		},
+		// expects all the top resource consuming process only to be present in a single chunk
+		{
+			cur:            pNow,
+			last:           pLast,
+			maxSize:        4,
+			blacklist:      []string{ "resource process", "git", "datadog", "foo", "mine" },
+			expectedTotal:  4,
+			expectedChunks: 1,
+			amountTopCPUPercentageUsage: 1,
+			amountTopIOUsage: 1,
+			amountTopMemoryUsage: 1,
+			expectedPids: []int32 { 6, 13, 16, 20 },
 		},
 	} {
 		bl := make([]*regexp.Regexp, 0, len(tc.blacklist))
@@ -221,31 +274,36 @@ func TestProcessFiltering(t *testing.T) {
 		}
 
 		chunked := fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun)
-
-		fmt.Println("---------chunked----------")
-		fmt.Printf("%v\n", chunked)
-		fmt.Println("-------------------")
-
 		assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
 		total := 0
+		pids := make([]int32, 0)
 		for _, c := range chunked {
 			total += len(c)
+			for _, proc := range c {
+				pids = append(pids, proc.Pid)
+			}
 		}
 		assert.Equal(t, tc.expectedTotal, total, "total test %d", i)
+		sort.Slice(pids, func(i, j int) bool {
+			return pids[i] < pids[j]
+		})
+		assert.Equal(t, tc.expectedPids, pids, "expected pIds: %v, found pIds: %v", tc.expectedPids, pids)
 
 		chunkedStat := fmtProcessStats(cfg, cur, last, containers, syst2, syst1, lastRun)
-
-		fmt.Println("---------chunkedStat----------")
-		fmt.Printf("%v\n", chunkedStat)
-		fmt.Println("-------------------")
-
 		assert.Len(t, chunkedStat, tc.expectedChunks, "len stat %d", i)
 		total = 0
+		pids = make([]int32, 0)
 		for _, c := range chunkedStat {
 			total += len(c)
+			for _, proc := range c {
+				pids = append(pids, proc.Pid)
+			}
 		}
 		assert.Equal(t, tc.expectedTotal, total, "total stat test %d", i)
-
+		sort.Slice(pids, func(i, j int) bool {
+			return pids[i] < pids[j]
+		})
+		assert.Equal(t, tc.expectedPids, pids, "expected pIds: %v, found pIds: %v", tc.expectedPids, pids)
 	}
 }
 

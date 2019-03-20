@@ -200,7 +200,7 @@ func skipCompleteProcessStat(cfg *config.AgentConfig, fp *model.ProcessStat, las
 }
 
 // sorts the provided array with the specific sorting func and takes the top n process and return the remaining
-func sortAndTakeTopNProcessStats(processStats []*model.ProcessStat, sortingFunc func(processStats []*model.ProcessStat) func(i, j int) bool , n, defaultSize int) ([]*model.ProcessStat, []*model.ProcessStat) {
+func sortAndTakeTopNProcessStats(processStats []*model.ProcessStat, sortingFunc func(processStats []*model.ProcessStat) func(i, j int) bool, n, defaultSize int) ([]*model.ProcessStat, []*model.ProcessStat) {
 	sort.Slice(processStats, sortingFunc(processStats))
 	var topNProcessStats, remainingProcessStats []*model.ProcessStat
 	if len(processStats) <= n {

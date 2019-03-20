@@ -33,9 +33,9 @@ func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, wr
 	return &process.FilledProcess{
 		Pid:         pid,
 		Cmdline:     strings.Split(cmdline, " "),
-		MemInfo:     &process.MemoryInfoStat{ RSS: resMemory },
+		MemInfo:     &process.MemoryInfoStat{RSS: resMemory},
 		CtxSwitches: &process.NumCtxSwitchesStat{},
-		IOStat: &process.IOCountersStat{ ReadCount: readCount, WriteCount: writeCount },
+		IOStat:      &process.IOCountersStat{ReadCount: readCount, WriteCount: writeCount},
 		CpuTime: cpu.TimesStat{
 			User: userCpu, System: systemCpu, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
 			GuestNice: 0, Idle: 0, Stolen: 0,
@@ -202,55 +202,55 @@ func TestProcessFiltering(t *testing.T) {
 	cfg := config.NewDefaultAgentConfig()
 
 	for i, tc := range []struct {
-		cur, last      []*process.FilledProcess
-		maxSize        int
-		blacklist      []string
-		expectedTotal  int
-		expectedChunks int
+		cur, last                   []*process.FilledProcess
+		maxSize                     int
+		blacklist                   []string
+		expectedTotal               int
+		expectedChunks              int
 		amountTopCPUPercentageUsage int
-		amountTopIOUsage int
-		amountTopMemoryUsage int
-		expectedPids []int32
+		amountTopIOUsage            int
+		amountTopMemoryUsage        int
+		expectedPids                []int32
 	}{
 		// expects all the processes to be present and chunked into 3 processes per chunk
 		{
-			cur:            pNow,
-			last:           pLast,
-			maxSize:        3,
-			blacklist:      []string{},
-			expectedTotal:  21,
-			expectedChunks: 7,
+			cur:                         pNow,
+			last:                        pLast,
+			maxSize:                     3,
+			blacklist:                   []string{},
+			expectedTotal:               21,
+			expectedChunks:              7,
 			amountTopCPUPercentageUsage: 2,
-			amountTopIOUsage: 2,
-			amountTopMemoryUsage: 2,
-			expectedPids: []int32 { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 },
+			amountTopIOUsage:            2,
+			amountTopMemoryUsage:        2,
+			expectedPids:                []int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
 		},
 		// expects all the processes not listed in the blacklist to be present as well as the top resource consuming
 		// processes regardless of whether they are blacklisted or not
 		{
-			cur:            pNow,
-			last:           pLast,
-			maxSize:        3,
-			blacklist:      []string{ "resource process" },
-			expectedTotal:  12,
-			expectedChunks: 4,
+			cur:                         pNow,
+			last:                        pLast,
+			maxSize:                     3,
+			blacklist:                   []string{"resource process"},
+			expectedTotal:               12,
+			expectedChunks:              4,
 			amountTopCPUPercentageUsage: 2,
-			amountTopIOUsage: 2,
-			amountTopMemoryUsage: 2,
-			expectedPids: []int32 { 1, 2, 3, 4, 5, 6, 11, 13, 16, 17, 20, 21 },
+			amountTopIOUsage:            2,
+			amountTopMemoryUsage:        2,
+			expectedPids:                []int32{1, 2, 3, 4, 5, 6, 11, 13, 16, 17, 20, 21},
 		},
 		// expects all the top resource consuming process only to be present in a single chunk
 		{
-			cur:            pNow,
-			last:           pLast,
-			maxSize:        4,
-			blacklist:      []string{ "resource process", "git", "datadog", "foo", "mine" },
-			expectedTotal:  4,
-			expectedChunks: 1,
+			cur:                         pNow,
+			last:                        pLast,
+			maxSize:                     4,
+			blacklist:                   []string{"resource process", "git", "datadog", "foo", "mine"},
+			expectedTotal:               4,
+			expectedChunks:              1,
 			amountTopCPUPercentageUsage: 1,
-			amountTopIOUsage: 1,
-			amountTopMemoryUsage: 1,
-			expectedPids: []int32 { 6, 13, 16, 20 },
+			amountTopIOUsage:            1,
+			amountTopMemoryUsage:        1,
+			expectedPids:                []int32{6, 13, 16, 20},
 		},
 	} {
 		bl := make([]*regexp.Regexp, 0, len(tc.blacklist))
@@ -306,7 +306,6 @@ func TestProcessFiltering(t *testing.T) {
 		assert.Equal(t, tc.expectedPids, pids, "expected pIds: %v, found pIds: %v", tc.expectedPids, pids)
 	}
 }
-
 
 func TestPercentCalculation(t *testing.T) {
 	// Capping at NUM CPU * 100 if we get odd values for delta-{Proc,Time}

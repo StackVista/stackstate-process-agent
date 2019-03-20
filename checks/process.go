@@ -208,16 +208,16 @@ func fmtProcesses(
 		append(
 			append(
 				append(cpuSortedProcs, ioReadSortedProcs...),
-			ioWriteSortedProcs...),
-		memorySortedProcs...),
-	filteredProcesses...)
+				ioWriteSortedProcs...),
+			memorySortedProcs...),
+		filteredProcesses...)
 
 	cfg.Scrubber.IncrementCacheAge()
 	return chunkProcesses(processesToInclude, cfg.MaxPerMessage, make([][]*model.Process, 0))
 }
 
 // sorts the provided array with the specific sorting func and takes the top n process and return the remaining
-func sortAndTakeTopN(processes []*model.Process, sortingFunc func(processes []*model.Process) func(i, j int) bool , n, defaultSize int) ([]*model.Process, []*model.Process) {
+func sortAndTakeTopN(processes []*model.Process, sortingFunc func(processes []*model.Process) func(i, j int) bool, n, defaultSize int) ([]*model.Process, []*model.Process) {
 	sort.Slice(processes, sortingFunc(processes))
 	var topNProcesses, remainingProcesses []*model.Process
 	if len(processes) <= n {

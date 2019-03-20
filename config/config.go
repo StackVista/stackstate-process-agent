@@ -83,8 +83,8 @@ type AgentConfig struct {
 
 	// Top resource using process inclusion amounts
 	AmountTopCPUPercentageUsage int
-	AmountTopIOUsage int
-	AmountTopMemoryUsage int
+	AmountTopIOUsage            int
+	AmountTopMemoryUsage        int
 
 	// Network collection configuration
 	EnableNetworkTracing              bool
@@ -177,8 +177,8 @@ func NewDefaultAgentConfig() *AgentConfig {
 
 		// Top resource using process inclusion amounts
 		AmountTopCPUPercentageUsage: 0,
-		AmountTopIOUsage: 0,
-		AmountTopMemoryUsage: 0,
+		AmountTopIOUsage:            0,
+		AmountTopMemoryUsage:        0,
 
 		// Path and environment for the dd-agent embedded python
 		DDAgentPy:    defaultDDAgentPy,

@@ -45,9 +45,9 @@ type YamlAgentConfig struct {
 		// The inclusion amounts for the top resource consuming processes. These processes will be included regardless
 		// of being included in the blacklist patterns.
 		ProcessInclusions struct {
-			AmountTopCPUPercentageUsage         int `yaml:"amount_top_cpu_pct_usage"`
-			AmountTopIOUsage           int `yaml:"amount_top_io_usage"`
-			AmountTopMemoryUsage int `yaml:"amount_top_mem_usage"`
+			AmountTopCPUPercentageUsage int `yaml:"amount_top_cpu_pct_usage"`
+			AmountTopIOUsage            int `yaml:"amount_top_io_usage"`
+			AmountTopMemoryUsage        int `yaml:"amount_top_mem_usage"`
 		} `yaml:"process_inclusions"`
 		// A list of regex patterns that will exclude a process if matched.
 		BlacklistPatterns []string `yaml:"blacklist_patterns"`

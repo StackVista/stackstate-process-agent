@@ -29,7 +29,7 @@ func makeProcess(pid int32, cmdline string) *process.FilledProcess {
 	}
 }
 
-func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCpu, systemCpu float64) *process.FilledProcess {
+func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCPU, systemCPU float64) *process.FilledProcess {
 	return &process.FilledProcess{
 		Pid:         pid,
 		Cmdline:     strings.Split(cmdline, " "),
@@ -37,7 +37,7 @@ func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, wr
 		CtxSwitches: &process.NumCtxSwitchesStat{},
 		IOStat:      &process.IOCountersStat{ReadCount: readCount, WriteCount: writeCount},
 		CpuTime: cpu.TimesStat{
-			User: userCpu, System: systemCpu, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+			User: userCPU, System: systemCPU, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
 			GuestNice: 0, Idle: 0, Stolen: 0,
 		},
 	}
@@ -243,14 +243,14 @@ func TestProcessFiltering(t *testing.T) {
 		{
 			cur:                         pNow,
 			last:                        pLast,
-			maxSize:                     4,
+			maxSize:                     7,
 			blacklist:                   []string{"resource process", "git", "datadog", "foo", "mine"},
-			expectedTotal:               4,
+			expectedTotal:               7,
 			expectedChunks:              1,
-			amountTopCPUPercentageUsage: 1,
+			amountTopCPUPercentageUsage: 2,
 			amountTopIOUsage:            1,
-			amountTopMemoryUsage:        1,
-			expectedPids:                []int32{6, 13, 16, 20},
+			amountTopMemoryUsage:        3,
+			expectedPids:                []int32{5, 6, 11, 12, 13, 16, 20},
 		},
 	} {
 		bl := make([]*regexp.Regexp, 0, len(tc.blacklist))

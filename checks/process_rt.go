@@ -148,7 +148,7 @@ func fmtProcessStats(
 
 		return sortingFunc
 	}
-	ioReadSortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, readIOSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+	ioReadSortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, readIOSort, cfg.AmountTopIOUsage, cfg.MaxPerMessage)
 
 	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
 	writeIOSort := func(processes []*model.ProcessStat) func(i, j int) bool {
@@ -158,7 +158,7 @@ func fmtProcessStats(
 
 		return sortingFunc
 	}
-	ioWriteSortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, writeIOSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+	ioWriteSortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, writeIOSort, cfg.AmountTopIOUsage, cfg.MaxPerMessage)
 
 	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
 	memorySort := func(processes []*model.ProcessStat) func(i, j int) bool {
@@ -168,7 +168,7 @@ func fmtProcessStats(
 
 		return sortingFunc
 	}
-	memorySortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, memorySort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+	memorySortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, memorySort, cfg.AmountTopMemoryUsage, cfg.MaxPerMessage)
 
 	// Take the remainingProcesses of the process and strip all processes that should be skipped
 	filteredProcessStats := remainingProcesses[:0]
@@ -192,11 +192,11 @@ func fmtProcessStats(
 }
 
 func skipCompleteProcessStat(cfg *config.AgentConfig, fp *model.ProcessStat, lastProcs map[int32]*process.FilledProcess) bool {
-	if filledProc, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
+	filledProc, ok := pidMissingInLastProcs(fp.Pid, lastProcs)
+	if ok {
 		return true
-	} else {
-		return skipProcess(cfg, filledProc, lastProcs)
 	}
+	return skipProcess(cfg, filledProc, lastProcs)
 }
 
 // sorts the provided array with the specific sorting func and takes the top n process and return the remaining
@@ -220,9 +220,8 @@ func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chu
 	// checks the length of the processStats otherwise it appends an empty array to the chunked
 	if len(processStats) == 0 {
 		return chunked
-	} else {
-		return append(chunked, processStats)
 	}
+	return append(chunked, processStats)
 }
 
 func calculateRate(cur, prev uint64, before time.Time) float32 {

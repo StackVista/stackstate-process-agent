@@ -18,12 +18,14 @@ process_config:
     connections: 5
   #
   process_inclusions:
-    amount_top_cpu_pct_usage: 5
-    amount_top_io_usage: 5
+    amount_top_cpu_pct_usage: 3
+    amount_top_io_usage: 3
     amount_top_mem_usage: 3
   # A list of regex patterns that will exclude a process if matched.
   blacklist_patterns:
     # Linux Specific patterns
+    # stress is used for molecule testing
+    - "stress"
     - "^-bash"
     - "^/bin/bash"
     - "^/lib/systemd/"

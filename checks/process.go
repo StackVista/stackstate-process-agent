@@ -172,7 +172,7 @@ func fmtProcesses(
 
 		return sortingFunc
 	}
-	ioReadSortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, readIOSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+	ioReadSortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, readIOSort, cfg.AmountTopIOUsage, cfg.MaxPerMessage)
 
 	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
 	writeIOSort := func(processes []*model.Process) func(i, j int) bool {
@@ -182,7 +182,7 @@ func fmtProcesses(
 
 		return sortingFunc
 	}
-	ioWriteSortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, writeIOSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+	ioWriteSortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, writeIOSort, cfg.AmountTopIOUsage, cfg.MaxPerMessage)
 
 	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
 	memorySort := func(processes []*model.Process) func(i, j int) bool {
@@ -192,7 +192,7 @@ func fmtProcesses(
 
 		return sortingFunc
 	}
-	memorySortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, memorySort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+	memorySortedProcs, remainingProcesses := sortAndTakeTopN(remainingProcesses, memorySort, cfg.AmountTopMemoryUsage, cfg.MaxPerMessage)
 
 	// Take the remainingProcesses of the process and strip all processes that should be skipped
 	filteredProcesses := remainingProcesses[:0]
@@ -237,9 +237,8 @@ func chunkProcesses(processes []*model.Process, maxPerMessage int, chunked [][]*
 	// checks the length of the processes otherwise it appends an empty array to the chunked
 	if len(processes) == 0 {
 		return chunked
-	} else {
-		return append(chunked, processes)
 	}
+	return append(chunked, processes)
 }
 
 func formatCommand(fp *process.FilledProcess) *model.Command {
@@ -325,11 +324,11 @@ func pidMissingInLastProcs(pid int32, lastProcs map[int32]*process.FilledProcess
 // skipProcess will skip a given process if it's blacklisted or hasn't existed
 // for multiple collections.
 func skipCompleteProcess(cfg *config.AgentConfig, fp *model.Process, lastProcs map[int32]*process.FilledProcess) bool {
-	if filledProc, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
+	filledProc, ok := pidMissingInLastProcs(fp.Pid, lastProcs)
+	if ok {
 		return true
-	} else {
-		return skipProcess(cfg, filledProc, lastProcs)
 	}
+	return skipProcess(cfg, filledProc, lastProcs)
 }
 
 func skipProcess(

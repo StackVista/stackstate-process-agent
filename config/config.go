@@ -83,7 +83,8 @@ type AgentConfig struct {
 
 	// Top resource using process inclusion amounts
 	AmountTopCPUPercentageUsage int
-	AmountTopIOUsage            int
+	AmountTopIOReadUsage        int
+	AmountTopIOWriteUsage       int
 	AmountTopMemoryUsage        int
 
 	// Network collection configuration
@@ -177,7 +178,8 @@ func NewDefaultAgentConfig() *AgentConfig {
 
 		// Top resource using process inclusion amounts
 		AmountTopCPUPercentageUsage: 0,
-		AmountTopIOUsage:            0,
+		AmountTopIOReadUsage:        0,
+		AmountTopIOWriteUsage:       0,
 		AmountTopMemoryUsage:        0,
 
 		// Path and environment for the dd-agent embedded python

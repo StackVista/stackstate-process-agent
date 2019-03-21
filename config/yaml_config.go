@@ -44,13 +44,16 @@ type YamlAgentConfig struct {
 		} `yaml:"intervals"`
 		// The inclusion amounts for the top resource consuming processes. These processes will be included regardless
 		// of being included in the blacklist patterns.
-		ProcessInclusions struct {
-			AmountTopCPUPercentageUsage int `yaml:"amount_top_cpu_pct_usage"`
-			AmountTopIOUsage            int `yaml:"amount_top_io_usage"`
-			AmountTopMemoryUsage        int `yaml:"amount_top_mem_usage"`
-		} `yaml:"process_inclusions"`
-		// A list of regex patterns that will exclude a process if matched.
-		BlacklistPatterns []string `yaml:"blacklist_patterns"`
+		Blacklist struct {
+			Inclusions struct {
+				AmountTopCPUPercentageUsage int `yaml:"amount_top_cpu_pct_usage"`
+				AmountTopIOReadUsage        int `yaml:"amount_top_io_read_usage"`
+				AmountTopIOWriteUsage       int `yaml:"amount_top_io_write_usage"`
+				AmountTopMemoryUsage        int `yaml:"amount_top_mem_usage"`
+			} `yaml:"inclusions"`
+			// A list of regex patterns that will exclude a process if matched.
+			Patterns []string `yaml:"patterns"`
+		} `yaml:"process_blacklist"`
 		// Enable/Disable the DataScrubber to obfuscate process args
 		// XXX: Using a bool pointer to differentiate between empty and set.
 		ScrubArgs *bool `yaml:"scrub_args,omitempty"`
@@ -161,21 +164,25 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		agentConf.CheckIntervals["connections"] = time.Duration(yc.Process.Intervals.Connections) * time.Second
 	}
 
-	if yc.Process.ProcessInclusions.AmountTopCPUPercentageUsage != 0 {
-		log.Infof("Overriding top CPU percentage using processes inclusions to %d", yc.Process.ProcessInclusions.AmountTopCPUPercentageUsage)
-		agentConf.AmountTopCPUPercentageUsage = yc.Process.ProcessInclusions.AmountTopCPUPercentageUsage
+	if yc.Process.Blacklist.Inclusions.AmountTopCPUPercentageUsage != 0 {
+		log.Infof("Overriding top CPU percentage using processes inclusions to %d", yc.Process.Blacklist.Inclusions.AmountTopCPUPercentageUsage)
+		agentConf.AmountTopCPUPercentageUsage = yc.Process.Blacklist.Inclusions.AmountTopCPUPercentageUsage
 	}
-	if yc.Process.ProcessInclusions.AmountTopIOUsage != 0 {
-		log.Infof("Overriding top IO using processes inclusions to %d", yc.Process.ProcessInclusions.AmountTopIOUsage)
-		agentConf.AmountTopIOUsage = yc.Process.ProcessInclusions.AmountTopIOUsage
+	if yc.Process.Blacklist.Inclusions.AmountTopIOReadUsage != 0 {
+		log.Infof("Overriding top IO read using processes inclusions to %d", yc.Process.Blacklist.Inclusions.AmountTopIOReadUsage)
+		agentConf.AmountTopIOReadUsage = yc.Process.Blacklist.Inclusions.AmountTopIOReadUsage
 	}
-	if yc.Process.ProcessInclusions.AmountTopMemoryUsage != 0 {
-		log.Infof("Overriding top memory using processes inclusions to %d", yc.Process.ProcessInclusions.AmountTopMemoryUsage)
-		agentConf.AmountTopMemoryUsage = yc.Process.ProcessInclusions.AmountTopMemoryUsage
+	if yc.Process.Blacklist.Inclusions.AmountTopIOWriteUsage != 0 {
+		log.Infof("Overriding top IO write using processes inclusions to %d", yc.Process.Blacklist.Inclusions.AmountTopIOWriteUsage)
+		agentConf.AmountTopIOWriteUsage = yc.Process.Blacklist.Inclusions.AmountTopIOWriteUsage
+	}
+	if yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage != 0 {
+		log.Infof("Overriding top memory using processes inclusions to %d", yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage)
+		agentConf.AmountTopMemoryUsage = yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage
 	}
 
-	blacklist := make([]*regexp.Regexp, 0, len(yc.Process.BlacklistPatterns))
-	for _, b := range yc.Process.BlacklistPatterns {
+	blacklist := make([]*regexp.Regexp, 0, len(yc.Process.Blacklist.Patterns))
+	for _, b := range yc.Process.Blacklist.Patterns {
 		r, err := regexp.Compile(b)
 		if err != nil {
 			log.Warnf("Invalid blacklist pattern: %s", b)

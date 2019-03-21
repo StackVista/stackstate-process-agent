@@ -43,94 +43,6 @@ func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, wr
 	}
 }
 
-func TestProcessChunking(t *testing.T) {
-	p := []*process.FilledProcess{
-		makeProcess(1, "git clone google.com"),
-		makeProcess(2, "mine-bitcoins -all -x"),
-		makeProcess(3, "datadog-process-agent -ddconfig datadog.conf"),
-		makeProcess(4, "foo -bar -bim"),
-	}
-	containers := []*containers.Container{}
-	lastRun := time.Now().Add(-5 * time.Second)
-	syst1, syst2 := cpu.TimesStat{}, cpu.TimesStat{}
-	cfg := config.NewDefaultAgentConfig()
-
-	for i, tc := range []struct {
-		cur, last      []*process.FilledProcess
-		maxSize        int
-		blacklist      []string
-		expectedTotal  int
-		expectedChunks int
-	}{
-		{
-			cur:            []*process.FilledProcess{p[0], p[1], p[2]},
-			last:           []*process.FilledProcess{p[0], p[1], p[2]},
-			maxSize:        1,
-			blacklist:      []string{},
-			expectedTotal:  3,
-			expectedChunks: 3,
-		},
-		{
-			cur:            []*process.FilledProcess{p[0], p[1], p[2]},
-			last:           []*process.FilledProcess{p[0], p[2]},
-			maxSize:        1,
-			blacklist:      []string{},
-			expectedTotal:  2,
-			expectedChunks: 2,
-		},
-		{
-			cur:            []*process.FilledProcess{p[0], p[1], p[2], p[3]},
-			last:           []*process.FilledProcess{p[0], p[1], p[2], p[3]},
-			maxSize:        10,
-			blacklist:      []string{"git", "datadog"},
-			expectedTotal:  2,
-			expectedChunks: 1,
-		},
-		{
-			cur:            []*process.FilledProcess{p[0], p[1], p[2], p[3]},
-			last:           []*process.FilledProcess{p[0], p[1], p[2], p[3]},
-			maxSize:        10,
-			blacklist:      []string{"git", "datadog", "foo", "mine"},
-			expectedTotal:  0,
-			expectedChunks: 0,
-		},
-	} {
-		bl := make([]*regexp.Regexp, 0, len(tc.blacklist))
-		for _, s := range tc.blacklist {
-			bl = append(bl, regexp.MustCompile(s))
-		}
-		cfg.Blacklist = bl
-		cfg.MaxPerMessage = tc.maxSize
-
-		cur := make(map[int32]*process.FilledProcess)
-		for _, c := range tc.cur {
-			cur[c.Pid] = c
-		}
-		last := make(map[int32]*process.FilledProcess)
-		for _, c := range tc.last {
-			last[c.Pid] = c
-		}
-
-		chunked := fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun)
-
-		assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
-		total := 0
-		for _, c := range chunked {
-			total += len(c)
-		}
-		assert.Equal(t, tc.expectedTotal, total, "total test %d", i)
-
-		chunkedStat := fmtProcessStats(cfg, cur, last, containers, syst2, syst1, lastRun)
-		assert.Len(t, chunkedStat, tc.expectedChunks, "len stat %d", i)
-		total = 0
-		for _, c := range chunkedStat {
-			total += len(c)
-		}
-		assert.Equal(t, tc.expectedTotal, total, "total stat test %d", i)
-
-	}
-}
-
 func TestProcessFiltering(t *testing.T) {
 	pNow := []*process.FilledProcess{
 		// generic processes
@@ -208,7 +120,8 @@ func TestProcessFiltering(t *testing.T) {
 		expectedTotal               int
 		expectedChunks              int
 		amountTopCPUPercentageUsage int
-		amountTopIOUsage            int
+		amountTopIOReadUsage        int
+		amountTopIOWriteUsage       int
 		amountTopMemoryUsage        int
 		expectedPids                []int32
 	}{
@@ -221,7 +134,8 @@ func TestProcessFiltering(t *testing.T) {
 			expectedTotal:               21,
 			expectedChunks:              7,
 			amountTopCPUPercentageUsage: 2,
-			amountTopIOUsage:            2,
+			amountTopIOReadUsage:        2,
+			amountTopIOWriteUsage:       2,
 			amountTopMemoryUsage:        2,
 			expectedPids:                []int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
 		},
@@ -235,7 +149,8 @@ func TestProcessFiltering(t *testing.T) {
 			expectedTotal:               12,
 			expectedChunks:              4,
 			amountTopCPUPercentageUsage: 2,
-			amountTopIOUsage:            2,
+			amountTopIOReadUsage:        2,
+			amountTopIOWriteUsage:       2,
 			amountTopMemoryUsage:        2,
 			expectedPids:                []int32{1, 2, 3, 4, 5, 6, 11, 13, 16, 17, 20, 21},
 		},
@@ -248,7 +163,8 @@ func TestProcessFiltering(t *testing.T) {
 			expectedTotal:               7,
 			expectedChunks:              1,
 			amountTopCPUPercentageUsage: 2,
-			amountTopIOUsage:            1,
+			amountTopIOReadUsage:        1,
+			amountTopIOWriteUsage:       1,
 			amountTopMemoryUsage:        3,
 			expectedPids:                []int32{5, 6, 11, 12, 13, 16, 20},
 		},
@@ -262,7 +178,8 @@ func TestProcessFiltering(t *testing.T) {
 
 		cfg.AmountTopCPUPercentageUsage = tc.amountTopCPUPercentageUsage
 		cfg.AmountTopMemoryUsage = tc.amountTopMemoryUsage
-		cfg.AmountTopIOUsage = tc.amountTopIOUsage
+		cfg.AmountTopIOReadUsage = tc.amountTopIOReadUsage
+		cfg.AmountTopIOWriteUsage = tc.amountTopIOWriteUsage
 
 		cur := make(map[int32]*process.FilledProcess)
 		for _, c := range tc.cur {

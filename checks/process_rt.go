@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"sort"
 	"time"
 
 	"github.com/DataDog/gopsutil/cpu"
@@ -108,13 +107,25 @@ func fmtProcessStats(
 	}
 
 	// Take all process and format them to the model.Process type
-	formattedProcesses := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
+	commonProcesses := make([]*ProcessCommon, 0, cfg.MaxPerMessage)
+	processStatMap := make(map[int32]*model.ProcessStat, cfg.MaxPerMessage)
 	for _, fp := range procs {
+		// Skipping any processes that didn't exist in the previous run.
+		// This means short-lived processes (<2s) will never be captured.
 		if _, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
 			continue
 		}
 
-		formattedProcesses = append(formattedProcesses, &model.ProcessStat{
+		// mapping to a common process type to do sorting
+		commonProcesses = append(commonProcesses, &ProcessCommon{
+			Pid:     fp.Pid,
+			Command: formatCommand(fp),
+			Memory:  formatMemory(fp),
+			Cpu:     formatCPU(fp, fp.CpuTime, lastProcs[fp.Pid].CpuTime, syst2, syst1),
+			IoStat:  formatIO(fp, lastProcs[fp.Pid].IOStat, lastRun),
+		})
+
+		processStatMap[fp.Pid] = &model.ProcessStat{
 			Pid:                    fp.Pid,
 			CreateTime:             fp.CreateTime,
 			Memory:                 formatMemory(fp),
@@ -127,108 +138,23 @@ func fmtProcessStats(
 			VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
 			InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
 			ContainerId:            cidByPid[fp.Pid],
-		})
-	}
-
-	// Top Percentage Using Processes, insert into chunked slice and strip from chunk slice
-	percentageSort := func(processes []*model.ProcessStat) func(i, j int) bool {
-		sortingFunc := func(i, j int) bool {
-			return processes[i].Cpu.TotalPct > processes[j].Cpu.TotalPct
 		}
-
-		return sortingFunc
 	}
-	cpuSortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(formattedProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
 
-	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice
-	readIOSort := func(processes []*model.ProcessStat) func(i, j int) bool {
-		sortingFunc := func(i, j int) bool {
-			return processes[i].IoStat.ReadRate > processes[j].IoStat.ReadRate
-		}
-
-		return sortingFunc
+	// Process inclusions
+	processes := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
+	topProcesses, remainingProcesses := getProcessInclusions(commonProcesses, cfg)
+	for _, p := range topProcesses {
+		processes = append(processes, processStatMap[p.Pid])
 	}
-	ioReadSortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, readIOSort, cfg.AmountTopIOUsage, cfg.MaxPerMessage)
-
-	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
-	writeIOSort := func(processes []*model.ProcessStat) func(i, j int) bool {
-		sortingFunc := func(i, j int) bool {
-			return processes[i].IoStat.WriteRate > processes[j].IoStat.WriteRate
-		}
-
-		return sortingFunc
-	}
-	ioWriteSortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, writeIOSort, cfg.AmountTopIOUsage, cfg.MaxPerMessage)
-
-	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
-	memorySort := func(processes []*model.ProcessStat) func(i, j int) bool {
-		sortingFunc := func(i, j int) bool {
-			return processes[i].Memory.Rss > processes[j].Memory.Rss
-		}
-
-		return sortingFunc
-	}
-	memorySortedProcs, remainingProcesses := sortAndTakeTopNProcessStats(remainingProcesses, memorySort, cfg.AmountTopMemoryUsage, cfg.MaxPerMessage)
 
 	// Take the remainingProcesses of the process and strip all processes that should be skipped
-	filteredProcessStats := remainingProcesses[:0]
-	for _, proc := range remainingProcesses {
-		if skipCompleteProcessStat(cfg, proc, lastProcs) {
+	for _, p := range remainingProcesses {
+		if isProcessBlacklisted(cfg, p.Command.Args) {
 			continue
 		}
-
-		filteredProcessStats = append(filteredProcessStats, proc)
+		processes = append(processes, processStatMap[p.Pid])
 	}
 
-	processStatsToInclude := append(
-		append(
-			append(
-				append(cpuSortedProcs, ioReadSortedProcs...),
-				ioWriteSortedProcs...),
-			memorySortedProcs...),
-		filteredProcessStats...)
-
-	return chunkProcessStats(processStatsToInclude, cfg.MaxPerMessage, make([][]*model.ProcessStat, 0))
-}
-
-func skipCompleteProcessStat(cfg *config.AgentConfig, fp *model.ProcessStat, lastProcs map[int32]*process.FilledProcess) bool {
-	filledProc, ok := pidMissingInLastProcs(fp.Pid, lastProcs)
-	if ok {
-		return true
-	}
-	return skipProcess(cfg, filledProc, lastProcs)
-}
-
-// sorts the provided array with the specific sorting func and takes the top n process and return the remaining
-func sortAndTakeTopNProcessStats(processStats []*model.ProcessStat, sortingFunc func(processStats []*model.ProcessStat) func(i, j int) bool, n, defaultSize int) ([]*model.ProcessStat, []*model.ProcessStat) {
-	sort.Slice(processStats, sortingFunc(processStats))
-	var topNProcessStats, remainingProcessStats []*model.ProcessStat
-	if len(processStats) <= n {
-		topNProcessStats, remainingProcessStats = processStats, make([]*model.ProcessStat, 0, defaultSize)
-	} else {
-		topNProcessStats, remainingProcessStats = processStats[:n], processStats[n:]
-	}
-
-	return topNProcessStats, remainingProcessStats
-}
-
-// Chunks processes into predefined max per message size
-func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chunked [][]*model.ProcessStat) [][]*model.ProcessStat {
-	for maxPerMessage < len(processStats) {
-		processStats, chunked = processStats[maxPerMessage:], append(chunked, processStats[0:maxPerMessage:maxPerMessage])
-	}
-	// checks the length of the processStats otherwise it appends an empty array to the chunked
-	if len(processStats) == 0 {
-		return chunked
-	}
-	return append(chunked, processStats)
-}
-
-func calculateRate(cur, prev uint64, before time.Time) float32 {
-	now := time.Now()
-	diff := now.Unix() - before.Unix()
-	if before.IsZero() || diff <= 0 || prev == 0 {
-		return 0
-	}
-	return float32(cur-prev) / float32(diff)
+	return chunkProcessStats(processes, cfg.MaxPerMessage, make([][]*model.ProcessStat, 0))
 }

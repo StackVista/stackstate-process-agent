@@ -121,7 +121,7 @@ func fmtProcessStats(
 			Pid:     fp.Pid,
 			Command: formatCommand(fp),
 			Memory:  formatMemory(fp),
-			Cpu:     formatCPU(fp, fp.CpuTime, lastProcs[fp.Pid].CpuTime, syst2, syst1),
+			CPU:     formatCPU(fp, fp.CpuTime, lastProcs[fp.Pid].CpuTime, syst2, syst1),
 			IoStat:  formatIO(fp, lastProcs[fp.Pid].IOStat, lastRun),
 		})
 

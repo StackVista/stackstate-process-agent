@@ -7,7 +7,7 @@ variables:
   STS_AWS_BUCKET: stackstate-process-agent-2-test
   STS_REPO_BRANCH_NAME: $CI_COMMIT_REF_NAME
   CIRCLE_BRANCH: $CI_COMMIT_REF_NAME
-  BASH_ENV: /root/.bashrc
+  BUILD_ENV: /root/.bashrc
 
 build_linux:
   image: stackstate/stackstate-process-agent-runner-gitlab:centos6
@@ -16,18 +16,19 @@ build_linux:
     - mkdir -p /go/src/github.com/StackVista
     - ln -s $CI_PROJECT_DIR  /go/src/github.com/StackVista/stackstate-process-agent
   script:
-    - touch $BASH_ENV
-    - echo 'export IMPORT_PATH=$GOPATH/src/github.com/StackVista/stackstate-process-agent' >> $BASH_ENV
+    - touch $BUILD_ENV
+    - echo 'export IMPORT_PATH=$GOPATH/src/github.com/StackVista/stackstate-process-agent' >> $BUILD_ENV
     - git status -s
-    - echo "export PROCESS_AGENT_VERSION=$(packaging/version.sh)" >> $BASH_ENV
-    - echo "export EBPF=${EBPF:-true}" >> $BASH_ENV
-    - echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BASH_ENV && source $BASH_ENV
+    - echo "export PROCESS_AGENT_VERSION=$(packaging/version.sh)" >> $BUILD_ENV
+    - echo "export EBPF=${EBPF:-true}" >> $BUILD_ENV
+    - echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BUILD_ENV && source $BUILD_ENV
     - rsync -azC --delete ./ $IMPORT_PATH
     - go get golang.org/x/tools/cmd/gorename
     - go get golang.org/x/tools/cmd/eg
     - go get golang.org/x/lint/golint
     - printenv
     - cd $IMPORT_PATH/packaging && ./apply_branding.sh
+    - export CC=/opt/centos/devtoolset-1.1/root/usr/bin/gcc
     - cd $IMPORT_PATH && rake build
     - cd $IMPORT_PATH/packaging && ./build_staging_package.sh
   artifacts:
@@ -35,8 +36,6 @@ build_linux:
       - $CI_PROJECT_DIR/process-agent
       - $CI_PROJECT_DIR/packaging/debian/*.deb
     expire_in: 2 week
-  tags:
-    - sts-aws
 
 # Gitlab dedicated runner in a Windows VM
 build_windows:
@@ -79,11 +78,11 @@ pre_release_linux:
   before_script:
     - mkdir -p /go/src/github.com/StackVista
     - ln -s $CI_PROJECT_DIR /go/src/github.com/StackVista/stackstate-process-agent
-    - echo 'export IMPORT_PATH=$GOPATH/src/github.com/StackVista/stackstate-process-agent' >> $BASH_ENV
+    - echo 'export IMPORT_PATH=$GOPATH/src/github.com/StackVista/stackstate-process-agent' >> $BUILD_ENV
     - git status -s
-    - echo "export PROCESS_AGENT_VERSION=$(packaging/version.sh)" >> $BASH_ENV
-    - echo "export EBPF=${EBPF:-true}" >> $BASH_ENV
-    - echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BASH_ENV && source $BASH_ENV
+    - echo "export PROCESS_AGENT_VERSION=$(packaging/version.sh)" >> $BUILD_ENV
+    - echo "export EBPF=${EBPF:-true}" >> $BUILD_ENV
+    - echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BUILD_ENV && source $BUILD_ENV
   script:
     - ls -la $IMPORT_PATH
     - ls -la $IMPORT_PATH/packaging

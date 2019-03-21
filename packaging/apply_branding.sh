@@ -72,7 +72,6 @@ UNAME="$(uname)"
 if [[ $UNAME != MSYS* ]]; then
     echo "Checking replacements..."
 
-    which rgrep
     grep -r --include=*.go "\"DD_"  $PWD/../cmd $PWD/../config $PWD/../checks
 
     RESULT=$?

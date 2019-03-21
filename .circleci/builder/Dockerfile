@@ -12,4 +12,4 @@ RUN curl -OL https://elrepo.org/linux/kernel/el6/x86_64/RPMS/kernel-lt-headers-4
 
 # Upgrade gcc to 4.7 needed to build gobpf/elf
 RUN curl https://people.centos.org/tru/devtools-1.1/devtools-1.1.repo -o /etc/yum.repos.d/devtools-1.1.repo \
-    && yum install -y yum install devtoolset-1.1-gcc
+    && yum install -y devtoolset-1.1-gcc

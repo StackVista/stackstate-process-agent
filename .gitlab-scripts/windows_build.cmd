@@ -7,4 +7,6 @@ set "MINGW_PACKAGE_PREFIX=mingw-w64-x86_64"
 set "LANG=en_US.UTF-8"
 set "PATH=c:\tools\msys64\mingw64\bin;c:\tools\msys64\usr\bin;%PATH%"
 echo %CD%
-call rake ci windres=true --trace
+call rake deps windres=true --trace
+call rake test windres=true --trace
+call rake build windres=true --trace

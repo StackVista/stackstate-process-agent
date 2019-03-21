@@ -35,6 +35,8 @@ build_linux:
       - $CI_PROJECT_DIR/process-agent
       - $CI_PROJECT_DIR/packaging/debian/*.deb
     expire_in: 2 week
+  tags:
+    - sts-aws
 
 # Gitlab dedicated runner in a Windows VM
 build_windows:

@@ -1,12 +1,13 @@
 #!/bin/bash
 
+set -e
+
 # https://regex-golang.appspot.com/assets/html/index.html
 
 export REPLACE_SCOPE="../config ../cmd ../checks"
 export REPLACE_MODE=-w # "-d"
 
 gofmt -l $REPLACE_MODE -r '"DD_HOSTNAME" -> "STS_HOSTNAME"'  $REPLACE_SCOPE
-echo gofmt -l $REPLACE_MODE -r '"DD_API_KEY" -> "STS_API_KEY"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_API_KEY" -> "STS_API_KEY"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_CUSTOM_SENSITIVE_WORDS" -> "STS_CUSTOM_SENSITIVE_WORDS"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_SCRUB_ARGS" -> "STS_SCRUB_ARGS"' $REPLACE_SCOPE
@@ -72,7 +73,7 @@ if [[ $UNAME != MSYS* ]]; then
     echo "Checking replacements..."
 
     which rgrep
-    rgrep --include=*.go "\"DD_"  $PWD/../cmd $PWD/../config $PWD/../checks
+    grep -r --include=*.go "\"DD_"  $PWD/../cmd $PWD/../config $PWD/../checks
 
     RESULT=$?
     if [ $RESULT -eq 0 ]; then

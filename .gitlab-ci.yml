@@ -29,7 +29,7 @@ build_linux:
     - printenv
     - cd $IMPORT_PATH/packaging && ./apply_branding.sh
     - export CC=/opt/centos/devtoolset-1.1/root/usr/bin/gcc
-    - cd $IMPORT_PATH && rake build
+    - cd $IMPORT_PATH && rake ci
     - cd $IMPORT_PATH/packaging && ./build_staging_package.sh
   artifacts:
     paths:

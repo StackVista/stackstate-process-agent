@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 # https://regex-golang.appspot.com/assets/html/index.html
 
 export REPLACE_SCOPE="../config ../cmd ../checks"

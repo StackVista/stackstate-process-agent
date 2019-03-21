@@ -20,6 +20,7 @@ build_linux:
     - echo 'export IMPORT_PATH=$GOPATH/src/github.com/StackVista/stackstate-process-agent' >> $BUILD_ENV
     - echo "export PROCESS_AGENT_VERSION=$(packaging/version.sh)" >> $BUILD_ENV
     - echo "export EBPF=${EBPF:-true}" >> $BUILD_ENV
+    - source $BUILD_ENV
     - rsync -azC --delete ./ $IMPORT_PATH
     - go get golang.org/x/tools/cmd/gorename
     - go get golang.org/x/tools/cmd/eg
@@ -77,6 +78,7 @@ pre_release_linux:
     - ln -s $CI_PROJECT_DIR /go/src/github.com/StackVista/stackstate-process-agent
     - echo 'export IMPORT_PATH=$GOPATH/src/github.com/StackVista/stackstate-process-agent' >> $BUILD_ENV
     - echo "export PROCESS_AGENT_VERSION=$(packaging/version.sh)" >> $BUILD_ENV
+    - source $BUILD_ENV
   script:
     - ls -la $IMPORT_PATH
     - ls -la $IMPORT_PATH/packaging

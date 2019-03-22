@@ -154,7 +154,7 @@ func fmtProcessStats(
 
 	// Take the remainingProcesses of the process and strip all processes that should be skipped
 	for _, p := range remainingProcesses {
-		if isProcessBlacklisted(cfg, p.Command.Args) {
+		if isProcessBlacklisted(cfg, p.Command.Args, p.Command.Exe) {
 			continue
 		}
 		processes = append(processes, processStatMap[p.Pid])

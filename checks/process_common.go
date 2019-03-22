@@ -195,8 +195,17 @@ func pidMissingInLastProcs(pid int32, lastProcs map[int32]*process.FilledProcess
 func isProcessBlacklisted(
 	cfg *config.AgentConfig,
 	cmdLine []string,
+	exe string,
 ) bool {
-	return len(cmdLine) == 0 || config.IsBlacklisted(cmdLine, cfg.Blacklist)
+	if len(cmdLine) == 0 {
+		return true
+	}
+
+	if len(cmdLine) == 0 && len(exe) == 0 {
+		return true
+	}
+
+	return config.IsBlacklisted(cmdLine, cfg.Blacklist)
 }
 
 func (p *ProcessCheck) createTimesforPIDs(pids []uint32) map[uint32]int64 {

@@ -16,7 +16,6 @@ process_config:
     container: 8
     process: 5
     connections: 5
-  #
   process_blacklist:
     patterns:
       # A list of regex patterns that will exclude a process if matched.

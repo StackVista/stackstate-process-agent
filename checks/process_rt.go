@@ -117,24 +117,28 @@ func fmtProcessStats(
 		}
 
 		// mapping to a common process type to do sorting
+		command := formatCommand(fp)
+		memory := formatMemory(fp)
+		cpu := formatCPU(fp, fp.CpuTime, lastProcs[fp.Pid].CpuTime, syst2, syst1)
+		ioStat := formatIO(fp, lastProcs[fp.Pid].IOStat, lastRun)
 		commonProcesses = append(commonProcesses, &ProcessCommon{
 			Pid:     fp.Pid,
-			Command: formatCommand(fp),
-			Memory:  formatMemory(fp),
-			CPU:     formatCPU(fp, fp.CpuTime, lastProcs[fp.Pid].CpuTime, syst2, syst1),
-			IoStat:  formatIO(fp, lastProcs[fp.Pid].IOStat, lastRun),
+			Command: command,
+			Memory:  memory,
+			CPU:     cpu,
+			IoStat:  ioStat,
 		})
 
 		processStatMap[fp.Pid] = &model.ProcessStat{
 			Pid:                    fp.Pid,
 			CreateTime:             fp.CreateTime,
-			Memory:                 formatMemory(fp),
-			Cpu:                    formatCPU(fp, fp.CpuTime, lastProcs[fp.Pid].CpuTime, syst2, syst1),
+			Memory:                 memory,
+			Cpu:                    cpu,
 			Nice:                   fp.Nice,
 			Threads:                fp.NumThreads,
 			OpenFdCount:            fp.OpenFdCount,
 			ProcessState:           model.ProcessState(model.ProcessState_value[fp.Status]),
-			IoStat:                 formatIO(fp, lastProcs[fp.Pid].IOStat, lastRun),
+			IoStat:                 ioStat,
 			VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
 			InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
 			ContainerId:            cidByPid[fp.Pid],

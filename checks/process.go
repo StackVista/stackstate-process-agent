@@ -193,10 +193,10 @@ func fmtProcesses(
 
 	// sort all, deduplicate and chunk
 	processes := append(<-processInclusions, <-allProcesses...)
-	pIdSort := func(i, j int) bool {
+	pIDSort := func(i, j int) bool {
 		return processes[i].Pid < processes[j].Pid
 	}
-	sort.Slice(processes, pIdSort)
+	sort.Slice(processes, pIDSort)
 
 	j := 0
 	for i := 1; i < len(processes); i++ {

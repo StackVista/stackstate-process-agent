@@ -19,66 +19,93 @@ type ProcessCommon struct {
 }
 
 // sorts the provided array with the specific sorting func and takes the top n process and return the remaining
-func sortAndTakeN(processes []*ProcessCommon, sortingFunc func(processes []*ProcessCommon) func(i, j int) bool, n, defaultSize int) ([]*ProcessCommon, []*ProcessCommon) {
+func sortAndTakeN(processes []*ProcessCommon, sortingFunc func(processes []*ProcessCommon) func(i, j int) bool, n, defaultSize int) []*ProcessCommon {
 	sort.Slice(processes, sortingFunc(processes))
-	var topNProcesses, remainingProcesses []*ProcessCommon
+	var topNProcesses []*ProcessCommon
 	if len(processes) <= n {
-		topNProcesses, remainingProcesses = processes, make([]*ProcessCommon, 0, defaultSize)
+		topNProcesses = processes
 	} else {
-		topNProcesses, remainingProcesses = processes[:n], processes[n:]
+		topNProcesses = processes[:n]
 	}
 
-	return topNProcesses, remainingProcesses
+	return topNProcesses
 }
 
-func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentConfig) ([]*ProcessCommon, []*ProcessCommon) {
-	// Top Percentage Using Processes, insert into chunked slice and strip from chunk slice
-	percentageSort := func(processes []*ProcessCommon) func(i, j int) bool {
-		sortingFunc := func(i, j int) bool {
-			return processes[i].CPU.TotalPct > processes[j].CPU.TotalPct
-		}
+func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentConfig) []*ProcessCommon {
+	cpuProcessChan := make(chan []*ProcessCommon)
+	cpuProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(cpuProcesses, commonProcesses)
 
-		return sortingFunc
-	}
-	cpuSortedProcesses, remainingProcesses := sortAndTakeN(commonProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+	ioReadProcessesChan := make(chan []*ProcessCommon)
+	readProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(readProcesses, commonProcesses)
+
+	ioWriteProcessesChan := make(chan []*ProcessCommon)
+	writeProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(writeProcesses, commonProcesses)
+
+	memoryProcessesChan := make(chan []*ProcessCommon)
+	memoryProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(memoryProcesses, commonProcesses)
+
+	// Top Percentage Using Processes, insert into chunked slice and strip from chunk slice
+	go func() {
+		percentageSort := func(processes []*ProcessCommon) func(i, j int) bool {
+			sortingFunc := func(i, j int) bool {
+				return processes[i].CPU.TotalPct > processes[j].CPU.TotalPct
+			}
+
+			return sortingFunc
+		}
+		cpuProcessChan <- sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+	}()
 
 	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice
-	readIOSort := func(processes []*ProcessCommon) func(i, j int) bool {
-		sortingFunc := func(i, j int) bool {
-			return processes[i].IoStat.ReadRate > processes[j].IoStat.ReadRate
-		}
+	go func() {
+		readIOSort := func(processes []*ProcessCommon) func(i, j int) bool {
+			sortingFunc := func(i, j int) bool {
+				return processes[i].IoStat.ReadRate > processes[j].IoStat.ReadRate
+			}
 
-		return sortingFunc
-	}
-	ioReadSortedProcesses, remainingProcesses := sortAndTakeN(remainingProcesses, readIOSort, cfg.AmountTopIOReadUsage, cfg.MaxPerMessage)
+			return sortingFunc
+		}
+		ioReadProcessesChan <- sortAndTakeN(readProcesses, readIOSort, cfg.AmountTopIOReadUsage, cfg.MaxPerMessage)
+	}()
 
 	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
-	writeIOSort := func(processes []*ProcessCommon) func(i, j int) bool {
-		sortingFunc := func(i, j int) bool {
-			return processes[i].IoStat.WriteRate > processes[j].IoStat.WriteRate
-		}
+	go func() {
+		writeIOSort := func(processes []*ProcessCommon) func(i, j int) bool {
+			sortingFunc := func(i, j int) bool {
+				return processes[i].IoStat.WriteRate > processes[j].IoStat.WriteRate
+			}
 
-		return sortingFunc
-	}
-	ioWriteSortedProcesses, remainingProcesses := sortAndTakeN(remainingProcesses, writeIOSort, cfg.AmountTopIOWriteUsage, cfg.MaxPerMessage)
+			return sortingFunc
+		}
+		ioWriteProcessesChan <- sortAndTakeN(writeProcesses, writeIOSort, cfg.AmountTopIOWriteUsage, cfg.MaxPerMessage)
+	}()
 
 	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
-	memorySort := func(processes []*ProcessCommon) func(i, j int) bool {
-		sortingFunc := func(i, j int) bool {
-			return processes[i].Memory.Rss > processes[j].Memory.Rss
+	go func() {
+		memorySort := func(processes []*ProcessCommon) func(i, j int) bool {
+			sortingFunc := func(i, j int) bool {
+				return processes[i].Memory.Rss > processes[j].Memory.Rss
+			}
+
+			return sortingFunc
 		}
+		memoryProcessesChan <- sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage, cfg.MaxPerMessage)
+	}()
 
-		return sortingFunc
-	}
-	memorySortedProcesses, remainingProcesses := sortAndTakeN(remainingProcesses, memorySort, cfg.AmountTopMemoryUsage, cfg.MaxPerMessage)
-
-	return append(append(append(cpuSortedProcesses, ioReadSortedProcesses...), ioWriteSortedProcesses...), memorySortedProcesses...), remainingProcesses
+	return append(append(append(<-cpuProcessChan, <-ioReadProcessesChan...), <-ioWriteProcessesChan...), <-memoryProcessesChan...)
 }
 
 // Chunks process stats into predefined max per message size
 func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chunked [][]*model.ProcessStat) [][]*model.ProcessStat {
-	for maxPerMessage < len(processStats) {
+	if maxPerMessage < len(processStats) {
 		seelog.Warnf("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processStats), maxPerMessage)
+	}
+
+	for maxPerMessage < len(processStats) {
 		processStats, chunked = processStats[maxPerMessage:], append(chunked, processStats[0:maxPerMessage:maxPerMessage])
 	}
 	// checks the length of the processStats otherwise it appends an empty array to the chunked
@@ -90,8 +117,11 @@ func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chu
 
 // Chunks processes into predefined max per message size
 func chunkProcesses(processes []*model.Process, maxPerMessage int, chunked [][]*model.Process) [][]*model.Process {
-	for maxPerMessage < len(processes) {
+	if maxPerMessage < len(processes) {
 		seelog.Warnf("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processes), maxPerMessage)
+	}
+
+	for maxPerMessage < len(processes) {
 		processes, chunked = processes[maxPerMessage:], append(chunked, processes[0:maxPerMessage:maxPerMessage])
 	}
 	// checks the length of the processStats otherwise it appends an empty array to the chunked

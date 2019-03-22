@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"sort"
 	"sync"
 	"time"
 
@@ -168,21 +169,45 @@ func fmtProcesses(
 	}
 
 	// Process inclusions
-	processes := make([]*model.Process, 0, cfg.MaxPerMessage)
-	topProcesses, remainingProcesses := getProcessInclusions(commonProcesses, cfg)
-	for _, commonProc := range topProcesses {
-		processes = append(processes, processMap[commonProc.Pid])
-	}
+	processInclusions := make(chan []*model.Process)
+	go func() {
+		processes := make([]*model.Process, 0, cfg.MaxPerMessage)
+		for _, p := range getProcessInclusions(commonProcesses, cfg) {
+			processes = append(processes, processMap[p.Pid])
+		}
+		processInclusions <- processes
+	}()
 
 	// Take the remainingProcesses of the process and strip all processes that should be skipped
-	for _, p := range remainingProcesses {
-		if isProcessBlacklisted(cfg, p.Command.Args, p.Command.Exe) {
+	allProcesses := make(chan []*model.Process)
+	go func() {
+		processes := make([]*model.Process, 0, cfg.MaxPerMessage)
+		for _, p := range commonProcesses {
+			if isProcessBlacklisted(cfg, p.Command.Args, p.Command.Exe) {
+				continue
+			}
+			processes = append(processes, processMap[p.Pid])
+		}
+		allProcesses <- processes
+	}()
+
+	// sort all, deduplicate and chunk
+	processes := append(<-processInclusions, <-allProcesses...)
+	pIdSort := func(i, j int) bool {
+		return processes[i].Pid < processes[j].Pid
+	}
+	sort.Slice(processes, pIdSort)
+
+	j := 0
+	for i := 1; i < len(processes); i++ {
+		if processes[j] == processes[i] {
 			continue
 		}
-		processes = append(processes, processMap[p.Pid])
+		j++
+		processes[j] = processes[i]
 	}
 
 	cfg.Scrubber.IncrementCacheAge()
 
-	return chunkProcesses(processes, cfg.MaxPerMessage, make([][]*model.Process, 0))
+	return chunkProcesses(processes[:j+1], cfg.MaxPerMessage, make([][]*model.Process, 0))
 }

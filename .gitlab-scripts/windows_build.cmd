@@ -10,3 +10,4 @@ echo %CD%
 call rake deps windres=true --trace
 call rake test windres=true --trace
 call rake build windres=true --trace
+if %errorlevel% neq 0 exit /b %errorlevel%

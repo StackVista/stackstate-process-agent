@@ -8,3 +8,4 @@ set "LANG=en_US.UTF-8"
 set "PATH=c:\tools\msys64\mingw64\bin;c:\tools\msys64\usr\bin;%PATH%"
 echo %CD%
 call rake build windres=true --trace
+if %errorlevel% neq 0 exit /b %errorlevel%

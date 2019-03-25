@@ -18,9 +18,29 @@ type ProcessCommon struct {
 	IoStat  *model.IOStat
 }
 
+// returns a function to filter processes in blacklist based on the configuration provided
+func filterProcess(cfg *config.AgentConfig) func (process *ProcessCommon) bool {
+	return func(process *ProcessCommon) bool {
+		return !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
+	}
+}
+
+// returns a function to map common processes into a model.Process based on the pID
+func mapProcess(processMap map[int32]*model.Process) func (process *ProcessCommon) *model.Process {
+	return func (process *ProcessCommon) *model.Process {
+		return processMap[process.Pid]
+	}
+}
+
+func mapProcessStat(processStatMap map[int32]*model.ProcessStat) func (process *ProcessCommon) *model.ProcessStat {
+	return func (process *ProcessCommon) *model.ProcessStat {
+		return processStatMap[process.Pid]
+	}
+}
+
 // sorts the provided array with the specific sorting func and takes the top n process and return the remaining
-func sortAndTakeN(processes []*ProcessCommon, sortingFunc func(processes []*ProcessCommon) func(i, j int) bool, n, defaultSize int) []*ProcessCommon {
-	sort.Slice(processes, sortingFunc(processes))
+func sortAndTakeN(processes []*ProcessCommon, sortingFunc func(processes []*ProcessCommon) func(i, j int) bool, n int) []*ProcessCommon {
+	sort.SliceStable(processes, sortingFunc(processes))
 	var topNProcesses []*ProcessCommon
 	if len(processes) <= n {
 		topNProcesses = processes
@@ -37,16 +57,22 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 	copy(cpuProcesses, commonProcesses)
 
 	ioReadProcessesChan := make(chan []*ProcessCommon)
-	readProcesses := make([]*ProcessCommon, len(commonProcesses))
-	copy(readProcesses, commonProcesses)
+	ioReadProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(ioReadProcesses, commonProcesses)
 
 	ioWriteProcessesChan := make(chan []*ProcessCommon)
-	writeProcesses := make([]*ProcessCommon, len(commonProcesses))
-	copy(writeProcesses, commonProcesses)
+	ioWriteProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(ioWriteProcesses, commonProcesses)
 
 	memoryProcessesChan := make(chan []*ProcessCommon)
 	memoryProcesses := make([]*ProcessCommon, len(commonProcesses))
 	copy(memoryProcesses, commonProcesses)
+
+	// defer closing of channels
+	defer close(cpuProcessChan)
+	defer close(ioReadProcessesChan)
+	defer close(ioWriteProcessesChan)
+	defer close(memoryProcessesChan)
 
 	// Top Percentage Using Processes, insert into chunked slice and strip from chunk slice
 	go func() {
@@ -57,7 +83,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		cpuProcessChan <- sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage, cfg.MaxPerMessage)
+		cpuProcessChan <- sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage)
 	}()
 
 	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice
@@ -69,7 +95,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		ioReadProcessesChan <- sortAndTakeN(readProcesses, readIOSort, cfg.AmountTopIOReadUsage, cfg.MaxPerMessage)
+		ioReadProcessesChan <- sortAndTakeN(ioReadProcesses, readIOSort, cfg.AmountTopIOReadUsage)
 	}()
 
 	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
@@ -81,7 +107,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		ioWriteProcessesChan <- sortAndTakeN(writeProcesses, writeIOSort, cfg.AmountTopIOWriteUsage, cfg.MaxPerMessage)
+		ioWriteProcessesChan <- sortAndTakeN(ioWriteProcesses, writeIOSort, cfg.AmountTopIOWriteUsage)
 	}()
 
 	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
@@ -93,7 +119,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		memoryProcessesChan <- sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage, cfg.MaxPerMessage)
+		memoryProcessesChan <- sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage)
 	}()
 
 	return append(append(append(<-cpuProcessChan, <-ioReadProcessesChan...), <-ioWriteProcessesChan...), <-memoryProcessesChan...)

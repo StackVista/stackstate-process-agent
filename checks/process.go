@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"sort"
 	"sync"
 	"time"
 
@@ -169,45 +168,30 @@ func fmtProcesses(
 	}
 
 	// Process inclusions
-	processInclusions := make(chan []*model.Process)
+	inclusionProcessesChan := make(chan []*model.Process)
+	inclusionCommonProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(inclusionCommonProcesses, commonProcesses)
+	defer close(inclusionProcessesChan)
 	go func() {
 		processes := make([]*model.Process, 0, cfg.MaxPerMessage)
-		for _, p := range getProcessInclusions(commonProcesses, cfg) {
-			processes = append(processes, processMap[p.Pid])
-		}
-		processInclusions <- processes
+		processes = deriveFmapCommonProcessToProcess(mapProcess(processMap), getProcessInclusions(inclusionCommonProcesses, cfg))
+		inclusionProcessesChan <- processes
 	}()
 
 	// Take the remainingProcesses of the process and strip all processes that should be skipped
-	allProcesses := make(chan []*model.Process)
+	allProcessesChan := make(chan []*model.Process)
+	allCommonProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(allCommonProcesses, commonProcesses)
+	defer close(allProcessesChan)
 	go func() {
 		processes := make([]*model.Process, 0, cfg.MaxPerMessage)
-		for _, p := range commonProcesses {
-			if isProcessBlacklisted(cfg, p.Command.Args, p.Command.Exe) {
-				continue
-			}
-			processes = append(processes, processMap[p.Pid])
-		}
-		allProcesses <- processes
+		processes = deriveFmapCommonProcessToProcess(mapProcess(processMap), deriveFilterBlacklistedProcesses(filterProcess(cfg), allCommonProcesses))
+		allProcessesChan <- processes
 	}()
 
 	// sort all, deduplicate and chunk
-	processes := append(<-processInclusions, <-allProcesses...)
-	pIDSort := func(i, j int) bool {
-		return processes[i].Pid < processes[j].Pid
-	}
-	sort.Slice(processes, pIDSort)
-
-	j := 0
-	for i := 1; i < len(processes); i++ {
-		if processes[j] == processes[i] {
-			continue
-		}
-		j++
-		processes[j] = processes[i]
-	}
-
+	processes := append(<-inclusionProcessesChan, <-allProcessesChan...)
 	cfg.Scrubber.IncrementCacheAge()
-
-	return chunkProcesses(processes[:j+1], cfg.MaxPerMessage, make([][]*model.Process, 0))
+	return chunkProcesses(deriveUniqueProcesses(deriveSortProcesses(processes)), cfg.MaxPerMessage, make([][]*model.Process, 0))
 }
+

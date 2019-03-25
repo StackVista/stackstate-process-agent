@@ -20,15 +20,6 @@ import (
 	// "github.com/StackVista/stackstate-agent/pkg/util/containers"
 )
 
-func makeProcess(pid int32, cmdline string) *process.FilledProcess {
-	return &process.FilledProcess{
-		Pid:         pid,
-		Cmdline:     strings.Split(cmdline, " "),
-		MemInfo:     &process.MemoryInfoStat{},
-		CtxSwitches: &process.NumCtxSwitchesStat{},
-	}
-}
-
 func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCPU, systemCPU float64) *process.FilledProcess {
 	return &process.FilledProcess{
 		Pid:         pid,
@@ -139,8 +130,8 @@ func TestProcessFiltering(t *testing.T) {
 			amountTopMemoryUsage:        2,
 			expectedPids:                []int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21},
 		},
-		// expects all the processes not listed in the blacklist to be present as well as the top resource consuming
-		// processes regardless of whether they are blacklisted or not
+		//// expects all the processes not listed in the blacklist to be present as well as the top resource consuming
+		//// processes regardless of whether they are blacklisted or not
 		{
 			cur:                         pNow,
 			last:                        pLast,

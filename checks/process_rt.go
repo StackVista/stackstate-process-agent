@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"sort"
 	"time"
 
 	"github.com/DataDog/gopsutil/cpu"
@@ -147,44 +146,28 @@ func fmtProcessStats(
 	}
 
 	// Process inclusions
-	processInclusions := make(chan []*model.ProcessStat)
+	inclusionProcessesChan := make(chan []*model.ProcessStat)
+	inclusionCommonProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(inclusionCommonProcesses, commonProcesses)
+	defer close(inclusionProcessesChan)
 	go func() {
 		processes := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
-		for _, p := range getProcessInclusions(commonProcesses, cfg) {
-			processes = append(processes, processStatMap[p.Pid])
-		}
-		processInclusions <- processes
+		processes = deriveFmapCommonProcessToProcessStat(mapProcessStat(processStatMap), getProcessInclusions(inclusionCommonProcesses, cfg))
+		inclusionProcessesChan <- processes
 	}()
 
-
 	// Take the remainingProcesses of the process and strip all processes that should be skipped
-	allProcesses := make(chan []*model.ProcessStat)
+	allProcessesChan := make(chan []*model.ProcessStat)
+	allCommonProcesses := make([]*ProcessCommon, len(commonProcesses))
+	copy(allCommonProcesses, commonProcesses)
+	defer close(allProcessesChan)
 	go func() {
 		processes := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
-		for _, p := range commonProcesses {
-			if isProcessBlacklisted(cfg, p.Command.Args, p.Command.Exe) {
-				continue
-			}
-			processes = append(processes, processStatMap[p.Pid])
-		}
-		allProcesses <- processes
+		processes = deriveFmapCommonProcessToProcessStat(mapProcessStat(processStatMap), deriveFilterBlacklistedProcesses(filterProcess(cfg), allCommonProcesses))
+		allProcessesChan <- processes
 	}()
 
 	// sort all, deduplicate and chunk
-	processes := append(<-processInclusions, <-allProcesses...)
-	pIDSort := func(i, j int) bool {
-		return processes[i].Pid < processes[j].Pid
-	}
-
-	sort.Slice(processes, pIDSort)
-	j := 0
-	for i := 1; i < len(processes); i++ {
-		if processes[j] == processes[i] {
-			continue
-		}
-		j++
-		processes[j] = processes[i]
-	}
-
-	return chunkProcessStats(processes[:j+1], cfg.MaxPerMessage, make([][]*model.ProcessStat, 0))
+	processes := append(<-inclusionProcessesChan, <-allProcessesChan...)
+	return chunkProcessStats(deriveUniqueProcessStats(deriveSortProcessStats(processes)), cfg.MaxPerMessage, make([][]*model.ProcessStat, 0))
 }

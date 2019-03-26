@@ -70,6 +70,15 @@ func deriveUniqueProcessStats(list []*model.ProcessStat) []*model.ProcessStat {
 	return list[:u]
 }
 
+// deriveUniquePids returns a list containing only the unique items from the input list.
+// It does this by reusing the input list.
+func deriveUniquePids(list []int) []int {
+	if len(list) == 0 {
+		return nil
+	}
+	return deriveKeys(deriveSet(list))
+}
+
 // deriveFilterBlacklistedProcesses returns a list of all items in the list that matches the predicate.
 func deriveFilterBlacklistedProcesses(predicate func(*ProcessCommon) bool, list []*ProcessCommon) []*ProcessCommon {
 	j := 0
@@ -150,6 +159,15 @@ func deriveSortProcessStats(list []*model.ProcessStat) []*model.ProcessStat {
 	return list
 }
 
+// deriveKeys returns the keys of the input map as a slice.
+func deriveKeys(m map[int]struct{}) []int {
+	keys := make([]int, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
 // deriveHash returns the hash of the object.
 func deriveHash(object *model.Process) uint64 {
 	if object == nil {
@@ -226,6 +244,15 @@ func deriveFmapCommonProcessToProcessStat(f func(*ProcessCommon) *model.ProcessS
 		out[i] = f(elem)
 	}
 	return out
+}
+
+// deriveSet returns the input list as a map with the items of the list as the keys of the map.
+func deriveSet(list []int) map[int]struct{} {
+	set := make(map[int]struct{}, len(list))
+	for _, v := range list {
+		set[v] = struct{}{}
+	}
+	return set
 }
 
 // deriveCompare returns:

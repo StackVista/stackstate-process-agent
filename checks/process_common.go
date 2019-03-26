@@ -15,25 +15,25 @@ type ProcessCommon struct {
 	Command *model.Command
 	Memory  *model.MemoryStat
 	CPU     *model.CPUStat
-	IoStat  *model.IOStat
+	IOStat  *model.IOStat
 }
 
 // returns a function to filter processes in blacklist based on the configuration provided
-func filterProcess(cfg *config.AgentConfig) func (process *ProcessCommon) bool {
+func keepProcess(cfg *config.AgentConfig) func(process *ProcessCommon) bool {
 	return func(process *ProcessCommon) bool {
 		return !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
 	}
 }
 
 // returns a function to map common processes into a model.Process based on the pID
-func mapProcess(processMap map[int32]*model.Process) func (process *ProcessCommon) *model.Process {
-	return func (process *ProcessCommon) *model.Process {
+func mapProcess(processMap map[int32]*model.Process) func(process *ProcessCommon) *model.Process {
+	return func(process *ProcessCommon) *model.Process {
 		return processMap[process.Pid]
 	}
 }
 
-func mapProcessStat(processStatMap map[int32]*model.ProcessStat) func (process *ProcessCommon) *model.ProcessStat {
-	return func (process *ProcessCommon) *model.ProcessStat {
+func mapProcessStat(processStatMap map[int32]*model.ProcessStat) func(process *ProcessCommon) *model.ProcessStat {
+	return func(process *ProcessCommon) *model.ProcessStat {
 		return processStatMap[process.Pid]
 	}
 }
@@ -90,7 +90,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 	go func() {
 		readIOSort := func(processes []*ProcessCommon) func(i, j int) bool {
 			sortingFunc := func(i, j int) bool {
-				return processes[i].IoStat.ReadRate > processes[j].IoStat.ReadRate
+				return processes[i].IOStat.ReadRate > processes[j].IOStat.ReadRate
 			}
 
 			return sortingFunc
@@ -102,7 +102,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 	go func() {
 		writeIOSort := func(processes []*ProcessCommon) func(i, j int) bool {
 			sortingFunc := func(i, j int) bool {
-				return processes[i].IoStat.WriteRate > processes[j].IoStat.WriteRate
+				return processes[i].IOStat.WriteRate > processes[j].IOStat.WriteRate
 			}
 
 			return sortingFunc

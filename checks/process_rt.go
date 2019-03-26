@@ -126,7 +126,7 @@ func fmtProcessStats(
 			Command: command,
 			Memory:  memory,
 			CPU:     cpu,
-			IoStat:  ioStat,
+			IOStat:  ioStat,
 		})
 
 		processStatMap[fp.Pid] = &model.ProcessStat{
@@ -163,7 +163,7 @@ func fmtProcessStats(
 	defer close(allProcessesChan)
 	go func() {
 		processes := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
-		processes = deriveFmapCommonProcessToProcessStat(mapProcessStat(processStatMap), deriveFilterBlacklistedProcesses(filterProcess(cfg), allCommonProcesses))
+		processes = deriveFmapCommonProcessToProcessStat(mapProcessStat(processStatMap), deriveFilterBlacklistedProcesses(keepProcess(cfg), allCommonProcesses))
 		allProcessesChan <- processes
 	}()
 

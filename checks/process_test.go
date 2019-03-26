@@ -4,6 +4,7 @@ import (
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
+	"github.com/StackVista/stackstate-process-agent/model"
 	"regexp"
 	"sort"
 
@@ -34,7 +35,338 @@ func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, wr
 	}
 }
 
-func TestProcessFiltering(t *testing.T) {
+func makeProcess(pid int32) *model.Process {
+	return &model.Process{
+		Pid: pid,
+	}
+}
+
+func makeProcessStat(pid int32) *model.ProcessStat {
+	return &model.ProcessStat{
+		Pid: pid,
+	}
+}
+
+func TestProcessChunking(t *testing.T) {
+	cfg := config.NewDefaultAgentConfig()
+
+	processes := []*model.Process{
+		makeProcess(1),
+		makeProcess(2),
+		makeProcess(3),
+		makeProcess(4),
+		makeProcess(5),
+		makeProcess(6),
+		makeProcess(7),
+		makeProcess(8),
+		makeProcess(9),
+		makeProcess(10),
+		makeProcess(11),
+		makeProcess(12),
+		makeProcess(13),
+		makeProcess(14),
+		makeProcess(15),
+		makeProcess(16),
+		makeProcess(17),
+		makeProcess(18),
+		makeProcess(19),
+		makeProcess(20),
+		makeProcess(21),
+	}
+	processStats := []*model.ProcessStat{
+		makeProcessStat(1),
+		makeProcessStat(2),
+		makeProcessStat(3),
+		makeProcessStat(4),
+		makeProcessStat(5),
+		makeProcessStat(6),
+		makeProcessStat(7),
+		makeProcessStat(8),
+		makeProcessStat(9),
+		makeProcessStat(10),
+		makeProcessStat(11),
+		makeProcessStat(12),
+		makeProcessStat(13),
+		makeProcessStat(14),
+		makeProcessStat(15),
+		makeProcessStat(16),
+		makeProcessStat(17),
+		makeProcessStat(18),
+		makeProcessStat(19),
+		makeProcessStat(20),
+		makeProcessStat(21),
+	}
+
+	for _, tc := range []struct {
+		name           string
+		maxSize        int
+		expectedTotal  int
+		expectedChunks int
+	}{
+		{
+			name:           "Should create 7 chunks of 3 items and have a total of 21 items",
+			maxSize:        3,
+			expectedTotal:  21,
+			expectedChunks: 7,
+		},
+		{
+			name:           "Should create 1 chunk with 21 items and have a total of 21 items",
+			maxSize:        21,
+			expectedTotal:  21,
+			expectedChunks: 1,
+		},
+	} {
+		cfg.MaxPerMessage = tc.maxSize
+
+		chunked := chunkProcesses(processes, tc.maxSize, make([][]*model.Process, 0, cfg.MaxPerMessage))
+		assert.Len(t, chunked, tc.expectedChunks, "Test: [%s], expected chunks: %d, found chunks: %d", tc.name, tc.expectedChunks, len(chunked))
+		total := 0
+		for _, c := range chunked {
+			total += len(c)
+		}
+		assert.Equal(t, total, tc.expectedTotal, "Test: [%s], expected total: %d, found total: %d", tc.name, tc.expectedTotal, total)
+
+		chunkedStat := chunkProcessStats(processStats, tc.maxSize, make([][]*model.ProcessStat, 0, cfg.MaxPerMessage))
+		assert.Len(t, chunkedStat, tc.expectedChunks, "Test: [%s], expected stats chunks: %d, found stats chunks: %d", tc.name, tc.expectedChunks, len(chunkedStat))
+		total = 0
+		for _, c := range chunkedStat {
+			total += len(c)
+		}
+		assert.Equal(t, total, tc.expectedTotal, "Test: [%s], expected stats total: %d, found stats total: %d", tc.name, tc.expectedTotal, total)
+	}
+}
+
+func TestProcessBlacklisting(t *testing.T) {
+	cfg := config.NewDefaultAgentConfig()
+
+	for _, tc := range []struct {
+		name      string
+		blacklist []string
+		process   *ProcessCommon
+		expected  bool
+	}{
+		{
+			name:      "Should filter process based on Blacklist",
+			blacklist: []string{"process-name"},
+			process: &ProcessCommon{
+				Pid: 1,
+				Command: &model.Command{
+					Args:   []string{"process-name", "arguments"},
+					Cwd:    "this/working/directory",
+					Root:   "",
+					OnDisk: false,
+					Exe:    "path/to/executable",
+				},
+			},
+			expected: false,
+		},
+		{
+			name:      "Should filter process with empty arguments",
+			blacklist: []string{},
+			process: &ProcessCommon{
+				Pid: 1,
+				Command: &model.Command{
+					Args:   []string{},
+					Cwd:    "this/working/directory",
+					Root:   "",
+					OnDisk: false,
+					Exe:    "path/to/executable",
+				},
+			},
+			expected: false,
+		},
+		{
+			name:      "Should filter unknown process without arguments or exe",
+			blacklist: []string{},
+			process: &ProcessCommon{
+				Pid: 1,
+				Command: &model.Command{
+					Args:   []string{},
+					Cwd:    "this/working/directory",
+					Root:   "",
+					OnDisk: false,
+					Exe:    "",
+				},
+			},
+			expected: false,
+		},
+		{
+			name:      "Should not filter process with arguments that does not match a pattern in the blacklist",
+			blacklist: []string{"non-matching-pattern"},
+			process: &ProcessCommon{
+				Pid: 1,
+				Command: &model.Command{
+					Args:   []string{"some", "args"},
+					Cwd:    "this/working/directory",
+					Root:   "",
+					OnDisk: false,
+					Exe:    "",
+				},
+			},
+			expected: true,
+		},
+	} {
+
+		bl := make([]*regexp.Regexp, 0, len(tc.blacklist))
+		for _, s := range tc.blacklist {
+			bl = append(bl, regexp.MustCompile(s))
+		}
+		cfg.Blacklist = bl
+
+		filter := keepProcess(cfg)(tc.process)
+		assert.Equal(t, tc.expected, filter, "Test: [%s], expected filter: %t, found filter: %t", tc.name, tc.expected, filter)
+	}
+}
+
+func TestProcessInclusions(t *testing.T) {
+	cfg := config.NewDefaultAgentConfig()
+
+	for _, tc := range []struct {
+		name                        string
+		processes                   []*ProcessCommon
+		amountTopCPUPercentageUsage int
+		amountTopIOReadUsage        int
+		amountTopIOWriteUsage       int
+		amountTopMemoryUsage        int
+		expectedPids                []int
+	}{
+		{
+			name: "Should return the correct top resource using processes",
+			processes: []*ProcessCommon{
+				{
+					Pid:    1,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 20},
+				},
+				{
+					Pid:    2,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 80},
+				},
+				{
+					Pid:    3,
+					CPU:    &model.CPUStat{TotalPct: 50},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    4,
+					CPU:    &model.CPUStat{TotalPct: 80},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    5,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 10, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    6,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 50, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    7,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 50},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    8,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 80},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+			},
+			amountTopCPUPercentageUsage: 1,
+			amountTopIOReadUsage:        1,
+			amountTopIOWriteUsage:       1,
+			amountTopMemoryUsage:        1,
+			expectedPids:                []int{2, 4, 6, 8},
+		},
+		{
+			name: "Should independently return the process which consumed the most resources for each of the categories",
+			processes: []*ProcessCommon{
+				{
+					Pid:    1,
+					CPU:    &model.CPUStat{TotalPct: 100},
+					IOStat: &model.IOStat{ReadRate: 100, WriteRate: 100},
+					Memory: &model.MemoryStat{Rss: 100},
+				},
+				{
+					Pid:    2,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 80},
+				},
+				{
+					Pid:    3,
+					CPU:    &model.CPUStat{TotalPct: 50},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    4,
+					CPU:    &model.CPUStat{TotalPct: 80},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    5,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 10, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    6,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 50, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    7,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 50},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    8,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 80},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+			},
+			amountTopCPUPercentageUsage: 1,
+			amountTopIOReadUsage:        1,
+			amountTopIOWriteUsage:       1,
+			amountTopMemoryUsage:        1,
+			expectedPids:                []int{1},
+		},
+	} {
+
+		cfg.AmountTopCPUPercentageUsage = tc.amountTopCPUPercentageUsage
+		cfg.AmountTopIOReadUsage = tc.amountTopIOReadUsage
+		cfg.AmountTopIOWriteUsage = tc.amountTopIOWriteUsage
+		cfg.AmountTopMemoryUsage = tc.amountTopMemoryUsage
+
+		processInclusions := getProcessInclusions(tc.processes, cfg)
+
+		pids := make([]int, 0)
+		for _, proc := range processInclusions {
+			pids = append(pids, int(proc.Pid))
+		}
+		pids = deriveUniquePids(pids)
+		sort.Ints(pids)
+
+		assert.Equal(t, tc.expectedPids, pids, "Test: [%s], expected pIds: %v, found pIds: %v", tc.expectedPids, pids)
+	}
+}
+
+func TestProcessFormatting(t *testing.T) {
 	pNow := []*process.FilledProcess{
 		// generic processes
 		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),

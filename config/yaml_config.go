@@ -183,9 +183,9 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 
 	// log warning if blacklist inclusions is specified without patterns
 	if (yc.Process.Blacklist.Inclusions.AmountTopCPUPercentageUsage > 0 ||
-				yc.Process.Blacklist.Inclusions.AmountTopIOReadUsage > 0 ||
-				yc.Process.Blacklist.Inclusions.AmountTopIOWriteUsage > 0 ||
-				yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage > 0) && len(yc.Process.Blacklist.Patterns) == 0 {
+		yc.Process.Blacklist.Inclusions.AmountTopIOReadUsage > 0 ||
+		yc.Process.Blacklist.Inclusions.AmountTopIOWriteUsage > 0 ||
+		yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage > 0) && len(yc.Process.Blacklist.Patterns) == 0 {
 		log.Warn("Process blacklist inclusions specified without a blacklist pattern. Please add process blacklist patterns to benefit from the top process inclusions")
 	}
 

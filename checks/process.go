@@ -148,7 +148,7 @@ func fmtProcesses(
 			Command: command,
 			Memory:  memory,
 			CPU:     cpu,
-			IoStat:  ioStat,
+			IOStat:  ioStat,
 		})
 
 		processMap[fp.Pid] = &model.Process{
@@ -185,7 +185,7 @@ func fmtProcesses(
 	defer close(allProcessesChan)
 	go func() {
 		processes := make([]*model.Process, 0, cfg.MaxPerMessage)
-		processes = deriveFmapCommonProcessToProcess(mapProcess(processMap), deriveFilterBlacklistedProcesses(filterProcess(cfg), allCommonProcesses))
+		processes = deriveFmapCommonProcessToProcess(mapProcess(processMap), deriveFilterBlacklistedProcesses(keepProcess(cfg), allCommonProcesses))
 		allProcessesChan <- processes
 	}()
 
@@ -194,4 +194,3 @@ func fmtProcesses(
 	cfg.Scrubber.IncrementCacheAge()
 	return chunkProcesses(deriveUniqueProcesses(deriveSortProcesses(processes)), cfg.MaxPerMessage, make([][]*model.Process, 0))
 }
-

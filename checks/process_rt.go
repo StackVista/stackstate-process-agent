@@ -111,6 +111,10 @@ func fmtProcessStats(
 	// Take all process and format them to the model.Process type
 	commonProcesses := make([]*ProcessCommon, 0, cfg.MaxPerMessage)
 	processStatMap := make(map[int32]*model.ProcessStat, cfg.MaxPerMessage)
+	var totalCPUUsage float32
+	var totalMemUsage uint64
+	totalCPUUsage = 0.0
+	totalMemUsage = 0
 	for _, fp := range procs {
 		// Skipping any processes that didn't exist in the previous run.
 		// This means short-lived processes (<2s) will never be captured.
@@ -145,6 +149,9 @@ func fmtProcessStats(
 			InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
 			ContainerId:            cidByPid[fp.Pid],
 		}
+
+		totalCPUUsage = totalCPUUsage + cpu.TotalPct
+		totalMemUsage = totalMemUsage + memory.Rss
 	}
 
 	// Process inclusions
@@ -154,7 +161,7 @@ func fmtProcessStats(
 	defer close(inclusionProcessesChan)
 	go func() {
 		processes := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
-		processes = deriveFmapCommonProcessToProcessStat(mapProcessStat(processStatMap), getProcessInclusions(inclusionCommonProcesses, cfg))
+		processes = deriveFmapCommonProcessToProcessStat(mapProcessStat(processStatMap), getProcessInclusions(inclusionCommonProcesses, cfg, totalCPUUsage, totalMemUsage))
 		inclusionProcessesChan <- processes
 	}()
 

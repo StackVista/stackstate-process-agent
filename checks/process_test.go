@@ -230,13 +230,17 @@ func TestProcessInclusions(t *testing.T) {
 		name                        string
 		processes                   []*ProcessCommon
 		amountTopCPUPercentageUsage int
+		cpuPercentageUsageThreshold int
 		amountTopIOReadUsage        int
 		amountTopIOWriteUsage       int
 		amountTopMemoryUsage        int
+		memoryUsageThreshold        int
 		expectedPidsTags            []struct {
 			int
 			Tags
 		}
+		totalCPUpercentage float32
+		totalMemory        uint64
 	}{
 		{
 			name: "Should return the correct top resource using processes",
@@ -291,9 +295,11 @@ func TestProcessInclusions(t *testing.T) {
 				},
 			},
 			amountTopCPUPercentageUsage: 1,
+			cpuPercentageUsageThreshold: 20,
 			amountTopIOReadUsage:        1,
 			amountTopIOWriteUsage:       1,
 			amountTopMemoryUsage:        1,
+			memoryUsageThreshold:        35,
 			expectedPidsTags: []struct {
 				int
 				Tags
@@ -303,6 +309,8 @@ func TestProcessInclusions(t *testing.T) {
 				{6, []string{TopIORead}},
 				{8, []string{TopIOWrite}},
 			},
+			totalCPUpercentage: 25,
+			totalMemory:        40,
 		},
 		{
 			name: "Should independently return the process which consumed the most resources for each of the categories",
@@ -357,23 +365,97 @@ func TestProcessInclusions(t *testing.T) {
 				},
 			},
 			amountTopCPUPercentageUsage: 1,
+			cpuPercentageUsageThreshold: 20,
 			amountTopIOReadUsage:        1,
 			amountTopIOWriteUsage:       1,
 			amountTopMemoryUsage:        1,
+			memoryUsageThreshold:        35,
 			expectedPidsTags: []struct {
 				int
 				Tags
 			}{{1, []string{TopMemory, TopCPU, TopIORead, TopIOWrite}}},
+			totalCPUpercentage: 25,
+			totalMemory:        40,
+		},
+		{
+			name: "Should not return CPU / Memory top consuming processes when the thresholds are not exceeded",
+			processes: []*ProcessCommon{
+				{
+					Pid:    1,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 20},
+				},
+				{
+					Pid:    2,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 80},
+				},
+				{
+					Pid:    3,
+					CPU:    &model.CPUStat{TotalPct: 50},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    4,
+					CPU:    &model.CPUStat{TotalPct: 80},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    5,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 10, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    6,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 50, WriteRate: 0},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    7,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 50},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+				{
+					Pid:    8,
+					CPU:    &model.CPUStat{TotalPct: 0},
+					IOStat: &model.IOStat{ReadRate: 0, WriteRate: 80},
+					Memory: &model.MemoryStat{Rss: 0},
+				},
+			},
+			amountTopCPUPercentageUsage: 1,
+			cpuPercentageUsageThreshold: 20,
+			amountTopIOReadUsage:        1,
+			amountTopIOWriteUsage:       1,
+			amountTopMemoryUsage:        1,
+			memoryUsageThreshold:        35,
+			expectedPidsTags: []struct {
+				int
+				Tags
+			}{
+				{6, []string{TopIORead}},
+				{8, []string{TopIOWrite}},
+			},
+			totalCPUpercentage: 10,
+			totalMemory:        10,
 		},
 	} {
 		cfg.AmountTopCPUPercentageUsage = tc.amountTopCPUPercentageUsage
+		cfg.CPUPercentageUsageThreshold = tc.cpuPercentageUsageThreshold
 		cfg.AmountTopIOReadUsage = tc.amountTopIOReadUsage
 		cfg.AmountTopIOWriteUsage = tc.amountTopIOWriteUsage
 		cfg.AmountTopMemoryUsage = tc.amountTopMemoryUsage
+		cfg.MemoryUsageThreshold = tc.memoryUsageThreshold
 		maxTopProcesses := cfg.AmountTopCPUPercentageUsage + cfg.AmountTopIOReadUsage + cfg.AmountTopIOWriteUsage + cfg.AmountTopMemoryUsage
 
 		t.Run(tc.name, func(t *testing.T) {
-			processInclusions := getProcessInclusions(tc.processes, cfg)
+			processInclusions := getProcessInclusions(tc.processes, cfg, tc.totalCPUpercentage, tc.totalMemory)
 			assert.True(t, len(processInclusions) <= maxTopProcesses, fmt.Sprintf("Way too many top processes reported: %d > %d", len(processInclusions), maxTopProcesses))
 
 			for _, proc := range processInclusions {

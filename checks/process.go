@@ -130,6 +130,10 @@ func fmtProcesses(
 	// Take all process and format them to the model.Process type
 	commonProcesses := make([]*ProcessCommon, 0, cfg.MaxPerMessage)
 	processMap := make(map[int32]*model.Process, cfg.MaxPerMessage)
+	var totalCPUUsage float32
+	var totalMemUsage uint64
+	totalCPUUsage = 0.0
+	totalMemUsage = 0
 	for _, fp := range procs {
 		// Hide blacklisted args if the Scrubber is enabled
 		fp.Cmdline = cfg.Scrubber.ScrubProcessCommand(fp)
@@ -167,6 +171,9 @@ func fmtProcesses(
 			InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
 			ContainerId:            cidByPid[fp.Pid],
 		}
+
+		totalCPUUsage = totalCPUUsage + cpu.TotalPct
+		totalMemUsage = totalMemUsage + memory.Rss
 	}
 
 	// Process inclusions
@@ -176,7 +183,7 @@ func fmtProcesses(
 	defer close(inclusionProcessesChan)
 	go func() {
 		processes := make([]*model.Process, 0, cfg.MaxPerMessage)
-		processes = deriveFmapCommonProcessToProcess(mapProcess(processMap), getProcessInclusions(inclusionCommonProcesses, cfg))
+		processes = deriveFmapCommonProcessToProcess(mapProcess(processMap), getProcessInclusions(inclusionCommonProcesses, cfg, totalCPUUsage, totalMemUsage))
 		inclusionProcessesChan <- processes
 	}()
 

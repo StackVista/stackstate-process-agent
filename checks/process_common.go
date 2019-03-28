@@ -71,7 +71,7 @@ func addTagToProcessCommon(tag string) func(*ProcessCommon) *ProcessCommon {
 	}
 }
 
-func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentConfig) []*ProcessCommon {
+func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentConfig, totalCPUUsage float32, totalMemUsage uint64) []*ProcessCommon {
 	cpuProcessChan := make(chan []*ProcessCommon)
 	cpuProcesses := make([]*ProcessCommon, len(commonProcesses))
 	copy(cpuProcesses, commonProcesses)
@@ -103,7 +103,12 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		cpuProcessChan <- deriveFmapTagProcess(addTagToProcessCommon(TopCPU), sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage))
+
+		if totalCPUUsage >= float32(cfg.CPUPercentageUsageThreshold) {
+			cpuProcessChan <- deriveFmapTagProcess(addTagToProcessCommon(TopCPU), sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage))
+		} else {
+			cpuProcessChan <- make([]*ProcessCommon, 0)
+		}
 	}()
 
 	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice
@@ -139,7 +144,12 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		memoryProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon(TopMemory), sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage))
+
+		if totalMemUsage >= uint64(cfg.MemoryUsageThreshold) {
+			memoryProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon(TopMemory), sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage))
+		} else {
+			memoryProcessesChan <- make([]*ProcessCommon, 0)
+		}
 	}()
 
 	return append(append(append(<-cpuProcessChan, <-ioReadProcessesChan...), <-ioWriteProcessesChan...), <-memoryProcessesChan...)

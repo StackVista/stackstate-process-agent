@@ -47,9 +47,11 @@ type YamlAgentConfig struct {
 		Blacklist struct {
 			Inclusions struct {
 				AmountTopCPUPercentageUsage int `yaml:"amount_top_cpu_pct_usage"`
+				CPUPercentageUsageThreshold int `yaml:"cpu_pct_usage_threshold"`
 				AmountTopIOReadUsage        int `yaml:"amount_top_io_read_usage"`
 				AmountTopIOWriteUsage       int `yaml:"amount_top_io_write_usage"`
 				AmountTopMemoryUsage        int `yaml:"amount_top_mem_usage"`
+				MemoryUsageThreshold        int `yaml:"mem_usage_threshold"`
 			} `yaml:"inclusions"`
 			// A list of regex patterns that will exclude a process if matched.
 			Patterns []string `yaml:"patterns"`
@@ -179,6 +181,24 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	if yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage != 0 {
 		log.Infof("Overriding top memory using processes inclusions to %d", yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage)
 		agentConf.AmountTopMemoryUsage = yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage
+	}
+
+	// Threshold for retrieving top CPU percentage using processes
+	if yc.Process.Blacklist.Inclusions.CPUPercentageUsageThreshold != 0 {
+		log.Infof("Overriding CPU percentage threshold for collecting top CPU using processes inclusions to %d", yc.Process.Blacklist.Inclusions.CPUPercentageUsageThreshold)
+		agentConf.CPUPercentageUsageThreshold = yc.Process.Blacklist.Inclusions.CPUPercentageUsageThreshold
+		if yc.Process.Blacklist.Inclusions.AmountTopCPUPercentageUsage <= 0 {
+			log.Warn("CPUPercentageUsageThreshold specified without AmountTopCPUPercentageUsage. Please add AmountTopCPUPercentageUsage to benefit from the top process inclusions")
+		}
+	}
+
+	// Threshold for retrieving top Memory percentage using processes
+	if yc.Process.Blacklist.Inclusions.MemoryUsageThreshold != 0 {
+		log.Infof("Overriding Memory threshold for collecting top memory using processes inclusions to %d", yc.Process.Blacklist.Inclusions.MemoryUsageThreshold)
+		agentConf.MemoryUsageThreshold = yc.Process.Blacklist.Inclusions.MemoryUsageThreshold
+		if yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage <= 0 {
+			log.Warn("MemoryUsageThreshold specified without AmountTopMemoryUsage. Please add AmountTopMemoryUsage to benefit from the top process inclusions")
+		}
 	}
 
 	// log warning if blacklist inclusions is specified without patterns

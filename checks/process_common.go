@@ -4,7 +4,7 @@ import (
 	"github.com/DataDog/gopsutil/process"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
-	"github.com/cihub/seelog"
+	log "github.com/cihub/seelog"
 	"sort"
 	"time"
 )
@@ -140,7 +140,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 // Chunks process stats into predefined max per message size
 func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chunked [][]*model.ProcessStat) [][]*model.ProcessStat {
 	if maxPerMessage < len(processStats) {
-		seelog.Warnf("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processStats), maxPerMessage)
+		log.Warnf("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processStats), maxPerMessage)
 	}
 
 	for maxPerMessage < len(processStats) {
@@ -156,7 +156,7 @@ func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chu
 // Chunks processes into predefined max per message size
 func chunkProcesses(processes []*model.Process, maxPerMessage int, chunked [][]*model.Process) [][]*model.Process {
 	if maxPerMessage < len(processes) {
-		seelog.Warnf("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processes), maxPerMessage)
+		log.Warnf("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processes), maxPerMessage)
 	}
 
 	for maxPerMessage < len(processes) {

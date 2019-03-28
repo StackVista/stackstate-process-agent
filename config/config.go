@@ -83,9 +83,11 @@ type AgentConfig struct {
 
 	// Top resource using process inclusion amounts
 	AmountTopCPUPercentageUsage int
+	CPUPercentageUsageThreshold int
 	AmountTopIOReadUsage        int
 	AmountTopIOWriteUsage       int
 	AmountTopMemoryUsage        int
+	MemoryUsageThreshold		int
 
 	// Network collection configuration
 	EnableNetworkTracing              bool

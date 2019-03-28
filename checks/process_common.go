@@ -19,6 +19,14 @@ type ProcessCommon struct {
 	Tags    []string
 }
 
+// Process tags for top usage
+const (
+	TopCPU     string = "usage:top-cpu"
+	TopMemory  string = "usage:top-mem"
+	TopIORead  string = "usage:top-io-read"
+	TopIOWrite string = "usage:top-io-write"
+)
+
 // returns a function to filter processes in blacklist based on the configuration provided
 func keepProcess(cfg *config.AgentConfig) func(*ProcessCommon) bool {
 	return func(process *ProcessCommon) bool {
@@ -95,7 +103,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		cpuProcessChan <- deriveFmapTagProcess(addTagToProcessCommon("topCpu"), sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage))
+		cpuProcessChan <- deriveFmapTagProcess(addTagToProcessCommon(TopCPU), sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage))
 	}()
 
 	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice
@@ -107,7 +115,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		ioReadProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon("topIORead"), sortAndTakeN(ioReadProcesses, readIOSort, cfg.AmountTopIOReadUsage))
+		ioReadProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon(TopIORead), sortAndTakeN(ioReadProcesses, readIOSort, cfg.AmountTopIOReadUsage))
 	}()
 
 	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
@@ -119,7 +127,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		ioWriteProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon("topIOWrite"), sortAndTakeN(ioWriteProcesses, writeIOSort, cfg.AmountTopIOWriteUsage))
+		ioWriteProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon(TopIOWrite), sortAndTakeN(ioWriteProcesses, writeIOSort, cfg.AmountTopIOWriteUsage))
 	}()
 
 	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
@@ -131,7 +139,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		memoryProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon("topMem"), sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage))
+		memoryProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon(TopMemory), sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage))
 	}()
 
 	return append(append(append(<-cpuProcessChan, <-ioReadProcessesChan...), <-ioWriteProcessesChan...), <-memoryProcessesChan...)

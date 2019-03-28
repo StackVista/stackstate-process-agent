@@ -297,7 +297,12 @@ func TestProcessInclusions(t *testing.T) {
 			expectedPidsTags: []struct {
 				int
 				Tags
-			}{{2, []string{"topMem"}}, {4, []string{"topCpu"}}, {6, []string{"topIORead"}}, {8, []string{"topIOWrite"}}},
+			}{
+				{2, []string{TopMemory}},
+				{4, []string{TopCPU}},
+				{6, []string{TopIORead}},
+				{8, []string{TopIOWrite}},
+			},
 		},
 		{
 			name: "Should independently return the process which consumed the most resources for each of the categories",
@@ -358,7 +363,7 @@ func TestProcessInclusions(t *testing.T) {
 			expectedPidsTags: []struct {
 				int
 				Tags
-			}{{1, []string{"topMem", "topCpu", "topIORead", "topIOWrite"}}},
+			}{{1, []string{TopMemory, TopCPU, TopIORead, TopIOWrite}}},
 		},
 	} {
 		cfg.AmountTopCPUPercentageUsage = tc.amountTopCPUPercentageUsage

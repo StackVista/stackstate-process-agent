@@ -1,3 +1,5 @@
+//go:generate goderive .
+
 package checks
 
 import (

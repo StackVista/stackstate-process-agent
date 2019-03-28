@@ -25,10 +25,6 @@
 [[constraint]]
   name = "golang.org/x/sys"
 
-[[constraint]]
-  name = "github.com/awalterschulze/goderive"
-  revision = "71608c676057f3512b43cbd61d645b0dc6bcfc20"
-
 [[override]]
   name = "gopkg.in/yaml.v2"
   revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"

@@ -87,7 +87,7 @@ type AgentConfig struct {
 	AmountTopIOReadUsage        int
 	AmountTopIOWriteUsage       int
 	AmountTopMemoryUsage        int
-	MemoryUsageThreshold		int
+	MemoryUsageThreshold        int
 
 	// Network collection configuration
 	EnableNetworkTracing              bool

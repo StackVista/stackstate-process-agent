@@ -16,7 +16,7 @@ type ProcessCommon struct {
 	Memory  *model.MemoryStat
 	CPU     *model.CPUStat
 	IOStat  *model.IOStat
-	Tags	[]string
+	Tags    []string
 }
 
 // returns a function to filter processes in blacklist based on the configuration provided

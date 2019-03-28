@@ -233,7 +233,10 @@ func TestProcessInclusions(t *testing.T) {
 		amountTopIOReadUsage        int
 		amountTopIOWriteUsage       int
 		amountTopMemoryUsage        int
-		expectedPidsTags            []struct {int; Tags}
+		expectedPidsTags            []struct {
+			int
+			Tags
+		}
 	}{
 		{
 			name: "Should return the correct top resource using processes",
@@ -291,7 +294,10 @@ func TestProcessInclusions(t *testing.T) {
 			amountTopIOReadUsage:        1,
 			amountTopIOWriteUsage:       1,
 			amountTopMemoryUsage:        1,
-			expectedPidsTags:            []struct {int; Tags}{{2, []string{"topMem"}}, {4, []string{"topCpu"}}, {6, []string{"topIORead"}}, {8, []string{"topIOWrite"}}},
+			expectedPidsTags: []struct {
+				int
+				Tags
+			}{{2, []string{"topMem"}}, {4, []string{"topCpu"}}, {6, []string{"topIORead"}}, {8, []string{"topIOWrite"}}},
 		},
 		{
 			name: "Should independently return the process which consumed the most resources for each of the categories",
@@ -349,7 +355,10 @@ func TestProcessInclusions(t *testing.T) {
 			amountTopIOReadUsage:        1,
 			amountTopIOWriteUsage:       1,
 			amountTopMemoryUsage:        1,
-			expectedPidsTags:            []struct {int; Tags}{{1, []string{"topMem", "topCpu", "topIORead", "topIOWrite"} }},
+			expectedPidsTags: []struct {
+				int
+				Tags
+			}{{1, []string{"topMem", "topCpu", "topIORead", "topIOWrite"}}},
 		},
 	} {
 		cfg.AmountTopCPUPercentageUsage = tc.amountTopCPUPercentageUsage
@@ -363,7 +372,10 @@ func TestProcessInclusions(t *testing.T) {
 			assert.True(t, len(processInclusions) <= maxTopProcesses, fmt.Sprintf("Way too many top processes reported: %d > %d", len(processInclusions), maxTopProcesses))
 
 			for _, proc := range processInclusions {
-				pidTags := struct {int; Tags}{int(proc.Pid), proc.Tags}
+				pidTags := struct {
+					int
+					Tags
+				}{int(proc.Pid), proc.Tags}
 				assert.Contains(t, tc.expectedPidsTags, pidTags, fmt.Sprintf("Expected pids/tags: %v, found pid/tag: %v", tc.expectedPidsTags, pidTags))
 			}
 		})

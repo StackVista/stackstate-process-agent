@@ -16,30 +16,35 @@ type ProcessCommon struct {
 	Memory  *model.MemoryStat
 	CPU     *model.CPUStat
 	IOStat  *model.IOStat
+	Tags	[]string
 }
 
 // returns a function to filter processes in blacklist based on the configuration provided
-func keepProcess(cfg *config.AgentConfig) func(process *ProcessCommon) bool {
+func keepProcess(cfg *config.AgentConfig) func(*ProcessCommon) bool {
 	return func(process *ProcessCommon) bool {
 		return !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
 	}
 }
 
 // returns a function to map common processes into a model.Process based on the pID
-func mapProcess(processMap map[int32]*model.Process) func(process *ProcessCommon) *model.Process {
-	return func(process *ProcessCommon) *model.Process {
-		return processMap[process.Pid]
+func mapProcess(processMap map[int32]*model.Process) func(*ProcessCommon) *model.Process {
+	return func(processCommon *ProcessCommon) *model.Process {
+		p := processMap[processCommon.Pid]
+		p.Tags = processCommon.Tags
+		return p
 	}
 }
 
-func mapProcessStat(processStatMap map[int32]*model.ProcessStat) func(process *ProcessCommon) *model.ProcessStat {
-	return func(process *ProcessCommon) *model.ProcessStat {
-		return processStatMap[process.Pid]
+func mapProcessStat(processStatMap map[int32]*model.ProcessStat) func(*ProcessCommon) *model.ProcessStat {
+	return func(processCommon *ProcessCommon) *model.ProcessStat {
+		p := processStatMap[processCommon.Pid]
+		p.Tags = processCommon.Tags
+		return p
 	}
 }
 
 // sorts the provided array with the specific sorting func and takes the top n process and return the remaining
-func sortAndTakeN(processes []*ProcessCommon, sortingFunc func(processes []*ProcessCommon) func(i, j int) bool, n int) []*ProcessCommon {
+func sortAndTakeN(processes []*ProcessCommon, sortingFunc func([]*ProcessCommon) func(i, j int) bool, n int) []*ProcessCommon {
 	sort.SliceStable(processes, sortingFunc(processes))
 	var topNProcesses []*ProcessCommon
 	if len(processes) <= n {
@@ -49,6 +54,13 @@ func sortAndTakeN(processes []*ProcessCommon, sortingFunc func(processes []*Proc
 	}
 
 	return topNProcesses
+}
+
+func addTagToProcessCommon(tag string) func(*ProcessCommon) *ProcessCommon {
+	return func(process *ProcessCommon) *ProcessCommon {
+		process.Tags = append(process.Tags, tag)
+		return process
+	}
 }
 
 func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentConfig) []*ProcessCommon {
@@ -83,7 +95,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		cpuProcessChan <- sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage)
+		cpuProcessChan <- deriveFmapTagProcess(addTagToProcessCommon("topCpu"), sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage))
 	}()
 
 	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice
@@ -95,7 +107,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		ioReadProcessesChan <- sortAndTakeN(ioReadProcesses, readIOSort, cfg.AmountTopIOReadUsage)
+		ioReadProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon("topIORead"), sortAndTakeN(ioReadProcesses, readIOSort, cfg.AmountTopIOReadUsage))
 	}()
 
 	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
@@ -107,7 +119,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		ioWriteProcessesChan <- sortAndTakeN(ioWriteProcesses, writeIOSort, cfg.AmountTopIOWriteUsage)
+		ioWriteProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon("topIOWrite"), sortAndTakeN(ioWriteProcesses, writeIOSort, cfg.AmountTopIOWriteUsage))
 	}()
 
 	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
@@ -119,7 +131,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		memoryProcessesChan <- sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage)
+		memoryProcessesChan <- deriveFmapTagProcess(addTagToProcessCommon("topMem"), sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage))
 	}()
 
 	return append(append(append(<-cpuProcessChan, <-ioReadProcessesChan...), <-ioWriteProcessesChan...), <-memoryProcessesChan...)

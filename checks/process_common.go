@@ -16,16 +16,16 @@ type ProcessCommon struct {
 	Memory  *model.MemoryStat
 	CPU     *model.CPUStat
 	IOStat  *model.IOStat
-	Tags	[]string
+	Tags    []string
 }
 
+// Process tags for top usage
 const (
-	TopCpu     string = "usage:top-cpu"
+	TopCPU     string = "usage:top-cpu"
 	TopMemory  string = "usage:top-mem"
 	TopIORead  string = "usage:top-io-read"
 	TopIOWrite string = "usage:top-io-write"
 )
-
 
 // returns a function to filter processes in blacklist based on the configuration provided
 func keepProcess(cfg *config.AgentConfig) func(*ProcessCommon) bool {
@@ -103,7 +103,7 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 
 			return sortingFunc
 		}
-		cpuProcessChan <- deriveFmapTagProcess(addTagToProcessCommon(TopCpu), sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage))
+		cpuProcessChan <- deriveFmapTagProcess(addTagToProcessCommon(TopCPU), sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage))
 	}()
 
 	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice

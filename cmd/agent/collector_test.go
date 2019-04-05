@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/StackVista/stackstate-process-agent/pkg"
+	"github.com/StackVista/stackstate-process-agent/pkg/config"
+	"github.com/StackVista/stackstate-process-agent/pkg/model"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -11,14 +12,14 @@ import (
 
 func TestUpdateRTStatus(t *testing.T) {
 	assert := assert.New(t)
-	cfg := pkg.NewDefaultAgentConfig()
+	cfg := config.NewDefaultAgentConfig()
 	c, err := NewCollector(cfg)
 	assert.NoError(err)
 	// XXX: Give the collector a big channel so it never blocks.
 	c.rtIntervalCh = make(chan time.Duration, 1000)
 
 	// Validate that we switch to real-time if only one response says so.
-	statuses := []*pkg.CollectorStatus{
+	statuses := []*model.CollectorStatus{
 		{ActiveClients: 0, Interval: 2},
 		{ActiveClients: 3, Interval: 2},
 		{ActiveClients: 0, Interval: 2},
@@ -27,7 +28,7 @@ func TestUpdateRTStatus(t *testing.T) {
 	assert.Equal(int32(1), atomic.LoadInt32(&c.realTimeEnabled))
 
 	// Validate that we stay that way
-	statuses = []*pkg.CollectorStatus{
+	statuses = []*model.CollectorStatus{
 		{ActiveClients: 0, Interval: 2},
 		{ActiveClients: 3, Interval: 2},
 		{ActiveClients: 0, Interval: 2},
@@ -36,7 +37,7 @@ func TestUpdateRTStatus(t *testing.T) {
 	assert.Equal(int32(1), atomic.LoadInt32(&c.realTimeEnabled))
 
 	// And that it can turn back off
-	statuses = []*pkg.CollectorStatus{
+	statuses = []*model.CollectorStatus{
 		{ActiveClients: 0, Interval: 2},
 		{ActiveClients: 0, Interval: 2},
 		{ActiveClients: 0, Interval: 2},
@@ -47,14 +48,14 @@ func TestUpdateRTStatus(t *testing.T) {
 
 func TestUpdateRTInterval(t *testing.T) {
 	assert := assert.New(t)
-	cfg := pkg.NewDefaultAgentConfig()
+	cfg := config.NewDefaultAgentConfig()
 	c, err := NewCollector(cfg)
 	assert.NoError(err)
 	// XXX: Give the collector a big channel so it never blocks.
 	c.rtIntervalCh = make(chan time.Duration, 1000)
 
 	// Validate that we pick the largest interval.
-	statuses := []*pkg.CollectorStatus{
+	statuses := []*model.CollectorStatus{
 		{ActiveClients: 0, Interval: 3},
 		{ActiveClients: 3, Interval: 2},
 		{ActiveClients: 0, Interval: 10},

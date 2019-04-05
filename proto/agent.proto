@@ -2,7 +2,7 @@ syntax = "proto3";
 
 option go_package = "github.com/StackVista/stackstate-process-agent/pkg/model";
 
-package stackstate.process_agent;
+package datadog.process_agent;
 
 //
 // Message Types

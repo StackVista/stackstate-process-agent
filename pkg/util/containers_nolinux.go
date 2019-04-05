@@ -4,7 +4,6 @@ package util
 
 import (
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
-	"github.com/StackVista/stackstate-process-agent/pkg"
 )
 
 // SetContainerSource is only implemented on Linux

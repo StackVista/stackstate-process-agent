@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"expvar"
 	"fmt"
-	"github.com/StackVista/stackstate-process-agent/pkg"
+	"github.com/StackVista/stackstate-process-agent/pkg/config"
+	"github.com/StackVista/stackstate-process-agent/pkg/model"
+	"github.com/StackVista/stackstate-process-agent/pkg/util"
 	"html/template"
 	"io"
 	"net/http"
@@ -119,9 +121,9 @@ func updateProcContainerCount(msgs []model.MessageBody) {
 	var procCount, containerCount int
 	for _, m := range msgs {
 		switch msg := m.(type) {
-		case *pkg.CollectorContainer:
+		case *model.CollectorContainer:
 			containerCount += len(msg.Containers)
-		case *pkg.CollectorProc:
+		case *model.CollectorProc:
 			procCount += len(msg.Processes)
 			containerCount += len(msg.Containers)
 		}
@@ -147,7 +149,7 @@ func publishQueueSize() interface{} {
 
 func publishContainerID() interface{} {
 	cgroupFile := "/proc/self/cgroup"
-	if !pkg.PathExists(cgroupFile) {
+	if !util.PathExists(cgroupFile) {
 		return nil
 	}
 	f, err := os.Open(cgroupFile)

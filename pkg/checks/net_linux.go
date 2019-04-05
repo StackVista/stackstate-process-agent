@@ -4,7 +4,6 @@ package checks
 
 import (
 	"bytes"
-	"github.com/StackVista/stackstate-process-agent/pkg"
 
 	"github.com/StackVista/stackstate-process-agent/pkg/tracer"
 	tracerConfig "github.com/StackVista/stackstate-process-agent/pkg/tracer/config"

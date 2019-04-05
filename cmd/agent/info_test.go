@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"github.com/StackVista/stackstate-process-agent/pkg"
+	"github.com/StackVista/stackstate-process-agent/pkg/config"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -78,7 +78,7 @@ func testServer(t *testing.T) *httptest.Server {
 
 func TestInfo(t *testing.T) {
 	assert := assert.New(t)
-	conf := pkg.NewDefaultAgentConfig()
+	conf := config.NewDefaultAgentConfig()
 	server := testServer(t)
 	assert.NotNil(server)
 	defer server.Close()
@@ -95,7 +95,7 @@ func TestInfo(t *testing.T) {
 
 func TestNotRunning(t *testing.T) {
 	assert := assert.New(t)
-	conf := pkg.NewDefaultAgentConfig()
+	conf := config.NewDefaultAgentConfig()
 	server := testServer(t)
 	assert.NotNil(server)
 	defer server.Close()
@@ -122,7 +122,7 @@ func TestNotRunning(t *testing.T) {
 
 func TestError(t *testing.T) {
 	assert := assert.New(t)
-	conf := pkg.NewDefaultAgentConfig()
+	conf := config.NewDefaultAgentConfig()
 	server := testServer(t)
 	assert.NotNil(server)
 	defer server.Close()

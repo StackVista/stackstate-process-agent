@@ -17,7 +17,7 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon(in *jlexer.Lexer, out *Connections) {
+func easyjsonC80ae7adDecodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon(in *jlexer.Lexer, out *Connections) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -53,9 +53,7 @@ func easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon(in *jl
 				}
 				for !in.IsDelim(']') {
 					var v1 ConnectionStats
-					if data := in.Raw(); in.Ok() {
-						in.AddError((v1).UnmarshalJSON(data))
-					}
+					(v1).UnmarshalEasyJSON(in)
 					out.Conns = append(out.Conns, v1)
 					in.WantComma()
 				}
@@ -71,7 +69,7 @@ func easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon(in *jl
 		in.Consumed()
 	}
 }
-func easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon(out *jwriter.Writer, in Connections) {
+func easyjsonC80ae7adEncodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon(out *jwriter.Writer, in Connections) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -91,7 +89,7 @@ func easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon(out *j
 				if v2 > 0 {
 					out.RawByte(',')
 				}
-				out.Raw((v3).MarshalJSON())
+				(v3).MarshalEasyJSON(out)
 			}
 			out.RawByte(']')
 		}
@@ -102,27 +100,27 @@ func easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon(out *j
 // MarshalJSON supports json.Marshaler interface
 func (v Connections) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon(&w, v)
+	easyjsonC80ae7adEncodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v Connections) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon(w, v)
+	easyjsonC80ae7adEncodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *Connections) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon(&r, v)
+	easyjsonC80ae7adDecodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Connections) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon(l, v)
+	easyjsonC80ae7adDecodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon(l, v)
 }
-func easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon1(in *jlexer.Lexer, out *ConnectionStats) {
+func easyjsonC80ae7adDecodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon1(in *jlexer.Lexer, out *ConnectionStats) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -173,7 +171,7 @@ func easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon1(in *j
 		in.Consumed()
 	}
 }
-func easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon1(out *jwriter.Writer, in ConnectionStats) {
+func easyjsonC80ae7adEncodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon1(out *jwriter.Writer, in ConnectionStats) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -293,23 +291,23 @@ func easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon1(out *
 // MarshalJSON supports json.Marshaler interface
 func (v ConnectionStats) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon1(&w, v)
+	easyjsonC80ae7adEncodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon1(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v ConnectionStats) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonC80ae7adEncodeGithubComStackVistaTcptracerBpfPkgTracerCommon1(w, v)
+	easyjsonC80ae7adEncodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon1(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *ConnectionStats) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon1(&r, v)
+	easyjsonC80ae7adDecodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon1(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *ConnectionStats) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonC80ae7adDecodeGithubComStackVistaTcptracerBpfPkgTracerCommon1(l, v)
+	easyjsonC80ae7adDecodeGithubComStackVistaStackstateProcessAgentPkgTracerCommon1(l, v)
 }

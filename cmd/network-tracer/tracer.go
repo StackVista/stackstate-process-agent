@@ -3,7 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/StackVista/stackstate-process-agent/pkg"
+	"github.com/StackVista/stackstate-process-agent/pkg/config"
+	"github.com/StackVista/stackstate-process-agent/pkg/net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,7 +26,7 @@ type NetworkTracer struct {
 
 	supported bool
 	tracer    tracer.Tracer
-	conn      pkg.Conn
+	conn      net.Conn
 }
 
 // CreateNetworkTracer creates a NetworkTracer as well as it's UDS socket after confirming that the OS supports BPF-based
@@ -46,7 +47,7 @@ func CreateNetworkTracer(cfg *config.AgentConfig) (*NetworkTracer, error) {
 	}
 
 	// Setting up the unix socket
-	uds, err := pkg.NewUDSListener(cfg)
+	uds, err := net.NewUDSListener(cfg)
 	if err != nil {
 		return nil, err
 	}

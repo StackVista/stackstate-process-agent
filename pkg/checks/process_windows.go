@@ -3,7 +3,6 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-process-agent/pkg"
 	"runtime"
 
 	"github.com/DataDog/gopsutil/cpu"

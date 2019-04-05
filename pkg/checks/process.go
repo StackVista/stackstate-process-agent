@@ -84,7 +84,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, groupID int32) ([]model.Mess
 		return nil, nil
 	}
 	groupSize := len(chunkedProcs)
-	chunkedContainers := fmtContainers(ctrList, p.lastCtrRates, p.lastRun, groupSize)
+	chunkedContainers := chunkContainers(ctrList, p.lastCtrRates, p.lastRun, groupSize, cfg.MaxPerMessage)
 	messages := make([]model.MessageBody, 0, groupSize)
 	totalProcs, totalContainers := float64(0), float64(0)
 	for i := 0; i < groupSize; i++ {

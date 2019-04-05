@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/StackVista/stackstate-process-agent/pkg"
+	"github.com/StackVista/stackstate-process-agent/pkg/checks"
+	"github.com/StackVista/stackstate-process-agent/pkg/config"
+	"github.com/StackVista/stackstate-process-agent/pkg/model"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -32,7 +34,7 @@ type Collector struct {
 	groupID       int32
 	// counters for each type of check
 	runCounters   sync.Map
-	enabledChecks []pkg.Check
+	enabledChecks []checks.Check
 
 	// Controls the real-time interval, can change live.
 	realTimeInterval time.Duration
@@ -43,13 +45,13 @@ type Collector struct {
 
 // NewCollector creates a new Collector
 func NewCollector(cfg *config.AgentConfig) (Collector, error) {
-	sysInfo, err := pkg.CollectSystemInfo(cfg)
+	sysInfo, err := checks.CollectSystemInfo(cfg)
 	if err != nil {
 		return Collector{}, err
 	}
 
-	enabledChecks := make([]pkg.Check, 0)
-	for _, c := range pkg.All {
+	enabledChecks := make([]checks.Check, 0)
+	for _, c := range checks.All {
 		if cfg.CheckIsEnabled(c.Name()) {
 			c.Init(cfg, sysInfo)
 			enabledChecks = append(enabledChecks, c)
@@ -70,7 +72,7 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 	}, nil
 }
 
-func (l *Collector) runCheck(c pkg.Check) {
+func (l *Collector) runCheck(c checks.Check) {
 	runCounter := int32(1)
 	if rc, ok := l.runCounters.Load(c.Name()); ok {
 		runCounter = rc.(int32) + 1
@@ -134,7 +136,7 @@ func (l *Collector) run(exit chan bool) {
 	}()
 
 	for _, c := range l.enabledChecks {
-		go func(c pkg.Check) {
+		go func(c checks.Check) {
 			// Run the check the first time to prime the caches.
 			if !c.RealTime() {
 				l.runCheck(c)
@@ -166,16 +168,16 @@ func (l *Collector) run(exit chan bool) {
 }
 
 func (l *Collector) postMessage(checkPath string, m model.MessageBody) {
-	msgType, err := pkg.DetectMessageType(m)
+	msgType, err := model.DetectMessageType(m)
 	if err != nil {
 		log.Errorf("Unable to detect message type: %s", err)
 		return
 	}
 
-	body, err := pkg.EncodeMessage(pkg.Message{
-		Header: pkg.MessageHeader{
-			Version:  pkg.MessageV3,
-			Encoding: pkg.MessageEncodingZstdPB,
+	body, err := model.EncodeMessage(model.Message{
+		Header: model.MessageHeader{
+			Version:  model.MessageV3,
+			Encoding: model.MessageEncodingZstdPB,
 			Type:     msgType,
 		}, Body: m})
 	if err != nil {
@@ -188,7 +190,7 @@ func (l *Collector) postMessage(checkPath string, m model.MessageBody) {
 	}
 
 	// Wait for all responses to come back before moving on.
-	statuses := make([]*pkg.CollectorStatus, 0, len(l.cfg.APIEndpoints))
+	statuses := make([]*model.CollectorStatus, 0, len(l.cfg.APIEndpoints))
 	for i := 0; i < len(l.cfg.APIEndpoints); i++ {
 		res := <-responses
 		if res.err != nil {
@@ -204,7 +206,7 @@ func (l *Collector) postMessage(checkPath string, m model.MessageBody) {
 	}
 }
 
-func (l *Collector) updateStatus(statuses []*pkg.CollectorStatus) {
+func (l *Collector) updateStatus(statuses []*model.CollectorStatus) {
 	curEnabled := atomic.LoadInt32(&l.realTimeEnabled) == 1
 
 	// If any of the endpoints wants real-time we'll do that.
@@ -250,11 +252,11 @@ func errResponse(format string, a ...interface{}) postResponse {
 	return postResponse{err: fmt.Errorf(format, a...)}
 }
 
-func (l *Collector) postToAPI(endpoint pkg.APIEndpoint, checkPath string, body []byte, responses chan postResponse) {
+func (l *Collector) postToAPI(endpoint config.APIEndpoint, checkPath string, body []byte, responses chan postResponse) {
 	l.postToAPIwithEncoding(endpoint, checkPath, body, responses, "x-zip")
 }
 
-func (l *Collector) postToAPIwithEncoding(endpoint pkg.APIEndpoint, checkPath string, body []byte, responses chan postResponse, contentEncoding string) {
+func (l *Collector) postToAPIwithEncoding(endpoint config.APIEndpoint, checkPath string, body []byte, responses chan postResponse, contentEncoding string) {
 	url := endpoint.Endpoint.String() + checkPath // Add the checkPath in full Process Agent URL
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {

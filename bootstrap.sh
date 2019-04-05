@@ -93,4 +93,4 @@ echo "export DEPNOLOCK=1" >> ~/.profile
 source ~/.profile
 
 # Install the gogo-proto binaries from the vendor directory to make sure we have the correct version
-cd /opt/stackstate-go/src/github.com/StackVista/stackstate-process-agent/vendor/github.com/gogo/protobuf && make install
+cd /opt/stackstate-go/src/github.com/StackVista/stackstate-process-agent/vendor/github.com/gogo/protobuf/proto && make install

@@ -3,7 +3,6 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-process-agent/pkg"
 	"time"
 
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"

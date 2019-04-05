@@ -4,18 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/StackVista/stackstate-process-agent/pkg"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	log "github.com/cihub/seelog"
 
-	"github.com/StackVista/stackstate-process-agent/checks"
-	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-process-agent/statsd"
 )
 
@@ -31,8 +30,9 @@ type Collector struct {
 	cfg           *config.AgentConfig
 	httpClient    http.Client
 	groupID       int32
-	runCounter    int32
-	enabledChecks []checks.Check
+	// counters for each type of check
+	runCounters   sync.Map
+	enabledChecks []pkg.Check
 
 	// Controls the real-time interval, can change live.
 	realTimeInterval time.Duration
@@ -43,13 +43,13 @@ type Collector struct {
 
 // NewCollector creates a new Collector
 func NewCollector(cfg *config.AgentConfig) (Collector, error) {
-	sysInfo, err := checks.CollectSystemInfo(cfg)
+	sysInfo, err := pkg.CollectSystemInfo(cfg)
 	if err != nil {
 		return Collector{}, err
 	}
 
-	enabledChecks := make([]checks.Check, 0)
-	for _, c := range checks.All {
+	enabledChecks := make([]pkg.Check, 0)
+	for _, c := range pkg.All {
 		if cfg.CheckIsEnabled(c.Name()) {
 			c.Init(cfg, sysInfo)
 			enabledChecks = append(enabledChecks, c)
@@ -70,8 +70,13 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 	}, nil
 }
 
-func (l *Collector) runCheck(c checks.Check) {
-	runCounter := atomic.AddInt32(&l.runCounter, 1)
+func (l *Collector) runCheck(c pkg.Check) {
+	runCounter := int32(1)
+	if rc, ok := l.runCounters.Load(c.Name()); ok {
+		runCounter = rc.(int32) + 1
+	}
+	l.runCounters.Store(c.Name(), runCounter)
+
 	s := time.Now()
 	// update the last collected timestamp for info
 	updateLastCollectTime(time.Now())
@@ -86,11 +91,11 @@ func (l *Collector) runCheck(c checks.Check) {
 			d := time.Since(s)
 			switch {
 			case runCounter < 5:
-				log.Infof("Finished check #%d in %s", runCounter, d)
+				log.Infof("Finished %s check #%d in %s", c.Name(), runCounter, d)
 			case runCounter == 5:
-				log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
+				log.Infof("Finished %s check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", c.Name(), runCounter, d)
 			case runCounter%20 == 0:
-				log.Infof("Finish check #%d in %s", runCounter, d)
+				log.Infof("Finish %s check #%d in %s", c.Name(), runCounter, d)
 			}
 		}
 	}
@@ -129,7 +134,7 @@ func (l *Collector) run(exit chan bool) {
 	}()
 
 	for _, c := range l.enabledChecks {
-		go func(c checks.Check) {
+		go func(c pkg.Check) {
 			// Run the check the first time to prime the caches.
 			if !c.RealTime() {
 				l.runCheck(c)
@@ -161,16 +166,16 @@ func (l *Collector) run(exit chan bool) {
 }
 
 func (l *Collector) postMessage(checkPath string, m model.MessageBody) {
-	msgType, err := model.DetectMessageType(m)
+	msgType, err := pkg.DetectMessageType(m)
 	if err != nil {
 		log.Errorf("Unable to detect message type: %s", err)
 		return
 	}
 
-	body, err := model.EncodeMessage(model.Message{
-		Header: model.MessageHeader{
-			Version:  model.MessageV3,
-			Encoding: model.MessageEncodingZstdPB,
+	body, err := pkg.EncodeMessage(pkg.Message{
+		Header: pkg.MessageHeader{
+			Version:  pkg.MessageV3,
+			Encoding: pkg.MessageEncodingZstdPB,
 			Type:     msgType,
 		}, Body: m})
 	if err != nil {
@@ -183,7 +188,7 @@ func (l *Collector) postMessage(checkPath string, m model.MessageBody) {
 	}
 
 	// Wait for all responses to come back before moving on.
-	statuses := make([]*model.CollectorStatus, 0, len(l.cfg.APIEndpoints))
+	statuses := make([]*pkg.CollectorStatus, 0, len(l.cfg.APIEndpoints))
 	for i := 0; i < len(l.cfg.APIEndpoints); i++ {
 		res := <-responses
 		if res.err != nil {
@@ -199,7 +204,7 @@ func (l *Collector) postMessage(checkPath string, m model.MessageBody) {
 	}
 }
 
-func (l *Collector) updateStatus(statuses []*model.CollectorStatus) {
+func (l *Collector) updateStatus(statuses []*pkg.CollectorStatus) {
 	curEnabled := atomic.LoadInt32(&l.realTimeEnabled) == 1
 
 	// If any of the endpoints wants real-time we'll do that.
@@ -245,11 +250,11 @@ func errResponse(format string, a ...interface{}) postResponse {
 	return postResponse{err: fmt.Errorf(format, a...)}
 }
 
-func (l *Collector) postToAPI(endpoint config.APIEndpoint, checkPath string, body []byte, responses chan postResponse) {
+func (l *Collector) postToAPI(endpoint pkg.APIEndpoint, checkPath string, body []byte, responses chan postResponse) {
 	l.postToAPIwithEncoding(endpoint, checkPath, body, responses, "x-zip")
 }
 
-func (l *Collector) postToAPIwithEncoding(endpoint config.APIEndpoint, checkPath string, body []byte, responses chan postResponse, contentEncoding string) {
+func (l *Collector) postToAPIwithEncoding(endpoint pkg.APIEndpoint, checkPath string, body []byte, responses chan postResponse, contentEncoding string) {
 	url := endpoint.Endpoint.String() + checkPath // Add the checkPath in full Process Agent URL
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {

@@ -33,7 +33,8 @@ jobs:
       - run: echo "export PROCESS_AGENT_VERSION=$(packaging/version.sh)" >> $BASH_ENV
       - run: echo "export EBPF=${EBPF:-true}" >> $BASH_ENV
       - run: echo 'export PATH=$GOPATH/bin:/usr/local/go/bin:$PATH' >> $BASH_ENV && source $BASH_ENV
-      - run: sudo apt-get update && sudo apt-get -y install linux-headers-$(uname -r) rsync rake
+      - run: sudo apt-get update && sudo apt-get -y install linux-headers-generic linux-headers-$(uname -r) rsync rake clang-format-3.8 git
+      - run: sudo cp /usr/bin/clang-format-3.8 /usr/bin/clang-format
       - run: mkdir -p $GOPATH $GOPATH/bin $IMPORT_PATH download
       - run: test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
       - run: sudo tar -C /usr/local -xzf download/$GODIST --mode='a+rwX'

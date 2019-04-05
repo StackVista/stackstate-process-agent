@@ -1,11 +1,15 @@
 vendor/
+vendor.orig/
 download/
 
-.vscode
+tracer-ebpf.o
+.DS_Store
 .idea
+.vscode
 .bashrc
 *.exe
 *.syso
+*.swp
 cmd/agent/windows_resources/process-agent-msg.rc
 cmd/agent/windows_resources/*.bin
 
@@ -21,5 +25,5 @@ derived.gen.go
 .vagrant/
 *.log
 
-#MAC OS 
+#MAC OS
 .DS_STORE

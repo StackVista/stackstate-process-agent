@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/StackVista/stackstate-process-agent/pkg"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	log "github.com/cihub/seelog"
 
 	"github.com/StackVista/stackstate-agent/pkg/pidfile"
-	"github.com/StackVista/stackstate-process-agent/config"
 )
 
 // Flag values
@@ -43,7 +43,7 @@ func main() {
 
 	// Set up a default config before parsing config so we log errors nicely.
 	// The default will be stdout since we can't assume any file is writeable.
-	if err := config.NewLoggerLevel("info", "", true); err != nil {
+	if err := pkg.NewLoggerLevel("info", "", true); err != nil {
 		panic(err)
 	}
 	defer log.Flush()
@@ -138,13 +138,13 @@ func versionString() string {
 }
 
 func parseConfig() *config.AgentConfig {
-	yamlConf, err := config.NewYamlIfExists(opts.configPath) // --yamlConfig
+	yamlConf, err := pkg.NewYamlIfExists(opts.configPath) // --yamlConfig
 	if err != nil {                                          // Will return nil if no Yaml file exists
 		log.Criticalf("Error reading YAML formatted config: %s", err)
 		os.Exit(1)
 	}
 
-	cfg, err := config.NewNetworkAgentConfig(yamlConf)
+	cfg, err := pkg.NewNetworkAgentConfig(yamlConf)
 	if err != nil {
 		log.Criticalf("Failed to create agent config: %s", err)
 		os.Exit(1)

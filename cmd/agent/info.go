@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"expvar"
 	"fmt"
+	"github.com/StackVista/stackstate-process-agent/pkg"
 	"html/template"
 	"io"
 	"net/http"
@@ -12,10 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
-	"github.com/StackVista/stackstate-process-agent/util"
 )
 
 var (
@@ -122,9 +119,9 @@ func updateProcContainerCount(msgs []model.MessageBody) {
 	var procCount, containerCount int
 	for _, m := range msgs {
 		switch msg := m.(type) {
-		case *model.CollectorContainer:
+		case *pkg.CollectorContainer:
 			containerCount += len(msg.Containers)
-		case *model.CollectorProc:
+		case *pkg.CollectorProc:
 			procCount += len(msg.Processes)
 			containerCount += len(msg.Containers)
 		}
@@ -150,7 +147,7 @@ func publishQueueSize() interface{} {
 
 func publishContainerID() interface{} {
 	cgroupFile := "/proc/self/cgroup"
-	if !util.PathExists(cgroupFile) {
+	if !pkg.PathExists(cgroupFile) {
 		return nil
 	}
 	f, err := os.Open(cgroupFile)
@@ -204,7 +201,7 @@ type StatusInfo struct {
 	Uptime          int                    `json:"uptime"`
 	MemStats        struct{ Alloc uint64 } `json:"memstats"`
 	Version         infoVersion            `json:"version"`
-	Config          config.AgentConfig     `json:"config"`
+	Config          config.AgentConfig        `json:"config"`
 	DockerSocket    string                 `json:"docker_socket"`
 	LastCollectTime string                 `json:"last_collect_time"`
 	ProcessCount    int                    `json:"process_count"`

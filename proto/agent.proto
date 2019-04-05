@@ -1,10 +1,8 @@
 syntax = "proto3";
 
-option go_package = "github.com/StackVista/stackstate-process-agent/model";
+option go_package = "github.com/StackVista/stackstate-process-agent/pkg/model";
 
-package datadog.process_agent;
-
-import "github.com/DataDog/agent-payload/agent_payload.proto";
+package stackstate.process_agent;
 
 //
 // Message Types
@@ -23,22 +21,20 @@ message ResCollector {
 }
 
 message CollectorProc {
+    reserved 8,9;
 	string  hostName = 2;
 	repeated Process processes = 3;
 	Host host = 4;
 	SystemInfo info = 5;
 	int32 groupId = 6;
 	int32 groupSize = 7;
-
-	// Optional metadata fields
-	datadog.agentpayload.KubeMetadataPayload kubernetes = 8; // DEPRECATED - left in place to support previous versions
-	datadog.agentpayload.ECSMetadataPayload ecs = 9; // DEPRECATED - left in place to support previous versions
-
 	repeated Container containers = 10;
 }
 
 message CollectorConnections {
+    reserved 1;
 	string hostName = 2;
+	int32 hostId = 9; // Post-resolution field.
 	repeated Connection connections = 3;
 
 	// Post-resolved field
@@ -64,15 +60,12 @@ message CollectorRealTime {
 }
 
 message CollectorContainer {
+    reserved 6,7;
 	string hostName = 1;
 	SystemInfo info = 2;
 	repeated Container containers = 3;
 	int32 groupId = 4;
 	int32 groupSize = 5;
-
-	// Optional metadata fields
-	datadog.agentpayload.KubeMetadataPayload kubernetes = 6; // DEPRECATED - left in place to support previous versions
-	datadog.agentpayload.ECSMetadataPayload ecs = 7; // DEPRECATED - left in place to support previous versions
 
 	// Post-resolved fields
 	Host host = 8;
@@ -107,16 +100,16 @@ message CollectorStatus {
 }
 
 message Process {
+	reserved 6,10;
+
 	uint32 key = 1;
 	int32 pid = 2;
 	Host host = 3;
 	Command command = 4;
 	ProcessUser user = 5;
-	// 6 is deprecated
 	MemoryStat memory = 7;
 	CPUStat cpu = 8;
 	int64 createTime = 9;
-	Container container = 10; // DEPRECATED - left in place to support previous versions
 	int32 openFdCount = 11;
 	ProcessState state = 12;
 	IOStat ioStat = 13;
@@ -169,14 +162,20 @@ enum ContainerHealth {
 	unhealthy = 3;
 }
 
+// ContainerAddr records the IPs, Ports and Protocols for each container
+message ContainerAddr {
+	string ip = 1;
+	int32 port = 2;
+	ConnectionType protocol = 3;
+}
+
 message Container {
+	reserved 3,4,7;
+
 	string type = 1;
 	string id = 2;
-	string name = 3; // DEPRECATED - left in place to support previous versions
-	string image = 4; // DEPRECATED - left in place to support previous versions
 	float  cpuLimit = 5;
 	uint64 memoryLimit = 6;
-	// 7 is removed, do not use.
 	ContainerState state = 8;
 	ContainerHealth health = 9;
 	int64 created = 10;
@@ -196,6 +195,7 @@ message Container {
 	int64 started = 24;
 	bytes byteKey = 25;
 	repeated string tags = 26;
+	repeated ContainerAddr addresses = 27;
 }
 
 // Process state codes in http://wiki.preshweb.co.uk/doku.php?id=linux:psflags
@@ -215,6 +215,7 @@ enum ProcessState {
 // generate a key). We will send a lot of these in the real-time messages so
 // it's critical to keep this small.
 message ProcessStat {
+    reserved 11;
 	int32 pid = 1;
 	// In milliseconds
 	int64 createTime = 2;
@@ -226,7 +227,6 @@ message ProcessStat {
 	uint32 key = 9;
 	// we need container id because we need to do the scoring by container
 	string containerId = 10;
-	ContainerState containerState = 11; // DEPRECATED
 	ProcessState processState = 12;
 	IOStat ioStat = 19;
 
@@ -278,10 +278,11 @@ message ContainerStat {
 }
 
 message SystemInfo {
+	reserved 4;
+
 	string uuid = 1;
 	OSInfo os = 2;
 	repeated CPUInfo cpus = 3;
-	// 4 is deprecated
 	int64 totalMemory = 5;
 }
 
@@ -310,33 +311,37 @@ enum ConnectionFamily {
 	v6 = 1;
 }
 
-enum ConnectionDirection { 
+enum ConnectionDirection {
 	none = 0;
 	outgoing = 1;
 	incoming = 2;
 }
 
 message Connection {
+	reserved 2, 3, 4, 7;
+
 	int32 pid = 1;
-	// 2 is deprecated
-	// 3 is deprecated
-	// 4 is deprecated
 	Addr laddr = 5; // Local address
 	Addr raddr = 6; // Remote address
-	// 7 is deprecated
 	float bytesSentPerSecond = 8;
-	float bytesReceivedPerSecond = 9;
+    float bytesReceivedPerSecond = 9;
 	ConnectionFamily family = 10;
 	ConnectionType type = 11;
 	int64 pidCreateTime = 12;
+	// Monotonic counters
+    uint64 totalBytesSent = 13;
+    uint64 totalBytesReceived = 14;
+    uint32 totalRetransmits = 15;
 	string namespace = 50; // local
 	ConnectionDirection direction = 51;
 }
 
 message Addr {
+    reserved 4;
 	Host host = 1;
 	string ip = 2;
 	int32 port = 3;
+	string containerId = 5; // post-resolution field
 }
 
 message MemoryStat {

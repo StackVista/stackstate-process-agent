@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/StackVista/stackstate-process-agent/pkg"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -13,10 +14,7 @@ import (
 	log "github.com/cihub/seelog"
 
 	"github.com/StackVista/stackstate-agent/pkg/tagger"
-	"github.com/StackVista/stackstate-process-agent/checks"
-	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/statsd"
-	"github.com/StackVista/stackstate-process-agent/util"
 )
 
 var opts struct {
@@ -97,34 +95,31 @@ func runAgent(exit chan bool) {
 		}()
 	}
 
-	agentConf, err := config.NewIfExists(opts.ddConfigPath)
+	agentConf, err := pkg.NewIfExists(opts.ddConfigPath)
 	//if err != nil {
 	//	log.Criticalf("Error reading sts-agent config: %s", err)
 	//	os.Exit(1)
 	//}
 
-	yamlConf, err := config.NewYamlIfExists(opts.configPath)
+	yamlConf, err := pkg.NewYamlIfExists(opts.configPath)
 	if err != nil {
 		log.Criticalf("Error reading stackstate.yaml: %s", err)
 		os.Exit(1)
 	} else if yamlConf != nil {
-		config.SetupDDAgentConfig(opts.configPath)
+		pkg.SetupDDAgentConfig(opts.configPath)
 	}
 
 	// Tagger must be initialized after agent config has been setup (via config.SetupDDAgentConfig)
-	if err := tagger.Init(); err == nil {
-		defer tagger.Stop()
-	} else {
-		log.Errorf("unable to initialize StackState entity tagger: %s", err)
-	}
+	tagger.Init()
+	defer tagger.Stop()
 
-	networkConf, err := config.NewYamlIfExists(opts.netConfigPath)
+	networkConf, err := pkg.NewYamlIfExists(opts.netConfigPath)
 	if err != nil {
 		log.Criticalf("Error reading network-tracer.yaml: %s", err)
 		os.Exit(1)
 	}
 
-	cfg, err := config.NewAgentConfig(agentConf, yamlConf, networkConf)
+	cfg, err := pkg.NewAgentConfig(agentConf, yamlConf, networkConf)
 	if err != nil {
 		log.Criticalf("Error parsing config: %s", err)
 		os.Exit(1)
@@ -155,7 +150,7 @@ func runAgent(exit chan bool) {
 	}
 
 	// update docker socket path in info
-	dockerSock, err := util.GetDockerSocketPath()
+	dockerSock, err := pkg.GetDockerSocketPath()
 	if err != nil {
 		log.Debugf("Docker is not available on this host")
 	}
@@ -202,19 +197,19 @@ func runAgent(exit chan bool) {
 }
 
 func debugCheckResults(cfg *config.AgentConfig, check string) error {
-	sysInfo, err := checks.CollectSystemInfo(cfg)
+	sysInfo, err := pkg.CollectSystemInfo(cfg)
 	if err != nil {
 		return err
 	}
 
-	if check == checks.Connections.Name() {
+	if check == pkg.Connections.Name() {
 		// Connections check requires process-check to have occurred first (for process creation ts)
-		checks.Process.Init(cfg, sysInfo)
-		checks.Process.Run(cfg, 0)
+		pkg.Process.Init(cfg, sysInfo)
+		pkg.Process.Run(cfg, 0)
 	}
 
-	names := make([]string, 0, len(checks.All))
-	for _, ch := range checks.All {
+	names := make([]string, 0, len(pkg.All))
+	for _, ch := range pkg.All {
 		if ch.Name() == check {
 			ch.Init(cfg, sysInfo)
 			return printResults(cfg, ch)
@@ -224,13 +219,13 @@ func debugCheckResults(cfg *config.AgentConfig, check string) error {
 	return fmt.Errorf("invalid check '%s', choose from: %v", check, names)
 }
 
-func printResults(cfg *config.AgentConfig, ch checks.Check) error {
+func printResults(cfg *config.AgentConfig, ch pkg.Check) error {
 	// Run the check once to prime the cache.
 	if _, err := ch.Run(cfg, 0); err != nil {
 		return fmt.Errorf("collection error: %s", err)
 	}
 
-	if cfg.EnableLocalNetworkTracer && ch.Name() == checks.Connections.Name() {
+	if cfg.EnableLocalNetworkTracer && ch.Name() == pkg.Connections.Name() {
 		fmt.Printf("Waiting 5 seconds to allow for active connections to transmit data\n")
 		time.Sleep(5 * time.Second)
 	} else {

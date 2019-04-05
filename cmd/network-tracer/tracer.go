@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/StackVista/stackstate-process-agent/pkg"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,10 +11,8 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mailru/easyjson"
 
-	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/net"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
-	tracerConfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
+	"github.com/StackVista/stackstate-process-agent/pkg/tracer"
+	tracerConfig "github.com/StackVista/stackstate-process-agent/pkg/tracer/config"
 )
 
 // ErrTracerUnsupported is the unsupported error prefix, for error-class matching from callers
@@ -26,7 +25,7 @@ type NetworkTracer struct {
 
 	supported bool
 	tracer    tracer.Tracer
-	conn      net.Conn
+	conn      pkg.Conn
 }
 
 // CreateNetworkTracer creates a NetworkTracer as well as it's UDS socket after confirming that the OS supports BPF-based
@@ -47,7 +46,7 @@ func CreateNetworkTracer(cfg *config.AgentConfig) (*NetworkTracer, error) {
 	}
 
 	// Setting up the unix socket
-	uds, err := net.NewUDSListener(cfg)
+	uds, err := pkg.NewUDSListener(cfg)
 	if err != nil {
 		return nil, err
 	}

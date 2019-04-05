@@ -4,27 +4,56 @@
 
 [[constraint]]
   name = "github.com/DataDog/gopsutil"
-  revision = "771928d86fa878b9d62f073a7a6f91ee0a358105"
-
-[[constraint]]
-  name = "github.com/StackVista/tcptracer-bpf"
-  revision = "1131a39218473b6a89583067bad83e6b2604bcda"
-
-[[constraint]]
-  name = "github.com/DataDog/zstd"
-  revision = "2bf71ec4836011b92dc78df3b9ace6b40e65f7df"
+  revision = "c8f74f1344dd41bc49ec4d3c2377c526aaedfd20"
 
 [[constraint]]
   name = "github.com/gogo/protobuf"
   revision = "d76fbc1373015ced59b43ac267f28d546b955683"
 
 [[constraint]]
+  name = "github.com/pytimer/win-netstat"
+  revision = "efa1aff6aafc7b37ca3ffb136b6b27a11178ffd6"
+
+[[constraint]]
+  name = "github.com/iovisor/gobpf"
+  revision = "98ebf56442afb10e1b43145127de3c1777ed7e95"
+
+[[constraint]]
+  name = "github.com/DataDog/zstd"
+  revision = "2bf71ec4836011b92dc78df3b9ace6b40e65f7df"
+
+[[constraint]]
+  name = "github.com/mailru/easyjson"
+  revision = "60711f1a8329503b04e1c88535f419d0bb440bff"
+
+[[constraint]]
   name = "github.com/stretchr/testify"
   version = "=v1.2.2"
+
+[[constraint]]
+  name = "github.com/cihub/seelog"
+  version = "=v2.6"
 
 [[constraint]]
   name = "golang.org/x/sys"
 
 [[override]]
+  name = "github.com/kardianos/osext"
+  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
+
+[[override]]
   name = "gopkg.in/yaml.v2"
   revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
+
+[[override]]
+  name = "bitbucket.org/ww/goautoneg"
+  source = "github.com/adjust/goautoneg"
+  revision = "d788f35a0315672bc90f50a6145d1252a230ee0d"
+
+[prune]
+  go-tests = true
+  unused-packages = true
+
+[[prune.project]]
+  name = "github.com/iovisor/gobpf"
+  unused-packages = false

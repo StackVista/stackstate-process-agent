@@ -16,7 +16,9 @@ def os
 desc "Setup dependencies"
 task :deps do
   system("go get -u github.com/golang/dep/cmd/dep")
+  system("go get -u github.com/mailru/easyjson/...")
   system("go get -u golang.org/x/lint/golint")
+  system("go get github.com/gogo/protobuf/...")
   system("go get -u github.com/awalterschulze/goderive")
   system("dep ensure -v -vendor-only")
 end
@@ -53,7 +55,7 @@ task :install do
     bin = "process-agent.exe"
   else
     bin = "process-agent"
-  end    
+  end
   go_build("github.com/StackVista/stackstate-process-agent/agent", :cmd=> "go build -i -o $GOPATH/bin/#{bin}")
 end
 
@@ -83,6 +85,7 @@ task 'build-network-tracer' do
   })
 end
 
+desc "Run go vet on code"
 task :vet do
   go_vet("./...", {
     :static => ENV['PROCESS_AGENT_STATIC'] == 'true',
@@ -90,13 +93,24 @@ task :vet do
   })
 end
 
-task :fmt do
+desc "Run go fmt"
+task :fmt => ['ebpf:fmt'] do
   packages = `go list ./... | grep -v vendor`.split("\n")
   packages.each do |pkg|
     go_fmt(pkg)
   end
 end
 
+desc "Ensures no changes are to be commited"
+task "no-change"  do
+  sh "rake fmt && exit $( git diff --name-status | wc -l)" do |ok,res|
+    if !ok then
+      fail "Some files have been changed:\n#{`git diff --name-status`}"
+    end
+  end
+end
+
+desc "Run go lint"
 task :lint do
   error = false
   packages = `go list ./... | grep -v vendor`.split("\n")
@@ -117,16 +131,25 @@ end
 
 desc "Compile the protobuf files for the Process Agent"
 task :protobuf do
-  protocv = `bash -c "protoc --version"`.strip
+  protocv = `bash -c "scripts/bin/protoc --version"`.strip
   if protocv != 'libprotoc 3.3.0'
     fail "Requires protoc version 3.3.0"
   end
-  sh "protoc proto/agent.proto -I $GOPATH/src -I vendor -I proto --gogofaster_out $GOPATH/src"
+  sh "scripts/bin/protoc proto/agent.proto -I $GOPATH/src -I vendor -I proto --gogofaster_out $GOPATH/src"
 end
 
-desc "Datadog Process Agent CI script (fmt, vet, etc)"
-task :ci => [:deps, :derive, :fmt, :vet, :test, :lint, :build]
+desc "Generate easyjson code"
+task :easyjson do
+  sh "easyjson ebpf/event_common.go"
+end
 
+desc "Regenerate protobuf definitions and easyjson definitions"
+task :codegen => [:protobuf, :easyjson, :derive]
+
+desc "Datadog Process Agent CI script (fmt, vet, etc)"
+task :ci => [:deps, :derive, :fmt, 'no-change', :vet, 'ebpf:build', :test, 'ebpf:test', :lint, :build]
+
+desc "Run errcheck"
 task :err do
   system("go get github.com/kisielk/errcheck")
   sh "errcheck github.com/StackVista/stackstate-process-agent"
@@ -137,3 +160,77 @@ task 'windows-versioned-artifact' do
   system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end
 
+namespace "ebpf" do
+  sudo=""
+  sh 'docker info >/dev/null 2>&1' do |ok, res|
+    if !ok
+      sudo = "sudo -E"
+    end
+  end
+
+  DEBUG=1
+  DOCKER_FILE='packaging/Dockerfile-ebpf'
+  DOCKER_IMAGE='datadog/tracer-bpf-builder'
+
+  desc "Run tests for eBPF code"
+  task :test => 'ebpf:build-only' do
+    tags = ''
+    if ENV["SKIP_BPF_TESTS"] != "true" then
+      tags = 'linux_bpf'
+    else
+      puts "Skipping BPF tests"
+    end
+      sh "go list ./... | grep -v vendor | sudo -E PATH=#{ENV['PATH']} xargs go test -v -tags #{tags}"
+  end
+
+  desc "Format ebpf code"
+  task :fmt => ['ebpf:cfmt'] do
+    sh "#{sudo} go fmt ebpf/tracer-ebpf.go"
+  end
+
+  desc "Build eBPF docker-image"
+  task :image do
+    sh "#{sudo} docker build -t #{DOCKER_IMAGE} -f #{DOCKER_FILE} ."
+  end
+
+  desc "Format C code using clang-format"
+  task :cfmt do
+    files = `find ebpf/c -name "*.c" -o -name "*.h"`.split("\n")
+    files.each do |file|
+      sh "clang-format -i -style='{BasedOnStyle: WebKit, BreakBeforeBraces: Attach}' #{file}"
+      # This only works with gnu sed
+      sh "sed -i 's/__attribute__((always_inline)) /__attribute__((always_inline))\\
+/g' #{file}"
+    end
+  end
+
+  desc "Generate and install eBPF program via gobindata"
+  task :build => ['ebpf:fmt', 'ebpf:image', 'ebpf:build-only']
+
+  desc "Build only the eBPF object (do not rebuild the docker image builder)"
+  task 'build-only' do
+    cmd = "build"
+    if ENV['TEST'] != "true"
+      cmd += " install"
+    end
+    sh "#{sudo} docker run --rm -e DEBUG=#{DEBUG} \
+        -e CIRCLE_BUILD_URL=#{ENV['CIRCLE_BUILD_URL']} \
+        -v $(pwd):/src:ro \
+    -v $(pwd)/ebpf:/ebpf/ \
+        --workdir=/src \
+        #{DOCKER_IMAGE} \
+        make -f ebpf/c/tracer-ebpf.mk #{cmd}"
+    sh "sudo chown -R $(id -u):$(id -u) ebpf"
+  end
+
+  desc "Build and run dockerized `nettop` command for testing"
+  task :nettop => 'ebpf:build' do
+    sh 'sudo docker build -t "ebpf-nettop" . -f packaging/Dockerfile-nettop'
+    sh "sudo docker run \
+      --net=host \
+      --cap-add=SYS_ADMIN \
+      --privileged \
+      -v /sys/kernel/debug:/sys/kernel/debug \
+      ebpf-nettop"
+  end
+end

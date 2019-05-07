@@ -34,7 +34,6 @@ gofmt -l $REPLACE_MODE -r '"DD_PROCESS_AGENT_URL is invalid: %s" -> "STS_PROCESS
 
 # tests
 sed -i 's/DD_SITE/STS_SITE/g' ../config/config_test.go
-gofmt -l $REPLACE_MODE -r '"dd_password" -> "sts_password"' ../config/data_scrubber_test.go
 
 # config_nix.go
 gofmt -l $REPLACE_MODE -r '"/var/log/datadog/process-agent.log" -> "/var/log/stackstate-agent/process-agent.log"' $REPLACE_SCOPE
@@ -76,7 +75,7 @@ UNAME="$(uname)"
 if [[ $UNAME != MSYS* ]]; then
     echo "Checking replacements..."
 
-    grep -ir --include=*.go "\"DD_"  $PWD/../cmd $PWD/../config $PWD/../checks
+    grep -r --include=*.go "\"DD_"  $PWD/../cmd $PWD/../config $PWD/../checks
 
     RESULT=$?
     if [ $RESULT -eq 0 ]; then

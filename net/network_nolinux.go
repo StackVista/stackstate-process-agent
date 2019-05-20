@@ -2,7 +2,7 @@
 
 package net
 
-import "github.com/DataDog/datadog-process-agent/ebpf"
+import "github.com/StackVista/stackstate-process-agent/ebpf"
 
 // RemoteNetTracerUtil is only implemented on linux
 type RemoteNetTracerUtil struct{}

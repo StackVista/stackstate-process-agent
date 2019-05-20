@@ -18,12 +18,12 @@ ENV PATH $GOPATH/bin:$GOROOT/bin:$PATH
 
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 
-ADD ./ /go/src/github.com/DataDog/datadog-process-agent
+ADD ./ /go/src/github.com/StackVista/stackstate-process-agent
 
 WORKDIR $GOPATH
 
-RUN cd /go/src/github.com/DataDog/datadog-process-agent/cmd/nettop && go build -tags 'linux_bpf' -o nettop
-RUN mv /go/src/github.com/DataDog/datadog-process-agent/cmd/nettop/nettop /usr/sbin
+RUN cd /go/src/github.com/StackVista/stackstate-process-agent/cmd/nettop && go build -tags 'linux_bpf' -o nettop
+RUN mv /go/src/github.com/StackVista/stackstate-process-agent/cmd/nettop/nettop /usr/sbin
 RUN chmod a+x /usr/sbin/nettop
 
 CMD ["nettop"]

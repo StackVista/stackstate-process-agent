@@ -6,7 +6,7 @@ import (
 	"flag"
 	_ "net/http/pprof"
 
-	"github.com/DataDog/datadog-process-agent/config"
+	"github.com/StackVista/stackstate-process-agent/config"
 )
 
 func main() {
@@ -22,7 +22,7 @@ func main() {
 
 	// Set up a default config before parsing config so we log errors nicely.
 	// The default will be stdout since we can't assume any file is writable.
-	if err := config.SetupInitialLogger(loggerName); err != nil {
+	if err := config.SetupInitialLogger("default-process-agent-logger"); err != nil {
 		panic(err)
 	}
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -xe
 
-cd $WORKSPACE/go/src/github.com/DataDog/datadog-process-agent
+cd $WORKSPACE/go/src/github.com/StackVista/stackstate-process-agent
 
 # Verify we have the correct environment variables
 if [ -z ${AGENT_S3_BUCKET+x} ]; then
@@ -29,7 +29,7 @@ eval "$(gimme 1.10.1)"
 export GOPATH=$WORKSPACE/go
 export PATH=$PATH:$GOPATH/bin
 
-agent_path="$WORKSPACE/go/src/github.com/DataDog/datadog-process-agent"
+agent_path="$WORKSPACE/go/src/github.com/StackVista/stackstate-process-agent"
 
 echo "Getting dependencies..."
 

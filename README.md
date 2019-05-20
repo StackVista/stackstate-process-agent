@@ -1,6 +1,6 @@
 # Datadog Process Agent
 
-[![CircleCI](https://circleci.com/gh/DataDog/datadog-process-agent.svg?style=svg)](https://circleci.com/gh/DataDog/datadog-process-agent)
+[![CircleCI](https://circleci.com/gh/StackVista/stackstate-process-agent.svg?style=svg)](https://circleci.com/gh/StackVista/stackstate-process-agent)
 
 ## Installation
 
@@ -17,7 +17,7 @@ Check out the repo in your `$GOPATH`
 
 ```
 cd $GOPATH/src/github.com/DataDog
-git clone git@github.com:DataDog/datadog-process-agent.git
+git clone git@github.com:StackVista/stackstate-process-agent.git
 cd datadog-process-agent
 ```
 

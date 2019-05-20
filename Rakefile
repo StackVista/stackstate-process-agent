@@ -31,7 +31,7 @@ task :build do
   else
     bin = "process-agent"
   end
-  go_build("github.com/DataDog/datadog-process-agent/cmd/agent", {
+  go_build("github.com/StackVista/stackstate-process-agent/cmd/agent", {
     :cmd => "go build -o #{bin}",
     :race => ENV['GO_RACE'] == 'true',
     :add_build_vars => ENV['PROCESS_AGENT_ADD_BUILD_VARS'] != 'false',
@@ -49,7 +49,7 @@ task :install do
   else
     bin = "process-agent"
   end
-  go_build("github.com/DataDog/datadog-process-agent/cmd/agent", :cmd=> "go build -i -o $GOPATH/bin/#{bin}")
+  go_build("github.com/StackVista/stackstate-process-agent/cmd/agent", :cmd=> "go build -i -o $GOPATH/bin/#{bin}")
 end
 
 desc "Test Datadog Process agent"
@@ -72,7 +72,7 @@ end
 desc "Build Datadog network-tracer agent"
 task 'build-network-tracer' do
   bin = "network-tracer"
-  go_build("github.com/DataDog/datadog-process-agent/cmd/network-tracer", {
+  go_build("github.com/StackVista/stackstate-process-agent/cmd/network-tracer", {
     :cmd => "go build -o #{bin}",
     :add_build_vars => true,
     :static => ENV['NETWORK_AGENT_STATIC'] == 'true',
@@ -145,7 +145,7 @@ task :ci => [:deps, :fmt, 'no-change', :vet, 'ebpf:build', :test, 'ebpf:test', :
 desc "Run errcheck"
 task :err do
   system("go get github.com/kisielk/errcheck")
-  sh "errcheck github.com/DataDog/datadog-process-agent"
+  sh "errcheck github.com/StackVista/stackstate-process-agent"
 end
 
 namespace "ebpf" do

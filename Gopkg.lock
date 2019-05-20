@@ -18,14 +18,65 @@
   version = "4.8"
 
 [[projects]]
-  digest = "1:c158aba258b286b1eb1dc1b246d860881a680b821effe567b1f055bdffcab44b"
-  name = "github.com/DataDog/datadog-agent"
+  digest = "1:7a91a175c283b21c6e99edc1b2fb82fe11eb5b42e7a28a2a67b17d9c28ad1855"
+  name = "github.com/DataDog/datadog-go"
+  packages = ["statsd"]
+  pruneopts = ""
+  revision = "a9c7a9896c1847c9cc2b068a2ae68e9d74540a5d"
+
+[[projects]]
+  digest = "1:be57d8791a067eec36e04f2550c9c49b3cf71197dfa84eae599158d7cdd62ae7"
+  name = "github.com/DataDog/gopsutil"
+  packages = [
+    "cpu",
+    "host",
+    "internal/common",
+    "mem",
+    "net",
+    "process",
+  ]
+  pruneopts = ""
+  revision = "233cd0cf42c26d835ed6f0e46f2103432a88b526"
+
+[[projects]]
+  digest = "1:e9ca79fa28ff0fe0271b63d2d30f4118643746610cd0d75603c7b4255a44f161"
+  name = "github.com/DataDog/viper"
+  packages = ["."]
+  pruneopts = ""
+  revision = "23ced3bc6b3751855704445e48da2c53075ade86"
+  version = "v1.4.0"
+
+[[projects]]
+  digest = "1:f3662169bf21f0406cdad064a592c5a052e8ba32f64a360d755544cd5a98dba8"
+  name = "github.com/DataDog/zstd"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2b373cbe6ac0c8e6960bbd18026ceb269eef89f5"
+
+[[projects]]
+  digest = "1:c7937d6337f88193ad8aade88c92d7e72b3d5fc6e5002a9515dabca5802624cd"
+  name = "github.com/Microsoft/go-winio"
+  packages = ["."]
+  pruneopts = ""
+  revision = "97e4973ce50b2ff5f09635a57e2b88a037aae829"
+  version = "v0.4.11"
+
+[[projects]]
+  digest = "1:f82b8ac36058904227087141017bb82f4b0fc58272990a4cdae3e2d6d222644e"
+  name = "github.com/StackExchange/wmi"
+  packages = ["."]
+  pruneopts = ""
+  revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
+  version = "1.0.0"
+
+[[projects]]
+  digest = "1:1d84ebb70b9a8858978af98ac8871893d768fb986346852e6cf5be744cec7027"
+  name = "github.com/StackVista/stackstate-agent"
   packages = [
     "cmd/agent/api/response",
     "pkg/api/security",
     "pkg/api/util",
     "pkg/autodiscovery/integration",
-    "pkg/clusteragent/api/v1",
     "pkg/clusteragent/clusterchecks/types",
     "pkg/clusteragent/custommetrics",
     "pkg/config",
@@ -39,7 +90,6 @@
     "pkg/tagger/collectors",
     "pkg/tagger/utils",
     "pkg/util",
-    "pkg/util/azure",
     "pkg/util/cache",
     "pkg/util/clusteragent",
     "pkg/util/common",
@@ -65,58 +115,7 @@
     "pkg/version",
   ]
   pruneopts = ""
-  revision = "d7712d570b91f4f97af9f155ad1c676921d8325d"
-
-[[projects]]
-  digest = "1:7a91a175c283b21c6e99edc1b2fb82fe11eb5b42e7a28a2a67b17d9c28ad1855"
-  name = "github.com/DataDog/datadog-go"
-  packages = ["statsd"]
-  pruneopts = ""
-  revision = "a9c7a9896c1847c9cc2b068a2ae68e9d74540a5d"
-
-[[projects]]
-  digest = "1:be57d8791a067eec36e04f2550c9c49b3cf71197dfa84eae599158d7cdd62ae7"
-  name = "github.com/DataDog/gopsutil"
-  packages = [
-    "cpu",
-    "host",
-    "internal/common",
-    "mem",
-    "net",
-    "process",
-  ]
-  pruneopts = ""
-  revision = "233cd0cf42c26d835ed6f0e46f2103432a88b526"
-
-[[projects]]
-  digest = "1:b22f5da83ac471bbbe2a5aa1f07c8029dc82bcbf6ff832516f035fc3a314d539"
-  name = "github.com/DataDog/viper"
-  packages = ["."]
-  pruneopts = ""
-  revision = "v1.5.0"
-
-[[projects]]
-  digest = "1:f3662169bf21f0406cdad064a592c5a052e8ba32f64a360d755544cd5a98dba8"
-  name = "github.com/DataDog/zstd"
-  packages = ["."]
-  pruneopts = ""
-  revision = "2b373cbe6ac0c8e6960bbd18026ceb269eef89f5"
-
-[[projects]]
-  digest = "1:c7937d6337f88193ad8aade88c92d7e72b3d5fc6e5002a9515dabca5802624cd"
-  name = "github.com/Microsoft/go-winio"
-  packages = ["."]
-  pruneopts = ""
-  revision = "97e4973ce50b2ff5f09635a57e2b88a037aae829"
-  version = "v0.4.11"
-
-[[projects]]
-  digest = "1:f82b8ac36058904227087141017bb82f4b0fc58272990a4cdae3e2d6d222644e"
-  name = "github.com/StackExchange/wmi"
-  packages = ["."]
-  pruneopts = ""
-  revision = "5d049714c4a64225c3c79a7cf7d02f7fb5b96338"
-  version = "1.0.0"
+  revision = "eddcdd63f4b61da5c9d1c7ca7bdb36fbb25de862"
 
 [[projects]]
   digest = "1:63776251fbaa60062742412a9d2fa1e4b7cd24bcf5527fa9656b314ea8d60913"
@@ -986,21 +985,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/DataDog/agent-payload/gogen",
-    "github.com/DataDog/datadog-agent/pkg/config",
-    "github.com/DataDog/datadog-agent/pkg/pidfile",
-    "github.com/DataDog/datadog-agent/pkg/tagger",
-    "github.com/DataDog/datadog-agent/pkg/tagger/collectors",
-    "github.com/DataDog/datadog-agent/pkg/util",
-    "github.com/DataDog/datadog-agent/pkg/util/cache",
-    "github.com/DataDog/datadog-agent/pkg/util/containers",
-    "github.com/DataDog/datadog-agent/pkg/util/containers/collectors",
-    "github.com/DataDog/datadog-agent/pkg/util/containers/metrics",
-    "github.com/DataDog/datadog-agent/pkg/util/docker",
-    "github.com/DataDog/datadog-agent/pkg/util/ecs",
-    "github.com/DataDog/datadog-agent/pkg/util/executable",
-    "github.com/DataDog/datadog-agent/pkg/util/log",
-    "github.com/DataDog/datadog-agent/pkg/util/retry",
-    "github.com/DataDog/datadog-agent/pkg/util/winutil",
     "github.com/DataDog/datadog-go/statsd",
     "github.com/DataDog/gopsutil/cpu",
     "github.com/DataDog/gopsutil/host",
@@ -1008,12 +992,28 @@
     "github.com/DataDog/gopsutil/process",
     "github.com/DataDog/zstd",
     "github.com/StackExchange/wmi",
+    "github.com/StackVista/stackstate-agent/pkg/config",
+    "github.com/StackVista/stackstate-agent/pkg/pidfile",
+    "github.com/StackVista/stackstate-agent/pkg/tagger",
+    "github.com/StackVista/stackstate-agent/pkg/tagger/collectors",
+    "github.com/StackVista/stackstate-agent/pkg/util",
+    "github.com/StackVista/stackstate-agent/pkg/util/cache",
+    "github.com/StackVista/stackstate-agent/pkg/util/containers",
+    "github.com/StackVista/stackstate-agent/pkg/util/containers/collectors",
+    "github.com/StackVista/stackstate-agent/pkg/util/containers/metrics",
+    "github.com/StackVista/stackstate-agent/pkg/util/docker",
+    "github.com/StackVista/stackstate-agent/pkg/util/ecs",
+    "github.com/StackVista/stackstate-agent/pkg/util/executable",
+    "github.com/StackVista/stackstate-agent/pkg/util/log",
+    "github.com/StackVista/stackstate-agent/pkg/util/retry",
+    "github.com/StackVista/stackstate-agent/pkg/util/winutil",
     "github.com/gogo/protobuf/jsonpb",
     "github.com/gogo/protobuf/proto",
     "github.com/iovisor/gobpf/elf",
     "github.com/mailru/easyjson",
     "github.com/mailru/easyjson/jlexer",
     "github.com/mailru/easyjson/jwriter",
+    "github.com/pkg/errors",
     "github.com/shirou/w32",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",

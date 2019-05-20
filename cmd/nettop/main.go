@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/DataDog/datadog-process-agent/ebpf"
+	"github.com/StackVista/stackstate-process-agent/ebpf"
 )
 
 func main() {

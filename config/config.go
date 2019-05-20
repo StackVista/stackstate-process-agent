@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/config"
-	ecsutil "github.com/DataDog/datadog-agent/pkg/util/ecs"
-	"github.com/DataDog/datadog-agent/pkg/util/log"
-	"github.com/DataDog/datadog-process-agent/util"
+	"github.com/StackVista/stackstate-agent/pkg/config"
+	ecsutil "github.com/StackVista/stackstate-agent/pkg/util/ecs"
+	"github.com/StackVista/stackstate-agent/pkg/util/log"
+	"github.com/StackVista/stackstate-process-agent/util"
 )
 
 var (
@@ -32,6 +32,9 @@ var (
 	processChecks   = []string{"process", "rtprocess"}
 	containerChecks = []string{"container", "rtcontainer"}
 )
+
+// LoggerName specifies the name of an instantiated logger.
+type LoggerName string
 
 type proxyFunc func(*http.Request) (*url.URL, error)
 
@@ -225,7 +228,7 @@ func loadConfigIfExists(path string) error {
 
 // NewAgentConfig returns an AgentConfig using a configuration file. It can be nil
 // if there is no file available. In this case we'll configure only via environment.
-func NewAgentConfig(loggerName config.LoggerName, yamlPath, netYamlPath string) (*AgentConfig, error) {
+func NewAgentConfig(loggerName string, yamlPath, netYamlPath string) (*AgentConfig, error) {
 	var err error
 	cfg := NewDefaultAgentConfig()
 
@@ -292,7 +295,7 @@ func NewAgentConfig(loggerName config.LoggerName, yamlPath, netYamlPath string) 
 
 // NewNetworkAgentConfig returns a network-tracer specific AgentConfig using a configuration file. It can be nil
 // if there is no file available. In this case we'll configure only via environment.
-func NewNetworkAgentConfig(loggerName config.LoggerName, yamlPath string) (*AgentConfig, error) {
+func NewNetworkAgentConfig(loggerName string, yamlPath string) (*AgentConfig, error) {
 	cfg := NewDefaultAgentConfig()
 
 	// When the network-tracer is enabled in a separate container, we need a way to also disable the network-tracer
@@ -484,9 +487,8 @@ func constructProxy(host, scheme string, port int, user, password string) (proxy
 
 // SetupInitialLogger will set up a default logger before parsing config so we log errors nicely.
 // The default will be stdout since we can't assume any file is writable.
-func SetupInitialLogger(loggerName config.LoggerName) error {
+func SetupInitialLogger(loggerName string) error {
 	return config.SetupLogger(
-		loggerName,
 		"info",
 		"",
 		"",
@@ -496,9 +498,8 @@ func SetupInitialLogger(loggerName config.LoggerName) error {
 	)
 }
 
-func setupLogger(loggerName config.LoggerName, logFile string, cfg *AgentConfig) error {
+func setupLogger(loggerName string, logFile string, cfg *AgentConfig) error {
 	return config.SetupLogger(
-		loggerName,
 		cfg.LogLevel,
 		logFile,
 		config.GetSyslogURI(),

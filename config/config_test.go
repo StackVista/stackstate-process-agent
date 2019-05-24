@@ -77,9 +77,9 @@ func TestSetBlacklistFromEnv(t *testing.T) {
 	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_TOP_CPU", "2")
 	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_TOP_IO_READ", "4")
 	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_TOP_IO_WRITE", "5")
-	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_TOP_MEM","6")
+	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_TOP_MEM", "6")
 	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_CPU_THRESHOLD", "30")
-	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_MEM_THRESHOLD","25")
+	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_MEM_THRESHOLD", "25")
 
 	agentConfig, _ := NewAgentConfig(nil, nil, nil)
 	assert.Equal(t, len(agentConfig.Blacklist), 2)
@@ -91,7 +91,6 @@ func TestSetBlacklistFromEnv(t *testing.T) {
 	assert.Equal(t, agentConfig.CPUPercentageUsageThreshold, 30)
 	assert.Equal(t, agentConfig.MemoryUsageThreshold, 25)
 }
-
 
 func TestOnlyEnvConfig(t *testing.T) {
 	// setting an API Key should be enough to generate valid config

@@ -180,10 +180,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		StatsdHost: "127.0.0.1",
 		StatsdPort: 8125,
 
-		Blacklist: deriveFmapConstructRegex(constructRegex, []string{
-			"stress", "^-bash", "^su$", "^/bin/bash", "^/lib/systemd/", "^pickup", "^/sbin/", "^qmgr", "^sshd:", "^/usr/bin/bash", "^/usr/bin/dbus-daemon", "^/usr/bin/vi(?:m|m.basic)?$", "^/usr/bin/tail", "^/usr/lib/systemd/", "^/usr/sbin/", "^\\(sd-pam\\)",
-			"cmd.exe", "conhost.exe", "DllHost.exe", "dwm.exe", "Explorer.EXE", "lsass.exe", "msdtc.exe", "SearchUI.exe", "sihost.exe", "smartscreen.exe", "svchost.exe", "taskhostw.exe", "tasklist.exe", "VBoxService.exe", "vim.exe", "wininit.exe", "winlogon.exe", "wlms.exe", "wmiprvse.exe", "sshd.exe",
-		}),
+		Blacklist: deriveFmapConstructRegex(constructRegex, defaultBlacklistPatterns),
 
 		// Top resource using process inclusion amounts
 		AmountTopCPUPercentageUsage: 0,

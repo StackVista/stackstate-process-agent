@@ -9,6 +9,8 @@ set "PATH=c:\tools\msys64\mingw64\bin;c:\tools\msys64\usr\bin;%PATH%"
 echo %CD%
 call rake deps windres=true --trace
 if %errorlevel% neq 0 exit /b %errorlevel%
+call rake derive windres=true --trace
+if %errorlevel% neq 0 exit /b %errorlevel%
 call rake test windres=true --trace
 if %errorlevel% neq 0 exit /b %errorlevel%
 call rake build windres=true --trace

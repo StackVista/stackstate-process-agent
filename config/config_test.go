@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/StackVista/stackstate-process-agent/util"
 	"net/http"
 	"net/url"
 	"os"
@@ -222,6 +223,7 @@ func TestDefaultConfig(t *testing.T) {
 
 	os.Setenv("DOCKER_DD_AGENT", "yes")
 	agentConfig = NewDefaultAgentConfig()
+	assert.Equal(false, util.PathExists("/host"))
 	assert.Equal(os.Getenv("HOST_PROC"), "")
 	assert.Equal(os.Getenv("HOST_SYS"), "")
 	os.Setenv("DOCKER_DD_AGENT", "no")

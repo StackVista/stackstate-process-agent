@@ -9,17 +9,13 @@ import (
 	"regexp"
 	"sort"
 
-	// "regexp"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	// "github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
-	//	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/stretchr/testify/assert"
-	// "github.com/StackVista/stackstate-agent/pkg/util/containers"
 )
 
 func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCPU, systemCPU float64) *process.FilledProcess {
@@ -610,10 +606,12 @@ func TestProcessFormatting(t *testing.T) {
 
 			cur := make(map[int32]*process.FilledProcess)
 			for _, c := range tc.cur {
+				c.CpuTime.Timestamp = 60*100 //in Windows uses CpuTime.Timestamp set to now in nanos
 				cur[c.Pid] = c
 			}
 			last := make(map[int32]*process.FilledProcess)
 			for _, c := range tc.last {
+				c.CpuTime.Timestamp = 30*100 //in Windows uses CpuTime.Timestamp set to now in nanos
 				last[c.Pid] = c
 			}
 

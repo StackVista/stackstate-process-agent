@@ -55,7 +55,7 @@ func TestCommandLineSplitting(t *testing.T) {
 			},
 		},
 	} {
-		assert.Equal(t, tc.expected, tc.input)
+		assert.Equal(t, tc.expected, parseCmdLineArgs(tc.input))
 	}
 }
 

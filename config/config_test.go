@@ -80,7 +80,11 @@ func TestDefaultBlacklist(t *testing.T) {
 	assert.NoError(t, err)
 
 	agentConfig, _ := NewAgentConfig(nil, cf, nil)
-	assert.True(t, IsBlacklisted([]string{"/usr/sbin/acpid"}, agentConfig.Blacklist))
+	if runtime.GOOS != "windows" {
+		assert.True(t, IsBlacklisted([]string{"/usr/sbin/acpid"}, agentConfig.Blacklist))
+	} else {
+		assert.True(t, IsBlacklisted([]string{"Explorer.EXE"}, agentConfig.Blacklist))
+	}
 }
 
 func TestSetBlacklistFromEnv(t *testing.T) {

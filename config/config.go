@@ -604,7 +604,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_BLACKLIST_INCLUSIONS_MEM_THRESHOLD")); err == nil {
 		memoryUsageThreshold = v
 	}
-	setBlacklistInclusions(c,
+	setProcessBlacklist(c,
 		patterns,
 		amountTopCPUPercentageUsage, amountTopIOReadUsage, amountTopIOWriteUsage, amountTopMemoryUsage,
 		CPUPercentageUsageThreshold, memoryUsageThreshold)
@@ -612,7 +612,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	return c
 }
 
-func setBlacklistInclusions(agentConf *AgentConfig,
+func setProcessBlacklist(agentConf *AgentConfig,
 	patterns []string,
 	amountTopCPUPercentageUsage int, amountTopIOReadUsage int, amountTopIOWriteUsage int, amountTopMemoryUsage int,
 	CPUPercentageUsageThreshold int, MemoryUsageThreshold int,

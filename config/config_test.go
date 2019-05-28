@@ -72,6 +72,17 @@ func TestBlacklist(t *testing.T) {
 	}
 }
 
+func TestDefaultBlacklist(t *testing.T) {
+	var cf *YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"anything: goes",
+	}, "\n")), &cf)
+	assert.NoError(t, err)
+
+	agentConfig, _ := NewAgentConfig(nil, cf, nil)
+	assert.True(t, IsBlacklisted([]string{"/usr/sbin/acpid"}, agentConfig.Blacklist))
+}
+
 func TestSetBlacklistFromEnv(t *testing.T) {
 	os.Setenv("STS_PROCESS_BLACKLIST_PATTERNS", "^/usr/bin/bashbash,^sshd:")
 

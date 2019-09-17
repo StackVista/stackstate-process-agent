@@ -76,16 +76,26 @@ func TestNetworkConnectionMax(t *testing.T) {
 	}
 }
 
-func makeConnectionStats(pid uint32) common.ConnectionStats {
-	return common.ConnectionStats{Pid: pid}
+func makeConnectionStats(pid uint32, local, remote string, localPort, remotePort uint16) common.ConnectionStats {
+	return common.ConnectionStats{
+		Pid: pid,
+		Type:       common.TCP,
+		Family:     common.AF_INET,
+		Local:      local,
+		Remote:     remote,
+		LocalPort:  localPort,
+		RemotePort: remotePort,
+		SendBytes:  0,
+		RecvBytes:  0,
+	}
 }
 
 func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 	p := []common.ConnectionStats{
-		makeConnectionStats(1),
-		makeConnectionStats(2),
-		makeConnectionStats(3),
-		makeConnectionStats(4),
+		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+		makeConnectionStats(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
+		makeConnectionStats(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
+		makeConnectionStats(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
 	}
 
 	testClusterName := "test-cluster"

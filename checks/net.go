@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/StackVista/stackstate-agent/pkg/util/kubernetes/clustername"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"strings"
 
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
@@ -141,12 +143,22 @@ func (c *ConnectionsCheck) formatConnections(conns []common.ConnectionStats, las
 			BytesSentPerSecond:     calculateRate(conn.SendBytes, lastConns[key].SendBytes, lastCheckTime),
 			BytesReceivedPerSecond: calculateRate(conn.RecvBytes, lastConns[key].RecvBytes, lastCheckTime),
 			Direction:              calculateDirection(conn.Direction),
-			Namespace:              conn.NetworkNamespace,
+			Namespace:              formatNamespace(conn.NetworkNamespace),
 		})
 	}
 	c.prevCheckConns = conns
 	c.prevCheckTime = time.Now()
 	return cxs
+}
+
+func formatNamespace(n string) string {
+	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
+	clName := clustername.GetClusterName()
+	if clName != "" {
+		return strings.Join([]string{n, clName}, ":")
+	}
+
+	return n
 }
 
 func formatFamily(f common.ConnectionFamily) model.ConnectionFamily {

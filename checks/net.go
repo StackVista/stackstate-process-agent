@@ -155,7 +155,7 @@ func formatNamespace(n string) string {
 	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
 	clName := clustername.GetClusterName()
 	if clName != "" {
-		return strings.Join([]string{n, clName}, ":")
+		return strings.Join([]string{clName, n}, ":")
 	}
 
 	return n

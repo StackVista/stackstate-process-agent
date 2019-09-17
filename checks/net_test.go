@@ -107,11 +107,8 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 	now := time.Now()
 
 	c := &ConnectionsCheck{
-		prevCheckConns: []common.ConnectionStats{},
-		prevCheckTime: now.Add(-30*time.Second),
 		buf: new(bytes.Buffer),
 	}
-
 	connections := c.formatConnections(p, make(map[string]common.ConnectionStats, 0), now.Add(-15*time.Second))
 
 	assert.Len(t, connections, 4)

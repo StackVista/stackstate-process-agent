@@ -81,6 +81,7 @@ func makeConnectionStats(pid uint32, local, remote string, localPort, remotePort
 		Pid: pid,
 		Type:       common.TCP,
 		Family:     common.AF_INET,
+		Direction: common.OUTGOING,
 		Local:      local,
 		Remote:     remote,
 		LocalPort:  localPort,

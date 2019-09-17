@@ -2,11 +2,12 @@ package checks
 
 import (
 	"bytes"
+	"github.com/DataDog/gopsutil/process"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
-	"os"
 	"testing"
 	"time"
 
+	agentConfig "github.com/StackVista/stackstate-agent/pkg/config"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/stretchr/testify/assert"
@@ -79,37 +80,47 @@ func TestNetworkConnectionMax(t *testing.T) {
 
 func makeConnectionStats(pid uint32, local, remote string, localPort, remotePort uint16) common.ConnectionStats {
 	return common.ConnectionStats{
-		Pid: pid,
+		Pid:        pid,
 		Type:       common.TCP,
 		Family:     common.AF_INET,
-		Direction: common.OUTGOING,
+		Direction:  common.OUTGOING,
 		Local:      local,
 		Remote:     remote,
 		LocalPort:  localPort,
 		RemotePort: remotePort,
 		SendBytes:  0,
 		RecvBytes:  0,
-		State: common.ACTIVE,
+		State:      common.ACTIVE,
 	}
 }
 
 func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
-	p := []common.ConnectionStats{
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
-		makeConnectionStats(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
-		makeConnectionStats(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
-		makeConnectionStats(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
-	}
-
 	testClusterName := "test-cluster"
-	_ = os.Setenv("CLUSTER_NAME", testClusterName)
+	agentConfig.Datadog.Set("cluster_name", testClusterName)
 
 	now := time.Now()
 
 	c := &ConnectionsCheck{
 		buf: new(bytes.Buffer),
 	}
-	connections := c.formatConnections(p, make(map[string]common.ConnectionStats, 0), now.Add(-15*time.Second))
+
+	// create the connection stats
+	connStats := []common.ConnectionStats{
+		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+		makeConnectionStats(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
+		makeConnectionStats(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
+		makeConnectionStats(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
+	}
+
+	// fill in the procs in the lastProcs map to get process create time for the connection mapping
+	Process.lastProcs = map[int32]*process.FilledProcess{
+		1: &process.FilledProcess{Pid: 1, CreateTime: now.Add(-5*time.Minute).Unix() },
+		2: &process.FilledProcess{Pid: 2, CreateTime: now.Add(-5*time.Minute).Unix() },
+		3: &process.FilledProcess{Pid: 3, CreateTime: now.Add(-5*time.Minute).Unix() },
+		4: &process.FilledProcess{Pid: 4, CreateTime: now.Add(-5*time.Minute).Unix() },
+	}
+
+	connections := c.formatConnections(connStats, make(map[string]common.ConnectionStats, 0), now.Add(-15*time.Second))
 
 	assert.Len(t, connections, 4)
 	for _, c := range connections {

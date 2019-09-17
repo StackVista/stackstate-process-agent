@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"bytes"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	"os"
 	"testing"
@@ -88,6 +89,7 @@ func makeConnectionStats(pid uint32, local, remote string, localPort, remotePort
 		RemotePort: remotePort,
 		SendBytes:  0,
 		RecvBytes:  0,
+		State: common.ACTIVE,
 	}
 }
 
@@ -104,7 +106,13 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 
 	now := time.Now()
 
-	connections := Connections.formatConnections(p, make(map[string]common.ConnectionStats, 0), now.Add(-10*time.Second))
+	c := &ConnectionsCheck{
+		prevCheckConns: []common.ConnectionStats{},
+		prevCheckTime: now.Add(-30*time.Second),
+		buf: new(bytes.Buffer),
+	}
+
+	connections := c.formatConnections(p, make(map[string]common.ConnectionStats, 0), now.Add(-15*time.Second))
 
 	assert.Len(t, connections, 4)
 	for _, c := range connections {

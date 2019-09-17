@@ -126,4 +126,7 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 	for _, c := range connections {
 		assert.Contains(t, c.Namespace, testClusterName)
 	}
+
+	// clear the changes to Process.lastProcs
+	Process.lastProcs = make(map[int32]*process.FilledProcess, 0)
 }

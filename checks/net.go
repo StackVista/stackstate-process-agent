@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
-	"strings"
-
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-process-agent/net"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	log "github.com/cihub/seelog"
+	"strings"
 	"time"
 )
 
@@ -142,7 +141,7 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 			BytesSentPerSecond:     calculateRate(conn.SendBytes, lastConns[key].SendBytes, lastCheckTime),
 			BytesReceivedPerSecond: calculateRate(conn.RecvBytes, lastConns[key].RecvBytes, lastCheckTime),
 			Direction:              calculateDirection(conn.Direction),
-			Namespace:              formatNamespace(cfg, conn.NetworkNamespace),
+			Namespace:              formatNamespace(cfg.ClusterName, conn.NetworkNamespace),
 		})
 	}
 	c.prevCheckConns = conns
@@ -150,14 +149,16 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 	return cxs
 }
 
-func formatNamespace(cfg *config.AgentConfig, n string) string {
+func formatNamespace(clusterName string, n string) string {
 	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
-	clName := cfg.ClusterName
-	if clName != "" {
-		return strings.Join([]string{clName, n}, ":")
+	var fragments []string
+	if clusterName != "" {
+		fragments = append(fragments, clusterName)
 	}
-
-	return n
+	if n != "" {
+		fragments = append(fragments, n)
+	}
+	return strings.Join(fragments, ":")
 }
 
 func formatFamily(f common.ConnectionFamily) model.ConnectionFamily {

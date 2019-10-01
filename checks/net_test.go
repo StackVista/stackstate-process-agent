@@ -130,3 +130,10 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 	// clear the changes to Process.lastProcs
 	Process.lastProcs = make(map[int32]*process.FilledProcess, 0)
 }
+
+func TestFormatNamespace(t *testing.T) {
+	assert.Equal(t, "c:n", formatNamespace("c", "n"))
+	assert.Equal(t, "c", formatNamespace("c", ""))
+	assert.Equal(t, "n", formatNamespace("", "n"))
+	assert.Equal(t, "", formatNamespace("", ""))
+}

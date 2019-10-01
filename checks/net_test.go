@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	agentConfig "github.com/StackVista/stackstate-agent/pkg/config"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/stretchr/testify/assert"
@@ -96,7 +95,8 @@ func makeConnectionStats(pid uint32, local, remote string, localPort, remotePort
 
 func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 	testClusterName := "test-cluster"
-	agentConfig.Datadog.Set("cluster_name", testClusterName)
+	cfg := config.NewDefaultAgentConfig()
+	cfg.ClusterName = testClusterName
 
 	now := time.Now()
 
@@ -114,13 +114,13 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 
 	// fill in the procs in the lastProcs map to get process create time for the connection mapping
 	Process.lastProcs = map[int32]*process.FilledProcess{
-		1: &process.FilledProcess{Pid: 1, CreateTime: now.Add(-5*time.Minute).Unix() },
-		2: &process.FilledProcess{Pid: 2, CreateTime: now.Add(-5*time.Minute).Unix() },
-		3: &process.FilledProcess{Pid: 3, CreateTime: now.Add(-5*time.Minute).Unix() },
-		4: &process.FilledProcess{Pid: 4, CreateTime: now.Add(-5*time.Minute).Unix() },
+		1: &process.FilledProcess{Pid: 1, CreateTime: now.Add(-5 * time.Minute).Unix()},
+		2: &process.FilledProcess{Pid: 2, CreateTime: now.Add(-5 * time.Minute).Unix()},
+		3: &process.FilledProcess{Pid: 3, CreateTime: now.Add(-5 * time.Minute).Unix()},
+		4: &process.FilledProcess{Pid: 4, CreateTime: now.Add(-5 * time.Minute).Unix()},
 	}
 
-	connections := c.formatConnections(connStats, make(map[string]common.ConnectionStats, 0), now.Add(-15*time.Second))
+	connections := c.formatConnections(cfg, connStats, make(map[string]common.ConnectionStats, 0), now.Add(-15*time.Second))
 
 	assert.Len(t, connections, 4)
 	for _, c := range connections {

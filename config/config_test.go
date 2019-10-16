@@ -824,7 +824,7 @@ func TestIsAffirmative(t *testing.T) {
 
 func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
   assert := assert.New(t)
-  defaultProcessURL = os.Getenv("STS_PROCESS_AGENT_URL")
+  defaultProcessURL := os.Getenv("STS_PROCESS_AGENT_URL")
   os.Unsetenv("STS_PROCESS_AGENT_URL")
   var ddy YamlAgentConfig
   err := yaml.Unmarshal([]byte(strings.Join([]string{
@@ -856,7 +856,7 @@ func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
 
 func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
   assert := assert.New(t)
-  defaultProcessURL = os.Getenv("STS_PROCESS_AGENT_URL")
+  defaultProcessURL := os.Getenv("STS_PROCESS_AGENT_URL")
   os.Unsetenv("STS_PROCESS_AGENT_URL")
   var ddy YamlAgentConfig
   err := yaml.Unmarshal([]byte(strings.Join([]string{

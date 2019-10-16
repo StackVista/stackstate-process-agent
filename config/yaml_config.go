@@ -19,7 +19,8 @@ import (
 // available in Agent versions >= 6
 type YamlAgentConfig struct {
 	APIKey string `yaml:"api_key"`
-	Site   string `yaml:"site"`
+  Site   string `yaml:"site"`
+  ProcessDDURL string `yaml:"sts_url"`
 	// Whether or not the process-agent should output logs to console
 	LogToConsole bool `yaml:"log_to_console"`
 	// Incremental publishing: send only changes to server, instead of snapshots
@@ -37,7 +38,8 @@ type YamlAgentConfig struct {
 		LogFile string `yaml:"log_file"`
 		// The interval, in seconds, at which we will run each check. If you want consistent
 		// behavior between real-time you may set the Container/ProcessRT intervals to 10.
-		// Defaults to 10s for normal checks and 2s for others.
+    // Defaults to 10s for normal checks and 2s for others.
+    ProcessDDURL string `yaml:"process_sts_url"`
 		Intervals struct {
 			Container         int `yaml:"container"`
 			ContainerRealTime int `yaml:"container_realtime"`
@@ -140,7 +142,20 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	url, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "process_config.process_dd_url"))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing process_dd_url: %s", err)
-	}
+  }
+  // STS custom
+  if yc.Process.ProcessDDURL != "" {
+    specificURL, err := url.Parse(yc.Process.ProcessDDURL)
+    if err == nil {
+      url = specificURL
+    }
+  } else if (yc.ProcessDDURL != "") {
+    defaultURL, err := url.Parse(yc.ProcessDDURL)
+    if err == nil {
+      url = defaultURL
+    }
+  }
+  // /STS custom
 	agentConf.APIEndpoints[0].Endpoint = url
 	if yc.LogToConsole {
 		agentConf.LogToConsole = true

@@ -510,7 +510,19 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if c.proxy, err = proxyFromEnv(c.proxy); err != nil {
 		log.Errorf("error parsing proxy settings, not using a proxy: %s", err)
 		c.proxy = nil
-	}
+  }
+
+	// STS
+  if v := os.Getenv("STS_STS_URL"); v != "" {
+    u, err := url.Parse(v)
+    if err != nil {
+      log.Warnf("STS_STS_URL is invalid: %s", err)
+    } else {
+      log.Infof("overriding API endpoint from env STS_STS_URL")
+      c.APIEndpoints[0].Endpoint = u
+    }
+  }
+	// /STS
 
 	if v := os.Getenv("DD_PROCESS_AGENT_URL"); v != "" {
 		u, err := url.Parse(v)

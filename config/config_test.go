@@ -832,7 +832,7 @@ func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
 		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
-		"  process_sts_url: http://default-endpoint.test.stackstate.com",
+		"  process_sts_url: http://process-endpoint.test.stackstate.com",
 		"  queue_size: 10",
 		"  intervals:",
 		"    container: 8",
@@ -848,7 +848,7 @@ func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
 
 	ep := agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
+	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
 func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {

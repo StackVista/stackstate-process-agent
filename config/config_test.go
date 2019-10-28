@@ -823,63 +823,180 @@ func TestIsAffirmative(t *testing.T) {
 //custom tests
 
 func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
-  assert := assert.New(t)
-  defaultProcessURL := os.Getenv("STS_PROCESS_AGENT_URL")
-  os.Unsetenv("STS_PROCESS_AGENT_URL")
-  var ddy YamlAgentConfig
-  err := yaml.Unmarshal([]byte(strings.Join([]string{
-    "api_key: apikey_30",
-    "sts_url: http://default-endpoint.test.stackstate.com",
-    "process_agent_enabled: true",
-    "process_config:",
-    "  enabled: 'true'",
-    "  process_sts_url: http://default-endpoint.test.stackstate.com",
-    "  queue_size: 10",
-    "  intervals:",
-    "    container: 8",
-    "    process: 30",
-    "network_tracer_config:",
-    "  network_tracing_enabled: 'true'",
-    "  initial_connections_from_proc: 'true'",
-  }, "\n")), &ddy)
-  assert.NoError(err)
+	assert := assert.New(t)
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"api_key: apikey_30",
+		"sts_url: http://default-endpoint.test.stackstate.com",
+		"process_agent_enabled: true",
+		"process_config:",
+		"  enabled: 'true'",
+		"  process_sts_url: http://default-endpoint.test.stackstate.com",
+		"  queue_size: 10",
+		"  intervals:",
+		"    container: 8",
+		"    process: 30",
+		"network_tracer_config:",
+		"  network_tracing_enabled: 'true'",
+		"  initial_connections_from_proc: 'true'",
+	}, "\n")), &ddy)
+	assert.NoError(err)
 
-  agentConfig, err := NewAgentConfig(nil, &ddy, nil)
-  assert.NoError(err)
+	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(err)
 
-  ep := agentConfig.APIEndpoints[0]
-  assert.Equal("apikey_30", ep.APIKey)
-  assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-  os.Setenv("STS_PROCESS_AGENT_URL", defaultProcessURL)
+	ep := agentConfig.APIEndpoints[0]
+	assert.Equal("apikey_30", ep.APIKey)
+	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
-
 func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
-  assert := assert.New(t)
-  defaultProcessURL := os.Getenv("STS_PROCESS_AGENT_URL")
-  os.Unsetenv("STS_PROCESS_AGENT_URL")
-  var ddy YamlAgentConfig
-  err := yaml.Unmarshal([]byte(strings.Join([]string{
-    "api_key: apikey_30",
-    "sts_url: http://default-endpoint.test.stackstate.com",
-    "process_agent_enabled: true",
-    "process_config:",
-    "  enabled: 'true'",
-    "  queue_size: 10",
-    "  intervals:",
-    "    container: 8",
-    "    process: 30",
-    "network_tracer_config:",
-    "  network_tracing_enabled: 'true'",
-    "  initial_connections_from_proc: 'true'",
-  }, "\n")), &ddy)
-  assert.NoError(err)
+	assert := assert.New(t)
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"api_key: apikey_30",
+		"sts_url: http://default-endpoint.test.stackstate.com",
+		"process_agent_enabled: true",
+		"process_config:",
+		"  enabled: 'true'",
+		"  queue_size: 10",
+		"  intervals:",
+		"    container: 8",
+		"    process: 30",
+		"network_tracer_config:",
+		"  network_tracing_enabled: 'true'",
+		"  initial_connections_from_proc: 'true'",
+	}, "\n")), &ddy)
+	assert.NoError(err)
 
-  agentConfig, err := NewAgentConfig(nil, &ddy, nil)
-  assert.NoError(err)
+	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(err)
 
-  ep := agentConfig.APIEndpoints[0]
-  assert.Equal("apikey_30", ep.APIKey)
-  assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-  os.Setenv("STS_PROCESS_AGENT_URL", defaultProcessURL)
+	ep := agentConfig.APIEndpoints[0]
+	assert.Equal("apikey_30", ep.APIKey)
+	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
+}
+
+func TestStackStateFallbackAgentConfigToEnvSTSUrl(t *testing.T) {
+	assert := assert.New(t)
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_STS_URL")
+	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"api_key: apikey_30",
+		"process_agent_enabled: true",
+		"process_config:",
+		"  enabled: 'true'",
+		"  queue_size: 10",
+		"  intervals:",
+		"    container: 8",
+		"    process: 30",
+		"network_tracer_config:",
+		"  network_tracing_enabled: 'true'",
+		"  initial_connections_from_proc: 'true'",
+	}, "\n")), &ddy)
+	assert.NoError(err)
+
+	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(err)
+
+	ep := agentConfig.APIEndpoints[0]
+	assert.Equal("apikey_30", ep.APIKey)
+	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
+}
+
+//case 5: STS_URL as env	PROCESS_AGENT_URL as env
+func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
+	assert := assert.New(t)
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_STS_URL")
+	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
+	os.Setenv("STS_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"api_key: apikey_30",
+		"process_agent_enabled: true",
+		"process_config:",
+		"  enabled: 'true'",
+		"  queue_size: 10",
+		"  intervals:",
+		"    container: 8",
+		"    process: 30",
+		"network_tracer_config:",
+		"  network_tracing_enabled: 'true'",
+		"  initial_connections_from_proc: 'true'",
+	}, "\n")), &ddy)
+	assert.NoError(err)
+
+	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(err)
+
+	ep := agentConfig.APIEndpoints[0]
+	assert.Equal("apikey_30", ep.APIKey)
+	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
+}
+
+//case 7: STS_URL as env	PROCESS_AGENT_URL as yaml - ENV wins
+func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
+	assert := assert.New(t)
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_STS_URL")
+	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"api_key: apikey_30",
+		"process_agent_enabled: true",
+		"process_config:",
+		"  enabled: 'true'",
+		"  process_sts_url: http://process-endpoint.test.stackstate.com",
+		"  queue_size: 10",
+		"  intervals:",
+		"    container: 8",
+		"    process: 30",
+		"network_tracer_config:",
+		"  network_tracing_enabled: 'true'",
+		"  initial_connections_from_proc: 'true'",
+	}, "\n")), &ddy)
+	assert.NoError(err)
+
+	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(err)
+
+	ep := agentConfig.APIEndpoints[0]
+	assert.Equal("apikey_30", ep.APIKey)
+	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
+}
+
+//case 8: STS_URL as yaml, PROCESS_AGENT_URL as env - ENV wins
+func TestStackStatePreferPROCESS_AGENT_URLOverYamlsts_sts_url(t *testing.T) {
+	assert := assert.New(t)
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_STS_URL")
+	os.Setenv("STS_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"api_key: apikey_30",
+		"sts_url: http://default-endpoint.test.stackstate.com",
+		"process_agent_enabled: true",
+		"process_config:",
+		"  enabled: 'true'",
+		"  queue_size: 10",
+		"  intervals:",
+		"    container: 8",
+		"    process: 30",
+		"network_tracer_config:",
+		"  network_tracing_enabled: 'true'",
+		"  initial_connections_from_proc: 'true'",
+	}, "\n")), &ddy)
+	assert.NoError(err)
+
+	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(err)
+
+	ep := agentConfig.APIEndpoints[0]
+	assert.Equal("apikey_30", ep.APIKey)
+	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }

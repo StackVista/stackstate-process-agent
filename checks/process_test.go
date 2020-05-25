@@ -6,6 +6,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/patrickmn/go-cache"
 	"regexp"
 	"sort"
 
@@ -20,7 +21,7 @@ import (
 
 func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCPU, systemCPU float64) *process.FilledProcess {
 	// process older than 2 minutes, ie. not short-lived
-	createTime := time.Now().Add(-2*time.Minute).Unix()
+	createTime := time.Now().Add(-2 * time.Minute).Unix()
 
 	return &process.FilledProcess{
 		Pid:         pid,
@@ -728,6 +729,8 @@ func TestBuildIncrementContainerPrecedeProcesses(t *testing.T) {
 }
 
 func TestProcessFormatting(t *testing.T) {
+	now := time.Now()
+
 	pNow := []*process.FilledProcess{
 		// generic processes
 		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),
@@ -880,6 +883,18 @@ func TestProcessFormatting(t *testing.T) {
 
 			Process.Init(cfg, &model.SystemInfo{})
 
+			// fill in the process cache
+			for _, fp := range tc.cur {
+				processID := createProcessID(fp.Pid, fp.CreateTime)
+				cachedProcess := &ProcessCache{
+					Process:       fp,
+					FirstObserved: now.Add(-5 * time.Minute).Unix(),
+					LastObserved:  now.Unix(),
+				}
+
+				Process.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
+			}
+
 			chunked := chunkProcesses(Process.fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun), cfg.MaxPerMessage, make([][]*model.Process, 0))
 			assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
 			total := 0
@@ -913,6 +928,8 @@ func TestProcessFormatting(t *testing.T) {
 			assert.Equal(t, tc.expectedPids, pids, "expected pIds: %v, found pIds: %v", tc.expectedPids, pids)
 		})
 	}
+
+	Process.cache.Flush()
 }
 
 func TestPercentCalculation(t *testing.T) {
@@ -939,6 +956,57 @@ func TestRateCalculation(t *testing.T) {
 	assert.True(t, floatEquals(calculateRate(5, 1, now), 0))
 	assert.True(t, floatEquals(calculateRate(5, 0, prev), 0))
 	assert.True(t, floatEquals(calculateRate(5, 1, empty), 0))
+}
+
+func TestProcessShortLivedFiltering(t *testing.T) {
+	cfg := config.NewDefaultAgentConfig()
+	now := time.Now()
+
+	Process.Init(cfg, &model.SystemInfo{})
+
+	for _, tc := range []struct {
+		name          string
+		process       *process.FilledProcess
+		expected      bool
+		firstObserved int64
+	}{
+		{
+			name: fmt.Sprintf("Should not filter a process that has been observed longer than the short-lived qualifier "+
+				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
+			process: &process.FilledProcess{
+				Pid: 1,
+			},
+			expected:      false,
+			firstObserved: now.Add(-2 * time.Minute).Unix(),
+		},
+		{
+			name: fmt.Sprintf("Should filter a process that has not been observed longer than the short-lived qualifier "+
+				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
+			process: &process.FilledProcess{
+				Pid: 2,
+			},
+			expected:      true,
+			firstObserved: now.Add(-2 * time.Second).Unix(),
+		},
+	} {
+
+		t.Run(tc.name, func(t *testing.T) {
+			// fill in the process cache
+			processID := createProcessID(tc.process.Pid, tc.process.CreateTime)
+			cachedProcess := &ProcessCache{
+				Process:       tc.process,
+				FirstObserved: tc.firstObserved,
+				LastObserved:  now.Unix(),
+			}
+
+			Process.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
+
+			_, shortLived := Process.isProcessShortLived(tc.process, now.Unix(), cfg)
+			assert.Equal(t, tc.expected, shortLived)
+		})
+	}
+
+	Process.cache.Flush()
 }
 
 func floatEquals(a, b float32) bool {

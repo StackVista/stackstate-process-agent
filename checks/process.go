@@ -49,7 +49,7 @@ type ProcessCheck struct {
 // Init initializes the singleton ProcessCheck.
 func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	p.sysInfo = info
-	p.cache = cache.New(cfg.ProcessCacheDuration, cfg.EnableProcessShortLivedQualifierSecs)
+	p.cache = cache.New(cfg.ProcessCacheDuration, cfg.ShortLivedProcessQualifierSecs)
 }
 
 // Name returns the name of the ProcessCheck.
@@ -438,15 +438,19 @@ func (p *ProcessCheck) isProcessShortLived(fp *process.FilledProcess, nowUnix in
 		cachedProcess = cPointer.(*ProcessCache)
 		cachedProcess.LastObserved = nowUnix
 	} else {
-		cachedProcess = &ProcessCache{fp, fp.CreateTime, nowUnix}
+		cachedProcess = &ProcessCache{
+			Process:       fp,
+			FirstObserved: nowUnix,
+			LastObserved:  nowUnix,
+		}
 	}
 
 	p.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
 
-	// process is not short-lived, continue to send it
-	if cachedProcess.CreateTime < time.Now().Add(-cfg.EnableProcessShortLivedQualifierSecs*time.Second).Unix() {
-		return cachedProcess, true
+	// FirstObserved is before ShortLivedTime. Process is not short-lived, return false
+	if cachedProcess.FirstObserved < time.Now().Add(-cfg.ShortLivedProcessQualifierSecs).Unix() {
+		return cachedProcess, false
 	}
 
-	return cachedProcess, false
+	return cachedProcess, true
 }

@@ -201,7 +201,7 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	setProcessFilters(agentConf, yc.Process.Filters.ShortLived.Enabled, yc.Process.Filters.ShortLived.QualifierSecs)
 
 	if yc.Process.ProcessCacheDuration > 0 {
-		agentConf.ProcessCacheDuration = time.Duration(yc.Process.ProcessCacheDuration)*time.Minute
+		agentConf.ProcessCacheDuration = time.Duration(yc.Process.ProcessCacheDuration) * time.Minute
 	}
 
 	// DataScrubber

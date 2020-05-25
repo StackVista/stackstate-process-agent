@@ -87,8 +87,8 @@ type AgentConfig struct {
 	ProcessCacheDuration time.Duration
 
 	// ShortLived process filtering
-	EnableProcessShortLivedFilter        bool
-	EnableProcessShortLivedQualifierSecs time.Duration
+	EnableShortLivedProcessFilter  bool
+	ShortLivedProcessQualifierSecs time.Duration
 
 	// Top resource using process inclusion amounts
 	AmountTopCPUPercentageUsage int
@@ -213,8 +213,8 @@ func NewDefaultAgentConfig() *AgentConfig {
 		ProcessCacheDuration: 5 * time.Minute,
 
 		// ShortLived process filtering
-		EnableProcessShortLivedFilter:        true,
-		EnableProcessShortLivedQualifierSecs: 60 * time.Second,
+		EnableShortLivedProcessFilter:  true,
+		ShortLivedProcessQualifierSecs: 60 * time.Second,
 
 		// Network collection configuration
 		EnableNetworkTracing:              false,
@@ -710,11 +710,11 @@ func setProcessBlacklist(agentConf *AgentConfig,
 }
 
 // setProcessFilters
-func setProcessFilters(agentConf *AgentConfig, enableProcessShortLivedFilter bool, enableProcessShortLivedQualifierSecs int) {
-	if enableProcessShortLivedFilter {
-		log.Infof("Process ShortLived filter enabled for processes younger than %d seconds", enableProcessShortLivedQualifierSecs)
-		agentConf.EnableProcessShortLivedFilter = enableProcessShortLivedFilter
-		agentConf.EnableProcessShortLivedQualifierSecs = time.Duration(enableProcessShortLivedQualifierSecs) * time.Second
+func setProcessFilters(agentConf *AgentConfig, enableShortLivedProcessFilter bool, shortLivedProcessQualifierSecs int) {
+	if enableShortLivedProcessFilter {
+		log.Infof("Process ShortLived filter enabled for processes younger than %d seconds", shortLivedProcessQualifierSecs)
+		agentConf.EnableShortLivedProcessFilter = enableShortLivedProcessFilter
+		agentConf.ShortLivedProcessQualifierSecs = time.Duration(shortLivedProcessQualifierSecs) * time.Second
 	}
 }
 

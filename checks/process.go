@@ -3,6 +3,7 @@
 package checks
 
 import (
+	"fmt"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/StackVista/stackstate-process-agent/statsd"
 	"github.com/StackVista/stackstate-process-agent/util"
 	log "github.com/cihub/seelog"
+	cache "github.com/patrickmn/go-cache"
 )
 
 // Process is a singleton ProcessCheck.
@@ -38,11 +40,16 @@ type ProcessCheck struct {
 	// Fields to keep track of what we communicated last to the remote. This is used to determine incremental changes
 	lastProcState map[int32]*model.Process
 	lastCtrState  map[string]*model.Container
+
+	// Create a cache with a default expiration time of 5 minutes, and which
+	// purges expired items every 10 minutes
+	cache *cache.Cache
 }
 
 // Init initializes the singleton ProcessCheck.
 func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	p.sysInfo = info
+	p.cache = cache.New(cfg.ProcessCacheDuration, cfg.EnableProcessShortLivedQualifierSecs)
 }
 
 // Name returns the name of the ProcessCheck.
@@ -91,7 +98,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, features features.Features, 
 
 	var messages []model.MessageBody
 
-	processes := fmtProcesses(cfg, procs, p.lastProcs, ctrList, cpuTimes[0], p.lastCPUTime, p.lastRun)
+	processes := p.fmtProcesses(cfg, procs, p.lastProcs, ctrList, cpuTimes[0], p.lastCPUTime, p.lastRun)
 
 	// In case we skip every process..
 	if len(processes) == 0 {
@@ -324,7 +331,7 @@ func enrichProcessWithKubernetesTags(processes []*model.Process, containers []*m
 	return enrichedProcesses
 }
 
-func fmtProcesses(
+func (p *ProcessCheck) fmtProcesses(
 	cfg *config.AgentConfig,
 	procs, lastProcs map[int32]*process.FilledProcess,
 	ctrList []*containers.Container,
@@ -345,13 +352,16 @@ func fmtProcesses(
 	var totalMemUsage uint64
 	totalCPUUsage = 0.0
 	totalMemUsage = 0
+
+	// the nanosecond difference between now and when the process shortlived-ness is calculated is not worth the computation
+	nowUnix := time.Now().Unix()
 	for _, fp := range procs {
 		// Hide blacklisted args if the Scrubber is enabled
 		fp.Cmdline = cfg.Scrubber.ScrubProcessCommand(fp)
 
 		// Skipping any processes that didn't exist in the previous run.
 		// This means short-lived processes (<2s) will never be captured.
-		if _, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
+		if _, ok := p.isProcessShortLived(fp, nowUnix, cfg); ok {
 			continue
 		}
 
@@ -413,4 +423,30 @@ func fmtProcesses(
 	processes := append(<-inclusionProcessesChan, <-allProcessesChan...)
 	cfg.Scrubber.IncrementCacheAge()
 	return deriveUniqueProcesses(deriveSortProcesses(processes))
+}
+
+func createProcessID(pid int32, createTime int64) string {
+	return fmt.Sprintf("%d:%d", pid, createTime)
+}
+
+func (p *ProcessCheck) isProcessShortLived(fp *process.FilledProcess, nowUnix int64, cfg *config.AgentConfig) (*ProcessCache, bool) {
+	var cachedProcess *ProcessCache
+	processID := createProcessID(fp.Pid, fp.CreateTime)
+
+	cPointer, found := p.cache.Get(processID)
+	if found {
+		cachedProcess = cPointer.(*ProcessCache)
+		cachedProcess.LastObserved = nowUnix
+	} else {
+		cachedProcess = &ProcessCache{fp, fp.CreateTime, nowUnix}
+	}
+
+	p.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
+
+	// process is not short-lived, continue to send it
+	if cachedProcess.CreateTime < time.Now().Add(-cfg.EnableProcessShortLivedQualifierSecs*time.Second).Unix() {
+		return cachedProcess, true
+	}
+
+	return cachedProcess, false
 }

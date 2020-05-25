@@ -83,6 +83,13 @@ type AgentConfig struct {
 	StatsdHost    string
 	StatsdPort    int
 
+	// Process Cache Expiration, In Minutes
+	ProcessCacheDuration time.Duration
+
+	// ShortLived process filtering
+	EnableProcessShortLivedFilter        bool
+	EnableProcessShortLivedQualifierSecs time.Duration
+
 	// Top resource using process inclusion amounts
 	AmountTopCPUPercentageUsage int
 	CPUPercentageUsageThreshold int
@@ -201,6 +208,13 @@ func NewDefaultAgentConfig() *AgentConfig {
 
 		EnableIncrementalPublishing:          true,
 		IncrementalPublishingRefreshInterval: 1 * time.Minute,
+
+		// Process Cache Expiration duration
+		ProcessCacheDuration: 5 * time.Minute,
+
+		// ShortLived process filtering
+		EnableProcessShortLivedFilter:        true,
+		EnableProcessShortLivedQualifierSecs: 60 * time.Second,
 
 		// Network collection configuration
 		EnableNetworkTracing:              false,
@@ -627,6 +641,15 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.ClusterName = v
 	}
 
+	if v := os.Getenv("STS_PROCESS_CACHE_DURATION"); v != "" {
+		durationS, _ := strconv.Atoi(v)
+		c.ProcessCacheDuration = time.Duration(durationS) * time.Minute
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS")); err == nil {
+		setProcessFilters(c, true, v)
+	}
+
 	return c
 }
 
@@ -684,6 +707,15 @@ func setProcessBlacklist(agentConf *AgentConfig,
 		log.Warn("Process blacklist inclusions specified without a blacklist pattern. Please add process blacklist patterns to benefit from the top process inclusions")
 	}
 
+}
+
+// setProcessFilters
+func setProcessFilters(agentConf *AgentConfig, enableProcessShortLivedFilter bool, enableProcessShortLivedQualifierSecs int) {
+	if enableProcessShortLivedFilter {
+		log.Infof("Process ShortLived filter enabled for processes younger than %d seconds", enableProcessShortLivedQualifierSecs)
+		agentConf.EnableProcessShortLivedFilter = enableProcessShortLivedFilter
+		agentConf.EnableProcessShortLivedQualifierSecs = time.Duration(enableProcessShortLivedQualifierSecs) * time.Second
+	}
 }
 
 func constructRegex(pattern string) *regexp.Regexp {

@@ -20,6 +20,13 @@ type ProcessCommon struct {
 	Tags    []string
 }
 
+// ProcessCache is used as the struct in the cache for all seen processes
+type ProcessCache struct {
+	Process      *process.FilledProcess
+	CreateTime   int64
+	LastObserved int64
+}
+
 // Process tags for top usage
 const (
 	TopCPU     string = "usage:top-cpu"

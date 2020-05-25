@@ -19,8 +19,12 @@ import (
 )
 
 func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCPU, systemCPU float64) *process.FilledProcess {
+	// process older than 2 minutes, ie. not short-lived
+	createTime := time.Now().Add(-2*time.Minute).Unix()
+
 	return &process.FilledProcess{
 		Pid:         pid,
+		CreateTime:  createTime,
 		Cmdline:     strings.Split(cmdline, " "),
 		MemInfo:     &process.MemoryInfoStat{RSS: resMemory},
 		CtxSwitches: &process.NumCtxSwitchesStat{},
@@ -874,7 +878,9 @@ func TestProcessFormatting(t *testing.T) {
 				last[c.Pid] = c
 			}
 
-			chunked := chunkProcesses(fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun), cfg.MaxPerMessage, make([][]*model.Process, 0))
+			Process.Init(cfg, &model.SystemInfo{})
+
+			chunked := chunkProcesses(Process.fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun), cfg.MaxPerMessage, make([][]*model.Process, 0))
 			assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
 			total := 0
 			pids := make([]int32, 0)

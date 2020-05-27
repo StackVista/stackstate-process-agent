@@ -30,7 +30,6 @@ type ProcessCheck struct {
 
 	sysInfo      *model.SystemInfo
 	lastCPUTime  cpu.TimesStat
-	lastProcs    map[int32]*process.FilledProcess
 	lastCtrRates map[string]util.ContainerRateMetrics
 	lastRun      time.Time
 
@@ -49,7 +48,7 @@ type ProcessCheck struct {
 // Init initializes the singleton ProcessCheck.
 func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	p.sysInfo = info
-	p.cache = cache.New(cfg.ProcessCacheDuration, cfg.ShortLivedProcessQualifierSecs)
+	p.cache = cache.New(cfg.ProcessCacheDuration, cfg.ProcessCacheDuration)
 }
 
 // Name returns the name of the ProcessCheck.
@@ -84,8 +83,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, features features.Features, 
 	ctrList, _ := util.GetContainers()
 
 	// End check early if this is our first run.
-	if p.lastProcs == nil {
-		p.lastProcs = procs
+	if p.lastProcState == nil {
 		p.lastCPUTime = cpuTimes[0]
 		p.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
 		p.lastRun = time.Now()
@@ -98,7 +96,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, features features.Features, 
 
 	var messages []model.MessageBody
 
-	processes := p.fmtProcesses(cfg, procs, p.lastProcs, ctrList, cpuTimes[0], p.lastCPUTime, p.lastRun)
+	processes := p.fmtProcesses(cfg, procs, ctrList, cpuTimes[0], p.lastCPUTime, p.lastRun)
 
 	// In case we skip every process..
 	if len(processes) == 0 {
@@ -118,7 +116,6 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, features features.Features, 
 
 	// Store the last state for comparison on the next run.
 	// Note: not storing the filtered in case there are new processes that haven't had a chance to show up twice.
-	p.lastProcs = procs
 	p.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
 	p.lastCPUTime = cpuTimes[0]
 	p.lastRun = time.Now()
@@ -333,7 +330,7 @@ func enrichProcessWithKubernetesTags(processes []*model.Process, containers []*m
 
 func (p *ProcessCheck) fmtProcesses(
 	cfg *config.AgentConfig,
-	procs, lastProcs map[int32]*process.FilledProcess,
+	procs map[int32]*process.FilledProcess,
 	ctrList []*containers.Container,
 	syst2, syst1 cpu.TimesStat,
 	lastRun time.Time,
@@ -353,48 +350,46 @@ func (p *ProcessCheck) fmtProcesses(
 	totalCPUUsage = 0.0
 	totalMemUsage = 0
 
-	// the nanosecond difference between now and when the process shortlived-ness is calculated is not worth the computation
-	nowUnix := time.Now().Unix()
 	for _, fp := range procs {
 		// Hide blacklisted args if the Scrubber is enabled
 		fp.Cmdline = cfg.Scrubber.ScrubProcessCommand(fp)
 
-		// Skipping any processes that didn't exist in the previous run.
-		// This means short-lived processes (<2s) will never be captured.
-		if _, ok := p.isProcessShortLived(fp, nowUnix, cfg); ok {
-			continue
+		// Check to see if we have this process cached and whether we have observed it for the configured time, otherwise skip
+		if processCache, ok := p.isCached(fp); ok && !p.isProcessShortLived(processCache.FirstObserved, cfg) {
+			// mapping to a common process type to do sorting
+			command := formatCommand(fp)
+			memory := formatMemory(fp)
+			cpu := formatCPU(fp, fp.CpuTime, processCache.Process.CpuTime, syst2, syst1)
+			ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
+			commonProcesses = append(commonProcesses, &ProcessCommon{
+				Pid:     fp.Pid,
+				Command: command,
+				Memory:  memory,
+				CPU:     cpu,
+				IOStat:  ioStat,
+			})
+
+			processMap[fp.Pid] = &model.Process{
+				Pid:                    fp.Pid,
+				Command:                command,
+				User:                   formatUser(fp),
+				Memory:                 memory,
+				Cpu:                    cpu,
+				CreateTime:             fp.CreateTime,
+				OpenFdCount:            fp.OpenFdCount,
+				State:                  model.ProcessState(model.ProcessState_value[fp.Status]),
+				IoStat:                 ioStat,
+				VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
+				InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
+				ContainerId:            cidByPid[fp.Pid],
+			}
+
+			totalCPUUsage = totalCPUUsage + cpu.TotalPct
+			totalMemUsage = totalMemUsage + memory.Rss
 		}
 
-		// mapping to a common process type to do sorting
-		command := formatCommand(fp)
-		memory := formatMemory(fp)
-		cpu := formatCPU(fp, fp.CpuTime, lastProcs[fp.Pid].CpuTime, syst2, syst1)
-		ioStat := formatIO(fp, lastProcs[fp.Pid].IOStat, lastRun)
-		commonProcesses = append(commonProcesses, &ProcessCommon{
-			Pid:     fp.Pid,
-			Command: command,
-			Memory:  memory,
-			CPU:     cpu,
-			IOStat:  ioStat,
-		})
-
-		processMap[fp.Pid] = &model.Process{
-			Pid:                    fp.Pid,
-			Command:                command,
-			User:                   formatUser(fp),
-			Memory:                 memory,
-			Cpu:                    cpu,
-			CreateTime:             fp.CreateTime,
-			OpenFdCount:            fp.OpenFdCount,
-			State:                  model.ProcessState(model.ProcessState_value[fp.Status]),
-			IoStat:                 ioStat,
-			VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
-			InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
-			ContainerId:            cidByPid[fp.Pid],
-		}
-
-		totalCPUUsage = totalCPUUsage + cpu.TotalPct
-		totalMemUsage = totalMemUsage + memory.Rss
+		// put it in the cache for the next run
+		p.putCache(fp)
 	}
 
 	// Process inclusions
@@ -429,13 +424,26 @@ func createProcessID(pid int32, createTime int64) string {
 	return fmt.Sprintf("%d:%d", pid, createTime)
 }
 
-func (p *ProcessCheck) isProcessShortLived(fp *process.FilledProcess, nowUnix int64, cfg *config.AgentConfig) (*ProcessCache, bool) {
-	var cachedProcess *ProcessCache
+func (p *ProcessCheck) isCached(fp *process.FilledProcess) (*ProcessCache, bool) {
 	processID := createProcessID(fp.Pid, fp.CreateTime)
 
 	cPointer, found := p.cache.Get(processID)
 	if found {
+		return cPointer.(*ProcessCache), true
+	}
+
+	return nil, false
+}
+
+func (p *ProcessCheck) putCache(fp *process.FilledProcess) *ProcessCache {
+	var cachedProcess *ProcessCache
+	processID := createProcessID(fp.Pid, fp.CreateTime)
+	nowUnix := time.Now().Unix()
+
+	cPointer, found := p.cache.Get(processID)
+	if found {
 		cachedProcess = cPointer.(*ProcessCache)
+		cachedProcess.Process = fp
 		cachedProcess.LastObserved = nowUnix
 	} else {
 		cachedProcess = &ProcessCache{
@@ -446,11 +454,14 @@ func (p *ProcessCheck) isProcessShortLived(fp *process.FilledProcess, nowUnix in
 	}
 
 	p.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
+	return cachedProcess
+}
 
-	// FirstObserved is before ShortLivedTime. Process is not short-lived, return false
-	if cachedProcess.FirstObserved < time.Now().Add(-cfg.ShortLivedProcessQualifierSecs).Unix() {
-		return cachedProcess, false
+func (p *ProcessCheck) isProcessShortLived(firstObserved int64, cfg *config.AgentConfig) bool {
+	// firstObserved is before ShortLivedTime. Process is not short-lived, return false
+	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedProcessQualifierSecs)) {
+		return false
 	}
 
-	return cachedProcess, true
+	return true
 }

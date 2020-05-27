@@ -21,7 +21,7 @@ import (
 
 func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCPU, systemCPU float64) *process.FilledProcess {
 	// process older than 2 minutes, ie. not short-lived
-	createTime := time.Now().Add(-2 * time.Minute).Unix()
+	createTime := time.Now().Add(-5 * time.Minute).Unix()
 
 	return &process.FilledProcess{
 		Pid:         pid,
@@ -789,7 +789,7 @@ func TestProcessFormatting(t *testing.T) {
 		makeProcessWithResource(20, "write io resource process 3", 0, 0, 10, 0, 0),
 		makeProcessWithResource(21, "write io resource process 4", 0, 0, 10, 0, 0),
 	}
-	containers := []*containers.Container{}
+	var containers []*containers.Container
 	lastRun := time.Now().Add(-5 * time.Second)
 	syst1, syst2 := cpu.TimesStat{
 		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
@@ -884,7 +884,7 @@ func TestProcessFormatting(t *testing.T) {
 			Process.Init(cfg, &model.SystemInfo{})
 
 			// fill in the process cache
-			for _, fp := range tc.cur {
+			for _, fp := range tc.last {
 				processID := createProcessID(fp.Pid, fp.CreateTime)
 				cachedProcess := &ProcessCache{
 					Process:       fp,
@@ -895,7 +895,7 @@ func TestProcessFormatting(t *testing.T) {
 				Process.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
 			}
 
-			chunked := chunkProcesses(Process.fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun), cfg.MaxPerMessage, make([][]*model.Process, 0))
+			chunked := chunkProcesses(Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun), cfg.MaxPerMessage, make([][]*model.Process, 0))
 			assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
 			total := 0
 			pids := make([]int32, 0)
@@ -958,6 +958,62 @@ func TestRateCalculation(t *testing.T) {
 	assert.True(t, floatEquals(calculateRate(5, 1, empty), 0))
 }
 
+func TestProcessCache(t *testing.T) {
+	cfg := config.NewDefaultAgentConfig()
+	cfg.ShortLivedProcessQualifierSecs = 500 * time.Millisecond
+	cfg.ProcessCacheDuration = 600 * time.Millisecond
+	var containers []*containers.Container
+	lastRun := time.Now().Add(-5 * time.Second)
+	syst1, syst2 := cpu.TimesStat{
+		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+		GuestNice: 0, Idle: 0, Stolen: 0,
+	}, cpu.TimesStat{
+		User: 20, System: 40, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+		GuestNice: 0, Idle: 0, Stolen: 0,
+	}
+	cur := make(map[int32]*process.FilledProcess)
+	for _, c := range []*process.FilledProcess{
+		// generic processes
+		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),
+		makeProcessWithResource(2, "mine-bitcoins -all -x", 0, 0, 0, 0, 0),
+		makeProcessWithResource(3, "datadog-process-agent -ddconfig datadog.conf", 0, 0, 0, 0, 0),
+		makeProcessWithResource(4, "foo -bar -bim", 0, 0, 0, 0, 0),
+	} {
+		c.CpuTime.Timestamp = 60 * 100 //in Windows uses CpuTime.Timestamp set to now in nanos
+		cur[c.Pid] = c
+	}
+
+	Process.Init(cfg, &model.SystemInfo{})
+
+	// assert an empty cache.
+	assert.Zero(t, Process.cache.ItemCount(), "Cache should be empty before running")
+
+	// first run on an empty cache; expect no process, but cache should be filled in now.
+	firstRun := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	assert.Zero(t, len(firstRun), "Processes should be empty when the cache is not present")
+	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
+
+	// wait for the shortlived qualifier seconds
+	time.Sleep(cfg.ShortLivedProcessQualifierSecs)
+
+	// second run with filled in cache; expect all processes.
+	secondRun := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	assert.Equal(t, 4, len(secondRun), "Processes should contain 4 elements")
+	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
+
+	// delete pid 4 from the process map, expect it to be excluded from the cache + process list
+	delete(cur, 4)
+	thirdRun := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	assert.Equal(t, 3, len(thirdRun), "Processes should contain 4 elements")
+	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
+
+	// wait 2 seconds
+	time.Sleep(2 * time.Second)
+	assert.Zero(t, Process.cache.ItemCount(), "Cache should be empty again")
+
+	Process.cache.Flush()
+}
+
 func TestProcessShortLivedFiltering(t *testing.T) {
 	cfg := config.NewDefaultAgentConfig()
 	now := time.Now()
@@ -966,25 +1022,18 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 
 	for _, tc := range []struct {
 		name          string
-		process       *process.FilledProcess
 		expected      bool
 		firstObserved int64
 	}{
 		{
 			name: fmt.Sprintf("Should not filter a process that has been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
-			process: &process.FilledProcess{
-				Pid: 1,
-			},
 			expected:      false,
 			firstObserved: now.Add(-2 * time.Minute).Unix(),
 		},
 		{
 			name: fmt.Sprintf("Should filter a process that has not been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
-			process: &process.FilledProcess{
-				Pid: 2,
-			},
 			expected:      true,
 			firstObserved: now.Add(-2 * time.Second).Unix(),
 		},
@@ -992,16 +1041,7 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			// fill in the process cache
-			processID := createProcessID(tc.process.Pid, tc.process.CreateTime)
-			cachedProcess := &ProcessCache{
-				Process:       tc.process,
-				FirstObserved: tc.firstObserved,
-				LastObserved:  now.Unix(),
-			}
-
-			Process.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
-
-			_, shortLived := Process.isProcessShortLived(tc.process, now.Unix(), cfg)
+			shortLived := Process.isProcessShortLived(tc.firstObserved, cfg)
 			assert.Equal(t, tc.expected, shortLived)
 		})
 	}

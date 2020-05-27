@@ -20,12 +20,9 @@ import (
 )
 
 func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCPU, systemCPU float64) *process.FilledProcess {
-	// process older than 2 minutes, ie. not short-lived
-	createTime := time.Now().Add(-5 * time.Minute).Unix()
-
 	return &process.FilledProcess{
 		Pid:         pid,
-		CreateTime:  createTime,
+		CreateTime:  time.Now().Add(-5 * time.Minute).Unix(),
 		Cmdline:     strings.Split(cmdline, " "),
 		MemInfo:     &process.MemoryInfoStat{RSS: resMemory},
 		CtxSwitches: &process.NumCtxSwitchesStat{},

@@ -40,8 +40,7 @@ type ProcessCheck struct {
 	lastProcState map[int32]*model.Process
 	lastCtrState  map[string]*model.Container
 
-	// Create a cache with a default expiration time of 5 minutes, and which
-	// purges expired items every 10 minutes
+	// Use this as the process cache to calculate rate metrics and drop short-lived processes
 	cache *cache.Cache
 }
 

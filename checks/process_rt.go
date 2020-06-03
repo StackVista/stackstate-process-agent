@@ -4,6 +4,7 @@ package checks
 
 import (
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/patrickmn/go-cache"
 	"time"
 
 	"github.com/DataDog/gopsutil/cpu"
@@ -22,14 +23,22 @@ var RTProcess = &RTProcessCheck{}
 type RTProcessCheck struct {
 	sysInfo      *model.SystemInfo
 	lastCPUTime  cpu.TimesStat
-	lastProcs    map[int32]*process.FilledProcess
 	lastCtrRates map[string]util.ContainerRateMetrics
 	lastRun      time.Time
+
+	// Use this as the process cache to calculate rate metrics and drop short-lived processes
+	cache *cache.Cache
+
+	// Flag to filter processes that are considered short-lived
+	shortLivedProcessFilterEnabled bool
 }
 
 // Init initializes a new RTProcessCheck instance.
 func (r *RTProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	r.sysInfo = info
+
+	r.cache = cache.New(cfg.ProcessCacheDuration, cfg.ProcessCacheDuration)
+	r.shortLivedProcessFilterEnabled = cfg.EnableShortLivedProcessFilter
 }
 
 // Name returns the name of the RTProcessCheck.
@@ -59,16 +68,14 @@ func (r *RTProcessCheck) Run(cfg *config.AgentConfig, features features.Features
 	ctrList, _ := util.GetContainers()
 
 	// End check early if this is our first run.
-	if r.lastProcs == nil {
+	if r.lastRun.IsZero() {
 		r.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
-		r.lastProcs = procs
 		r.lastCPUTime = cpuTimes[0]
 		r.lastRun = time.Now()
 		return nil, nil
 	}
 
-	chunkedStats := fmtProcessStats(cfg, procs, r.lastProcs,
-		ctrList, cpuTimes[0], r.lastCPUTime, r.lastRun)
+	chunkedStats := r.fmtProcessStats(cfg, procs, ctrList, cpuTimes[0], r.lastCPUTime, r.lastRun)
 	groupSize := len(chunkedStats)
 	chunkedCtrStats := fmtContainerStats(ctrList, r.lastCtrRates, r.lastRun, groupSize)
 	messages := make([]model.MessageBody, 0, groupSize)
@@ -87,7 +94,6 @@ func (r *RTProcessCheck) Run(cfg *config.AgentConfig, features features.Features
 	// Store the last state for comparison on the next run.
 	// Note: not storing the filtered in case there are new processes that haven't had a chance to show up twice.
 	r.lastRun = time.Now()
-	r.lastProcs = procs
 	r.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
 	r.lastCPUTime = cpuTimes[0]
 
@@ -95,9 +101,9 @@ func (r *RTProcessCheck) Run(cfg *config.AgentConfig, features features.Features
 }
 
 // fmtProcessStats formats and chunks a slice of ProcessStat into chunks.
-func fmtProcessStats(
+func (r *RTProcessCheck) fmtProcessStats(
 	cfg *config.AgentConfig,
-	procs, lastProcs map[int32]*process.FilledProcess,
+	procs map[int32]*process.FilledProcess,
 	ctrList []*containers.Container,
 	syst2, syst1 cpu.TimesStat,
 	lastRun time.Time,
@@ -117,42 +123,43 @@ func fmtProcessStats(
 	totalCPUUsage = 0.0
 	totalMemUsage = 0
 	for _, fp := range procs {
-		// Skipping any processes that didn't exist in the previous run.
-		// This means short-lived processes (<2s) will never be captured.
-		if _, ok := pidMissingInLastProcs(fp.Pid, lastProcs); ok {
-			continue
+		// Check to see if we have this process cached and whether we have observed it for the configured time, otherwise skip
+		if processCache, ok := isCached(r.cache, fp); ok && !isProcessShortLived(r.shortLivedProcessFilterEnabled, processCache.FirstObserved, cfg) {
+
+			// mapping to a common process type to do sorting
+			command := formatCommand(fp)
+			memory := formatMemory(fp)
+			cpu := formatCPU(fp, fp.CpuTime, processCache.Process.CpuTime, syst2, syst1)
+			ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
+			commonProcesses = append(commonProcesses, &ProcessCommon{
+				Pid:     fp.Pid,
+				Command: command,
+				Memory:  memory,
+				CPU:     cpu,
+				IOStat:  ioStat,
+			})
+
+			processStatMap[fp.Pid] = &model.ProcessStat{
+				Pid:                    fp.Pid,
+				CreateTime:             fp.CreateTime,
+				Memory:                 memory,
+				Cpu:                    cpu,
+				Nice:                   fp.Nice,
+				Threads:                fp.NumThreads,
+				OpenFdCount:            fp.OpenFdCount,
+				ProcessState:           model.ProcessState(model.ProcessState_value[fp.Status]),
+				IoStat:                 ioStat,
+				VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
+				InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
+				ContainerId:            cidByPid[fp.Pid],
+			}
+
+			totalCPUUsage = totalCPUUsage + cpu.TotalPct
+			totalMemUsage = totalMemUsage + memory.Rss
 		}
 
-		// mapping to a common process type to do sorting
-		command := formatCommand(fp)
-		memory := formatMemory(fp)
-		cpu := formatCPU(fp, fp.CpuTime, lastProcs[fp.Pid].CpuTime, syst2, syst1)
-		ioStat := formatIO(fp, lastProcs[fp.Pid].IOStat, lastRun)
-		commonProcesses = append(commonProcesses, &ProcessCommon{
-			Pid:     fp.Pid,
-			Command: command,
-			Memory:  memory,
-			CPU:     cpu,
-			IOStat:  ioStat,
-		})
-
-		processStatMap[fp.Pid] = &model.ProcessStat{
-			Pid:                    fp.Pid,
-			CreateTime:             fp.CreateTime,
-			Memory:                 memory,
-			Cpu:                    cpu,
-			Nice:                   fp.Nice,
-			Threads:                fp.NumThreads,
-			OpenFdCount:            fp.OpenFdCount,
-			ProcessState:           model.ProcessState(model.ProcessState_value[fp.Status]),
-			IoStat:                 ioStat,
-			VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
-			InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
-			ContainerId:            cidByPid[fp.Pid],
-		}
-
-		totalCPUUsage = totalCPUUsage + cpu.TotalPct
-		totalMemUsage = totalMemUsage + memory.Rss
+		// put it in the cache for the next run
+		putCache(r.cache, fp)
 	}
 
 	// Process inclusions

@@ -42,12 +42,16 @@ type ProcessCheck struct {
 
 	// Use this as the process cache to calculate rate metrics and drop short-lived processes
 	cache *cache.Cache
+
+	// Flag to filter processes that are considered short-lived
+	shortLivedProcessFilterEnabled bool
 }
 
 // Init initializes the singleton ProcessCheck.
 func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	p.sysInfo = info
 	p.cache = cache.New(cfg.ProcessCacheDuration, cfg.ProcessCacheDuration)
+	p.shortLivedProcessFilterEnabled = cfg.EnableShortLivedProcessFilter
 }
 
 // Name returns the name of the ProcessCheck.
@@ -457,6 +461,11 @@ func (p *ProcessCheck) putCache(fp *process.FilledProcess) *ProcessCache {
 }
 
 func (p *ProcessCheck) isProcessShortLived(firstObserved int64, cfg *config.AgentConfig) bool {
+	// short-lived filtering is disabled, return false
+	if !p.shortLivedProcessFilterEnabled {
+		return false
+	}
+
 	// firstObserved is before ShortLivedTime. Process is not short-lived, return false
 	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedProcessQualifierSecs)) {
 		return false

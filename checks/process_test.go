@@ -998,14 +998,14 @@ func TestProcessCache(t *testing.T) {
 	assert.Equal(t, 4, len(secondRun), "Processes should contain 4 elements")
 	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
 
-	// delete pid 4 from the process map, expect it to be excluded from the cache + process list
+	// delete pid 4 from the process map, expect it to be excluded from the process list, but not the cache
 	delete(cur, 4)
 	thirdRun := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
-	assert.Equal(t, 3, len(thirdRun), "Processes should contain 4 elements")
+	assert.Equal(t, 3, len(thirdRun), "Processes should contain 3 elements")
 	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
 
-	// wait 2 seconds
-	time.Sleep(2 * time.Second)
+	// wait for cfg.ProcessCacheDuration + a 250 Millisecond buffer to allow the cache expiration to complete
+	time.Sleep(cfg.ProcessCacheDuration + 250*time.Millisecond)
 	assert.Zero(t, Process.cache.ItemCount(), "Cache should be empty again")
 
 	Process.cache.Flush()

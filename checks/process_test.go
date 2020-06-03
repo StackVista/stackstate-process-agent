@@ -1046,7 +1046,6 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 	}
 
 	now := time.Now()
-	Process.Init(cfg, &model.SystemInfo{})
 
 	for _, tc := range []struct {
 		name                     string
@@ -1088,10 +1087,28 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 			expected:                 false,
 			processShortLivedEnabled: true,
 		},
+		{
+			name: fmt.Sprintf("Should not filter a process when the processShortLivedEnabled is set to false"),
+			prepCache: func() {
+				fp := cur[1]
+				processID := createProcessID(fp.Pid, fp.CreateTime)
+				cachedProcess := &ProcessCache{
+					Process:       fp,
+					FirstObserved: now.Add(-5 * time.Second).Unix(),
+					LastObserved:  now.Unix(),
+				}
+
+				Process.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
+			},
+			expected:                 true,
+			processShortLivedEnabled: false,
+		},
 	} {
 
 		t.Run(tc.name, func(t *testing.T) {
 			cfg.EnableShortLivedProcessFilter = tc.processShortLivedEnabled
+			Process.Init(cfg, &model.SystemInfo{})
+			
 			tc.prepCache()
 			// fill in the process cache
 			processes := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)

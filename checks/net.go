@@ -29,7 +29,6 @@ type ConnectionsCheck struct {
 	useLocalTracer bool
 	localTracer    tracer.Tracer
 
-	prevCheckConns []common.ConnectionStats
 	prevCheckTime  time.Time
 
 	buf *bytes.Buffer // Internal buffer
@@ -66,24 +65,13 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		return nil, err
 	}
 
-	if c.prevCheckConns == nil { // End check early if this is our first run.
-		c.prevCheckConns = conns
+	if c.prevCheckTime.IsZero() { // End check early if this is our first run.
 		c.prevCheckTime = time.Now()
 		return nil, nil
 	}
 
-	// Temporary map to help find matching connections from previous check
-	lastConnByKey := make(map[string]common.ConnectionStats)
-	for _, conn := range c.prevCheckConns {
-		if b, err := conn.ByteKey(c.buf); err == nil {
-			lastConnByKey[string(b)] = conn
-		} else {
-			log.Debugf("failed to create connection byte key: %s", err)
-		}
-	}
-
 	log.Debugf("collected connections in %s", time.Since(start))
-	return batchConnections(cfg, groupID, c.formatConnections(cfg, conns, lastConnByKey, c.prevCheckTime)), nil
+	return batchConnections(cfg, groupID, c.formatConnections(cfg, conns, c.prevCheckTime)), nil
 }
 
 func (c *ConnectionsCheck) getConnections() ([]common.ConnectionStats, error) {
@@ -108,7 +96,7 @@ func (c *ConnectionsCheck) getConnections() ([]common.ConnectionStats, error) {
 
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
-func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, lastConns map[string]common.ConnectionStats, lastCheckTime time.Time) []*model.Connection {
+func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, lastCheckTime time.Time) []*model.Connection {
 	// Process create-times required to construct unique process hash keys on the backend
 	createTimeForPID := Process.createTimesforPIDs(connectionPIDs(conns))
 
@@ -144,7 +132,6 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 			Namespace:              formatNamespace(cfg.ClusterName, conn.NetworkNamespace),
 		})
 	}
-	c.prevCheckConns = conns
 	c.prevCheckTime = time.Now()
 	return cxs
 }

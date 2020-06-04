@@ -37,7 +37,7 @@ func endpointKeyNoPort(e *model.EndpointId) string {
 }
 
 // connectionRelationIdentifier returns an identification for the relation this connection may contribute to
-func connectionRelationIdentifier(conn model.EnrichedConnection) string {
+func createRelationIdentifier(conn *model.EnrichedConnection) string {
 
 	// For directional relations, connections with the same source ip are grouped (port is ignored)
 	// For non-directed relations ports are ignored on both sides

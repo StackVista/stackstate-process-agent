@@ -446,4 +446,5 @@ message EnrichedConnection {
     double bytesReceivedPerSecond = 5;
     EndpointId remoteEndpoint = 6;
     ConnectionType connectionType = 7;
+    string connectionIdentifier = 8;
 }

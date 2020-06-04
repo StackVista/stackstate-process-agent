@@ -262,6 +262,22 @@ func TestDefaultBlacklistNix(t *testing.T) {
 	}
 }
 
+func TestSetFiltersFromEnv(t *testing.T) {
+	os.Setenv("STS_PROCESS_CACHE_DURATION", "2")
+	os.Setenv("STS_RELATION_CACHE_DURATION", "4")
+	os.Setenv("STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS", "0")
+	os.Setenv("STS_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS", "45")
+
+	agentConfig, _ := NewAgentConfig(nil, nil, nil)
+
+	assert.Equal(t, 2*time.Minute, agentConfig.ProcessCacheDuration)
+	assert.Equal(t, 4*time.Minute, agentConfig.RelationCacheDuration)
+	assert.Equal(t, false, agentConfig.EnableShortLivedProcessFilter)
+	assert.Equal(t, 0*time.Second, agentConfig.ShortLivedProcessQualifierSecs)
+	assert.Equal(t, true, agentConfig.EnableShortLivedRelationFilter)
+	assert.Equal(t, 45*time.Second, agentConfig.ShortLivedRelationQualifierSecs)
+}
+
 func TestSetBlacklistFromEnv(t *testing.T) {
 	os.Setenv("STS_PROCESS_BLACKLIST_PATTERNS", "^/usr/bin/bashbash,^sshd:")
 
@@ -765,6 +781,15 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 		"  intervals:",
 		"    container: 8",
 		"    process: 30",
+		"  relation_cache_duration: 10",
+		"  process_cache_duration: 15",
+		"  filters:",
+		"    short_lived_processes:",
+		"      enabled: true",
+		"      qualifier_secs: 20",
+		"    short_lived_relations:",
+		"      enabled: true",
+		"      qualifier_secs: 30",
 		"network_tracer_config:",
 		"  network_tracing_enabled: 'true'",
 		"  initial_connections_from_proc: 'true'",
@@ -784,6 +809,12 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(true, agentConfig.NetworkInitialConnectionsFromProc)
 	assert.Equal(append(processChecks, "connections"), agentConfig.EnabledChecks)
+	assert.Equal(10*time.Minute, agentConfig.RelationCacheDuration)
+	assert.Equal(15*time.Minute, agentConfig.ProcessCacheDuration)
+	assert.Equal(true, agentConfig.EnableShortLivedProcessFilter)
+	assert.Equal(20*time.Second, agentConfig.ShortLivedProcessQualifierSecs)
+	assert.Equal(true, agentConfig.EnableShortLivedRelationFilter)
+	assert.Equal(30*time.Second, agentConfig.ShortLivedRelationQualifierSecs)
 }
 
 func TestProxyEnv(t *testing.T) {

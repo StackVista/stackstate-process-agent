@@ -46,16 +46,24 @@ type YamlAgentConfig struct {
 			Connections       int `yaml:"connections"`
 		} `yaml:"intervals"`
 		// The expiration time in, in minutes, that is used to evict items from the process cache
+		RelationCacheDuration int `yaml:"relation_cache_duration"`
+		// The expiration time in, in minutes, that is used to evict items from the process cache
 		ProcessCacheDuration int `yaml:"process_cache_duration"`
 		// The filters are used to excluded processes based on some value
 		Filters struct {
-			// The ShortLived filter determines whether a process is considered "shortlived" and filters it based on the
+			// The ShortLivedRelations filter determines whether a network relation is considered "shortlived" and filters it based on the
 			// configured qualifier seconds
-			ShortLived struct {
+			ShortLivedRelations struct {
 				Enabled       bool `yaml:"enabled"`
 				QualifierSecs int  `yaml:"qualifier_secs"`
-			}
-		} `yaml:"process_filtering"`
+			} `yaml:"short_lived_relations"`
+			// The ShortLived filter determines whether a process is considered "shortlived" and filters it based on the
+			// configured qualifier seconds
+			ShortLivedProcesses struct {
+				Enabled       bool `yaml:"enabled"`
+				QualifierSecs int  `yaml:"qualifier_secs"`
+			} `yaml:"short_lived_processes"`
+		} `yaml:"filters"`
 		// The inclusion amounts for the top resource consuming processes. These processes will be included regardless
 		// of being included in the blacklist patterns.
 		// TODO: Move to Filters
@@ -198,10 +206,16 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage,
 		yc.Process.Blacklist.Inclusions.CPUPercentageUsageThreshold, yc.Process.Blacklist.Inclusions.MemoryUsageThreshold)
 
-	setProcessFilters(agentConf, yc.Process.Filters.ShortLived.Enabled, yc.Process.Filters.ShortLived.QualifierSecs)
+	setProcessFilters(agentConf, yc.Process.Filters.ShortLivedProcesses.Enabled, yc.Process.Filters.ShortLivedProcesses.QualifierSecs)
+
+	setRelationFilters(agentConf, yc.Process.Filters.ShortLivedRelations.Enabled, yc.Process.Filters.ShortLivedRelations.QualifierSecs)
 
 	if yc.Process.ProcessCacheDuration > 0 {
 		agentConf.ProcessCacheDuration = time.Duration(yc.Process.ProcessCacheDuration) * time.Minute
+	}
+
+	if yc.Process.RelationCacheDuration > 0 {
+		agentConf.RelationCacheDuration = time.Duration(yc.Process.RelationCacheDuration) * time.Minute
 	}
 
 	// DataScrubber

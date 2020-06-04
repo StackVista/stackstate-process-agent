@@ -90,6 +90,13 @@ type AgentConfig struct {
 	EnableShortLivedProcessFilter  bool
 	ShortLivedProcessQualifierSecs time.Duration
 
+	// Relation Cache Expiration, In Minutes
+	RelationCacheDuration time.Duration
+
+	// ShortLived relation filtering
+	EnableShortLivedRelationFilter  bool
+	ShortLivedRelationQualifierSecs time.Duration
+
 	// Top resource using process inclusion amounts
 	AmountTopCPUPercentageUsage int
 	CPUPercentageUsageThreshold int
@@ -208,6 +215,13 @@ func NewDefaultAgentConfig() *AgentConfig {
 
 		EnableIncrementalPublishing:          true,
 		IncrementalPublishingRefreshInterval: 1 * time.Minute,
+
+		// Relation Cache Expiration duration
+		RelationCacheDuration: 5 * time.Minute,
+
+		// ShortLived relation filtering
+		EnableShortLivedRelationFilter:  true,
+		ShortLivedRelationQualifierSecs: 60 * time.Second,
 
 		// Process Cache Expiration duration
 		ProcessCacheDuration: 5 * time.Minute,
@@ -646,8 +660,17 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.ProcessCacheDuration = time.Duration(durationS) * time.Minute
 	}
 
+	if v := os.Getenv("STS_RELATION_CACHE_DURATION"); v != "" {
+		durationS, _ := strconv.Atoi(v)
+		c.RelationCacheDuration = time.Duration(durationS) * time.Minute
+	}
+
 	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS")); err == nil {
 		setProcessFilters(c, true, v)
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS")); err == nil {
+		setRelationFilters(c, true, v)
 	}
 
 	return c
@@ -709,14 +732,30 @@ func setProcessBlacklist(agentConf *AgentConfig,
 
 }
 
-// setProcessFilters
+// setProcessFilters sets the short-lived process filters
 func setProcessFilters(agentConf *AgentConfig, enableShortLivedProcessFilter bool, shortLivedProcessQualifierSecs int) {
-	if enableShortLivedProcessFilter {
-		log.Infof("Process ShortLived filter enabled for processes younger than %d seconds", shortLivedProcessQualifierSecs)
+	if enableShortLivedProcessFilter && shortLivedProcessQualifierSecs > 0 {
+		log.Infof("Process ShortLived filter enabled for processes that were observed for less than %d seconds", shortLivedProcessQualifierSecs)
 		agentConf.EnableShortLivedProcessFilter = enableShortLivedProcessFilter
-		agentConf.ShortLivedProcessQualifierSecs = time.Duration(shortLivedProcessQualifierSecs) * time.Second
+	} else {
+		log.Infof("Process ShortLived filter disabled")
+		agentConf.EnableShortLivedProcessFilter = false
 	}
+	agentConf.ShortLivedProcessQualifierSecs = time.Duration(shortLivedProcessQualifierSecs) * time.Second
 }
+
+// setRelationFilters sets the short-lived relation filters
+func setRelationFilters(agentConf *AgentConfig, enableShortLivedRelationFilter bool, shortLivedRelationQualifierSecs int) {
+	if enableShortLivedRelationFilter && shortLivedRelationQualifierSecs > 0 {
+		log.Infof("Relation ShortLived filter enabled for connections that are once off and were observed for less than %d seconds", shortLivedRelationQualifierSecs)
+		agentConf.EnableShortLivedRelationFilter = enableShortLivedRelationFilter
+	} else {
+		log.Infof("Relation ShortLived filter disabled")
+		agentConf.EnableShortLivedRelationFilter = false
+	}
+	agentConf.ShortLivedRelationQualifierSecs = time.Duration(shortLivedRelationQualifierSecs) * time.Second
+}
+
 
 func constructRegex(pattern string) *regexp.Regexp {
 	r, err := regexp.Compile(pattern)

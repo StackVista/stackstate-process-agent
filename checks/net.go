@@ -11,6 +11,7 @@ import (
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	log "github.com/cihub/seelog"
+	"github.com/patrickmn/go-cache"
 	"strings"
 	"time"
 )
@@ -32,6 +33,12 @@ type ConnectionsCheck struct {
 	prevCheckTime  time.Time
 
 	buf *bytes.Buffer // Internal buffer
+
+	// Use this as the relation cache to calculate rate metrics and drop short-lived network relations
+	cache *cache.Cache
+
+	// Flag to filter network relations that are considered short-lived
+	shortLivedRelationFilterEnabled bool
 }
 
 // Name returns the name of the ConnectionsCheck.
@@ -201,14 +208,6 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-func groupSize(total, maxBatchSize int) int32 {
-	groupSize := total / maxBatchSize
-	if total%maxBatchSize > 0 {
-		groupSize++
-	}
-	return int32(groupSize)
 }
 
 func connectionPIDs(conns []common.ConnectionStats) []uint32 {

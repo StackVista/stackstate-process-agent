@@ -1045,27 +1045,25 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 		cur[c.Pid] = c
 	}
 
-	now := time.Now()
-
 	for _, tc := range []struct {
 		name                     string
-		prepCache                func()
+		prepCache                func(c *cache.Cache)
 		expected                 bool
 		processShortLivedEnabled bool
 	}{
 		{
 			name: fmt.Sprintf("Should not filter a process that has been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
-			prepCache: func() {
+			prepCache: func(c *cache.Cache) {
 				fp := cur[1]
 				processID := createProcessID(fp.Pid, fp.CreateTime)
 				cachedProcess := &ProcessCache{
 					Process:       fp,
-					FirstObserved: now.Add(-5 * time.Minute).Unix(),
-					LastObserved:  now.Unix(),
+					FirstObserved: lastRun.Add(-5 * time.Minute).Unix(),
+					LastObserved:  lastRun.Unix(),
 				}
 
-				Process.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
+				c.Set(processID, cachedProcess, cache.DefaultExpiration)
 			},
 			expected:                 true,
 			processShortLivedEnabled: true,
@@ -1073,32 +1071,32 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 		{
 			name: fmt.Sprintf("Should filter a process that has not been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
-			prepCache: func() {
+			prepCache: func(c *cache.Cache) {
 				fp := cur[1]
 				processID := createProcessID(fp.Pid, fp.CreateTime)
 				cachedProcess := &ProcessCache{
 					Process:       fp,
-					FirstObserved: now.Add(-5 * time.Second).Unix(),
-					LastObserved:  now.Unix(),
+					FirstObserved: lastRun.Add(-5 * time.Second).Unix(),
+					LastObserved:  lastRun.Unix(),
 				}
 
-				Process.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
+				c.Set(processID, cachedProcess, cache.DefaultExpiration)
 			},
 			expected:                 false,
 			processShortLivedEnabled: true,
 		},
 		{
 			name: fmt.Sprintf("Should not filter a process when the processShortLivedEnabled is set to false"),
-			prepCache: func() {
+			prepCache: func(c *cache.Cache) {
 				fp := cur[1]
 				processID := createProcessID(fp.Pid, fp.CreateTime)
 				cachedProcess := &ProcessCache{
 					Process:       fp,
-					FirstObserved: now.Add(-5 * time.Second).Unix(),
-					LastObserved:  now.Unix(),
+					FirstObserved: lastRun.Add(-5 * time.Second).Unix(),
+					LastObserved:  lastRun.Unix(),
 				}
 
-				Process.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
+				c.Set(processID, cachedProcess, cache.DefaultExpiration)
 			},
 			expected:                 true,
 			processShortLivedEnabled: false,
@@ -1107,9 +1105,10 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			cfg.EnableShortLivedProcessFilter = tc.processShortLivedEnabled
+
+			// Process Check
 			Process.Init(cfg, &model.SystemInfo{})
-			
-			tc.prepCache()
+			tc.prepCache(Process.cache)
 			// fill in the process cache
 			processes := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
 			var pids []string
@@ -1121,16 +1120,37 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 			processID := createProcessID(p.Pid, p.CreateTime)
 
 			if tc.expected {
-				assert.Len(t, processes, 1, "Process should be present in the returned payload")
-				assert.Contains(t, pids, processID, "%s should not be filtered from the process identifiers", processID)
+				assert.Len(t, processes, 1, "Process should be present in the returned payload for the Process Check")
+				assert.Contains(t, pids, processID, "%s should not be filtered from the process identifiers for the Process Check", processID)
 			} else {
-				assert.Len(t, processes, 0, "The process should be filtered in the returned payload")
-				assert.NotContains(t, pids, processID, "%s should be filtered from the process identifiers", processID)
+				assert.Len(t, processes, 0, "The process should be filtered in the returned payload for the Process Check")
+				assert.NotContains(t, pids, processID, "%s should be filtered from the process identifiers for the Process Check", processID)
+			}
+
+			// Process RT Check
+			RTProcess.Init(cfg, &model.SystemInfo{})
+			// fill in the real-time process cache
+			tc.prepCache(RTProcess.cache)
+
+			chunkedStat := RTProcess.fmtProcessStats(cfg, cur, containers, syst2, syst1, lastRun)
+			pids = make([]string, 0)
+			for _, c := range chunkedStat {
+				for _, p := range c {
+					pids = append(pids, createProcessID(p.Pid, p.CreateTime))
+				}
+			}
+			if tc.expected {
+				assert.Len(t, processes, 1, "Process should be present in the returned payload for the RTProcess Check")
+				assert.Contains(t, pids, processID, "%s should not be filtered from the process identifiers for the RTProcess Check", processID)
+			} else {
+				assert.Len(t, processes, 0, "The process should be filtered in the returned payload for the RTProcess Check")
+				assert.NotContains(t, pids, processID, "%s should be filtered from the process identifiers for the RTProcess Check", processID)
 			}
 		})
 	}
 
 	Process.cache.Flush()
+	RTProcess.cache.Flush()
 }
 
 func floatEquals(a, b float32) bool {

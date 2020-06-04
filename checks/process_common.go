@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"fmt"
 	"github.com/DataDog/gopsutil/process"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
@@ -18,13 +19,6 @@ type ProcessCommon struct {
 	CPU     *model.CPUStat
 	IOStat  *model.IOStat
 	Tags    []string
-}
-
-// ProcessCache is used as the struct in the cache for all seen processes
-type ProcessCache struct {
-	Process       *process.FilledProcess
-	FirstObserved int64
-	LastObserved  int64
 }
 
 // Process tags for top usage
@@ -285,17 +279,9 @@ func formatMemory(fp *process.FilledProcess) *model.MemoryStat {
 	return ms
 }
 
-// checks if the process was in the previous collected processes
-func pidMissingInLastProcs(pid int32, lastProcs map[int32]*process.FilledProcess) (*process.FilledProcess, bool) {
-	lastProcess, ok := lastProcs[pid]
-
-	if !ok {
-		// Skipping any processes that didn't exist in the previous run.
-		// This means short-lived processes (<2s) will never be captured.
-		return nil, true
-	}
-
-	return lastProcess, false
+// createProcessID creates process identifier
+func createProcessID(pid int32, createTime int64) string {
+	return fmt.Sprintf("%d:%d", pid, createTime)
 }
 
 // skipProcess will skip a given process if it's blacklisted or hasn't existed
@@ -346,4 +332,18 @@ func replicateKubernetesLabelsToProcess(process *model.Process, container *model
 		}
 	}
 	return process
+}
+
+func isProcessShortLived(shortLivedProcessFilterEnabled bool, firstObserved int64, cfg *config.AgentConfig) bool {
+	// short-lived filtering is disabled, return false
+	if !shortLivedProcessFilterEnabled {
+		return false
+	}
+
+	// firstObserved is before ShortLivedTime. Process is not short-lived, return false
+	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedProcessQualifierSecs)) {
+		return false
+	}
+
+	return true
 }

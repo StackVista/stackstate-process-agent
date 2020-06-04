@@ -3,7 +3,6 @@
 package checks
 
 import (
-	"fmt"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"sync"
 	"time"
@@ -86,7 +85,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, features features.Features, 
 	ctrList, _ := util.GetContainers()
 
 	// End check early if this is our first run.
-	if p.lastProcState == nil {
+	if p.lastRun.IsZero() {
 		p.lastCPUTime = cpuTimes[0]
 		p.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
 		p.lastRun = time.Now()
@@ -358,7 +357,7 @@ func (p *ProcessCheck) fmtProcesses(
 		fp.Cmdline = cfg.Scrubber.ScrubProcessCommand(fp)
 
 		// Check to see if we have this process cached and whether we have observed it for the configured time, otherwise skip
-		if processCache, ok := p.isCached(fp); ok && !p.isProcessShortLived(processCache.FirstObserved, cfg) {
+		if processCache, ok := isCached(p.cache, fp); ok && !isProcessShortLived(p.shortLivedProcessFilterEnabled, processCache.FirstObserved, cfg) {
 			// mapping to a common process type to do sorting
 			command := formatCommand(fp)
 			memory := formatMemory(fp)
@@ -392,7 +391,7 @@ func (p *ProcessCheck) fmtProcesses(
 		}
 
 		// put it in the cache for the next run
-		p.putCache(fp)
+		putCache(p.cache, fp)
 	}
 
 	// Process inclusions
@@ -421,55 +420,4 @@ func (p *ProcessCheck) fmtProcesses(
 	processes := append(<-inclusionProcessesChan, <-allProcessesChan...)
 	cfg.Scrubber.IncrementCacheAge()
 	return deriveUniqueProcesses(deriveSortProcesses(processes))
-}
-
-func createProcessID(pid int32, createTime int64) string {
-	return fmt.Sprintf("%d:%d", pid, createTime)
-}
-
-func (p *ProcessCheck) isCached(fp *process.FilledProcess) (*ProcessCache, bool) {
-	processID := createProcessID(fp.Pid, fp.CreateTime)
-
-	cPointer, found := p.cache.Get(processID)
-	if found {
-		return cPointer.(*ProcessCache), true
-	}
-
-	return nil, false
-}
-
-func (p *ProcessCheck) putCache(fp *process.FilledProcess) *ProcessCache {
-	var cachedProcess *ProcessCache
-	processID := createProcessID(fp.Pid, fp.CreateTime)
-	nowUnix := time.Now().Unix()
-
-	cPointer, found := p.cache.Get(processID)
-	if found {
-		cachedProcess = cPointer.(*ProcessCache)
-		cachedProcess.Process = fp
-		cachedProcess.LastObserved = nowUnix
-	} else {
-		cachedProcess = &ProcessCache{
-			Process:       fp,
-			FirstObserved: nowUnix,
-			LastObserved:  nowUnix,
-		}
-	}
-
-	p.cache.Set(processID, cachedProcess, cache.DefaultExpiration)
-	return cachedProcess
-}
-
-func (p *ProcessCheck) isProcessShortLived(firstObserved int64, cfg *config.AgentConfig) bool {
-	// short-lived filtering is disabled, return false
-	if !p.shortLivedProcessFilterEnabled {
-		return false
-	}
-
-	// firstObserved is before ShortLivedTime. Process is not short-lived, return false
-	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedProcessQualifierSecs)) {
-		return false
-	}
-
-	return true
 }

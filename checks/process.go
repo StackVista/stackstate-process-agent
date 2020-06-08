@@ -3,7 +3,9 @@
 package checks
 
 import (
+	"fmt"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"strings"
 	"sync"
 	"time"
 
@@ -362,12 +364,14 @@ func (p *ProcessCheck) fmtProcesses(
 		if processCache, ok := isCached(p.cache, fp); ok {
 			if isProcessShortLived(p.shortLivedProcessFilterEnabled, processCache.FirstObserved, cfg) {
 				// process is filtered due to it's short-lived nature, let's log it on trace level
+				processID := createProcessID(fp.Pid, fp.CreateTime)
+				processStr := fmt.Sprintf("%s %s", fp.Exe, strings.Join(fp.Cmdline, " "))
 				log.Tracef("Process [%s] filtered due to it's short-lived nature; "+
 					"meaning we observed it less than %d seconds. If this behaviour is not desired set the "+
 					"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disabled it in agent.yaml "+
 					"under process_config.filters.short_lived_processes.enabled or increase the qualifier seconds using"+
-					"process_config.filters.short_lived_processes.qualifier_secs",
-					createProcessID(fp.Pid, fp.CreateTime), cfg.ShortLivedProcessQualifierSecs,
+					"process_config.filters.short_lived_processes.qualifier_secs.\nThe process observed was: %s",
+					processID, cfg.ShortLivedProcessQualifierSecs, processStr,
 				)
 			} else {
 				// mapping to a common process type to do sorting

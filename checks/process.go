@@ -127,7 +127,9 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, features features.Features, 
 	statsd.Client.Gauge("datadog.process.containers.host_count", float64(len(containers)), []string{}, 1)
 	statsd.Client.Gauge("datadog.process.processes.host_count", float64(len(processes)), []string{}, 1)
 
-	log.Debugf("collected processes in %s", time.Now().Sub(start))
+	checkRunDuration := time.Now().Sub(start)
+	log.Debugf("collected processes in %s, processes found: %v", checkRunDuration, processes)
+	log.Debugf("collected containers in %s, containers found: %v", checkRunDuration, containers)
 	return messages, nil
 }
 
@@ -357,37 +359,48 @@ func (p *ProcessCheck) fmtProcesses(
 		fp.Cmdline = cfg.Scrubber.ScrubProcessCommand(fp)
 
 		// Check to see if we have this process cached and whether we have observed it for the configured time, otherwise skip
-		if processCache, ok := isCached(p.cache, fp); ok && !isProcessShortLived(p.shortLivedProcessFilterEnabled, processCache.FirstObserved, cfg) {
-			// mapping to a common process type to do sorting
-			command := formatCommand(fp)
-			memory := formatMemory(fp)
-			cpu := formatCPU(fp, fp.CpuTime, processCache.Process.CpuTime, syst2, syst1)
-			ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
-			commonProcesses = append(commonProcesses, &ProcessCommon{
-				Pid:     fp.Pid,
-				Command: command,
-				Memory:  memory,
-				CPU:     cpu,
-				IOStat:  ioStat,
-			})
+		if processCache, ok := isCached(p.cache, fp); ok {
+			if isProcessShortLived(p.shortLivedProcessFilterEnabled, processCache.FirstObserved, cfg) {
+				// process is filtered due to it's short-lived nature, let's log it on trace level
+				log.Tracef("Process [%s] filtered due to it's short-lived nature; " +
+					"meaning we observed it less than %d seconds. If this behaviour is not desired set the " +
+					"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disabled it in agent.yaml " +
+					"under process_config.filters.short_lived_processes.enabled or increase the qualifier seconds using" +
+					"process_config.filters.short_lived_processes.qualifier_secs",
+					createProcessID(fp.Pid, fp.CreateTime), cfg.ShortLivedProcessQualifierSecs,
+				)
+			} else {
+				// mapping to a common process type to do sorting
+				command := formatCommand(fp)
+				memory := formatMemory(fp)
+				cpu := formatCPU(fp, fp.CpuTime, processCache.Process.CpuTime, syst2, syst1)
+				ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
+				commonProcesses = append(commonProcesses, &ProcessCommon{
+					Pid:     fp.Pid,
+					Command: command,
+					Memory:  memory,
+					CPU:     cpu,
+					IOStat:  ioStat,
+				})
 
-			processMap[fp.Pid] = &model.Process{
-				Pid:                    fp.Pid,
-				Command:                command,
-				User:                   formatUser(fp),
-				Memory:                 memory,
-				Cpu:                    cpu,
-				CreateTime:             fp.CreateTime,
-				OpenFdCount:            fp.OpenFdCount,
-				State:                  model.ProcessState(model.ProcessState_value[fp.Status]),
-				IoStat:                 ioStat,
-				VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
-				InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
-				ContainerId:            cidByPid[fp.Pid],
+				processMap[fp.Pid] = &model.Process{
+					Pid:                    fp.Pid,
+					Command:                command,
+					User:                   formatUser(fp),
+					Memory:                 memory,
+					Cpu:                    cpu,
+					CreateTime:             fp.CreateTime,
+					OpenFdCount:            fp.OpenFdCount,
+					State:                  model.ProcessState(model.ProcessState_value[fp.Status]),
+					IoStat:                 ioStat,
+					VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
+					InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
+					ContainerId:            cidByPid[fp.Pid],
+				}
+
+				totalCPUUsage = totalCPUUsage + cpu.TotalPct
+				totalMemUsage = totalMemUsage + memory.Rss
 			}
-
-			totalCPUUsage = totalCPUUsage + cpu.TotalPct
-			totalMemUsage = totalMemUsage + memory.Rss
 		}
 
 		// put it in the cache for the next run

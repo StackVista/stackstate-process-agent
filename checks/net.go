@@ -77,8 +77,9 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		return nil, nil
 	}
 
-	log.Debugf("collected connections in %s", time.Since(start))
-	return batchConnections(cfg, groupID, c.formatConnections(cfg, conns, c.prevCheckTime)), nil
+	formattedConnections := c.formatConnections(cfg, conns, c.prevCheckTime)
+	log.Debugf("collected connections in %s, connections found: %v", time.Since(start), formattedConnections)
+	return batchConnections(cfg, groupID, formattedConnections), nil
 }
 
 func (c *ConnectionsCheck) getConnections() ([]common.ConnectionStats, error) {

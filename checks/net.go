@@ -115,6 +115,7 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 	cxs := make([]*model.Connection, 0, len(conns))
 	for _, conn := range conns {
 		if _, ok := createTimeForPID[conn.Pid]; !ok {
+			log.Tracef("Connection filtered due to it's corresponding pid [%d] not being present in the last process state", conn.Pid)
 			continue
 		}
 

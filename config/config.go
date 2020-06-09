@@ -444,6 +444,12 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 		cfg.Windows.ArgsRefreshInterval = -1
 	}
 
+	if cfg.EnableShortLivedProcessFilter {
+		log.Infof("Process ShortLived filter enabled for processes younger than %s", cfg.ShortLivedProcessQualifierSecs)
+	} else {
+		log.Info("Process ShortLived filter disabled")
+	}
+
 	return cfg, nil
 }
 
@@ -712,7 +718,6 @@ func setProcessBlacklist(agentConf *AgentConfig,
 // setProcessFilters
 func setProcessFilters(agentConf *AgentConfig, enableShortLivedProcessFilter bool, shortLivedProcessQualifierSecs int) {
 	if enableShortLivedProcessFilter {
-		log.Infof("Process ShortLived filter enabled for processes younger than %d seconds", shortLivedProcessQualifierSecs)
 		agentConf.EnableShortLivedProcessFilter = enableShortLivedProcessFilter
 		agentConf.ShortLivedProcessQualifierSecs = time.Duration(shortLivedProcessQualifierSecs) * time.Second
 	}

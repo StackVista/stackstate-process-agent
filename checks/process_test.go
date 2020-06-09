@@ -241,6 +241,24 @@ func TestProcessBlacklisting(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name:      "Should filter process with arguments that does not match a pattern in the blacklist, but is not " +
+				"observed for longer than the configured short-lived seconds",
+			blacklist: []string{"non-matching-pattern"},
+			process: &ProcessCommon{
+				Pid: 1,
+				Identifier: fmt.Sprintf("1:%d", time.Now().Add(-5*time.Millisecond).Unix()),
+				FirstObserved: time.Now().Add(-5*time.Millisecond).Unix(),
+				Command: &model.Command{
+					Args:   []string{"some", "args"},
+					Cwd:    "this/working/directory",
+					Root:   "",
+					OnDisk: false,
+					Exe:    "",
+				},
+			},
+			expected: false,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			bl := make([]*regexp.Regexp, 0, len(tc.blacklist))

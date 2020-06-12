@@ -458,6 +458,18 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 		cfg.Windows.ArgsRefreshInterval = -1
 	}
 
+	if cfg.EnableShortLivedProcessFilter {
+		log.Infof("Process ShortLived filter enabled for processes younger than %s", cfg.ShortLivedProcessQualifierSecs)
+	} else {
+		log.Info("Process ShortLived filter disabled")
+	}
+
+	if cfg.EnableShortLivedRelationFilter {
+		log.Infof("Relation ShortLived filter enabled for connections that are once off and were observed for less than %d seconds", shortLivedRelationQualifierSecs)
+	} else {
+		log.Infof("Relation ShortLived filter disabled")
+	}
+
 	return cfg, nil
 }
 
@@ -735,10 +747,8 @@ func setProcessBlacklist(agentConf *AgentConfig,
 // setProcessFilters sets the short-lived process filters
 func setProcessFilters(agentConf *AgentConfig, enableShortLivedProcessFilter bool, shortLivedProcessQualifierSecs int) {
 	if enableShortLivedProcessFilter && shortLivedProcessQualifierSecs > 0 {
-		log.Infof("Process ShortLived filter enabled for processes that were observed for less than %d seconds", shortLivedProcessQualifierSecs)
 		agentConf.EnableShortLivedProcessFilter = enableShortLivedProcessFilter
 	} else {
-		log.Infof("Process ShortLived filter disabled")
 		agentConf.EnableShortLivedProcessFilter = false
 	}
 	agentConf.ShortLivedProcessQualifierSecs = time.Duration(shortLivedProcessQualifierSecs) * time.Second
@@ -747,15 +757,12 @@ func setProcessFilters(agentConf *AgentConfig, enableShortLivedProcessFilter boo
 // setRelationFilters sets the short-lived relation filters
 func setRelationFilters(agentConf *AgentConfig, enableShortLivedRelationFilter bool, shortLivedRelationQualifierSecs int) {
 	if enableShortLivedRelationFilter && shortLivedRelationQualifierSecs > 0 {
-		log.Infof("Relation ShortLived filter enabled for connections that are once off and were observed for less than %d seconds", shortLivedRelationQualifierSecs)
 		agentConf.EnableShortLivedRelationFilter = enableShortLivedRelationFilter
 	} else {
-		log.Infof("Relation ShortLived filter disabled")
 		agentConf.EnableShortLivedRelationFilter = false
 	}
 	agentConf.ShortLivedRelationQualifierSecs = time.Duration(shortLivedRelationQualifierSecs) * time.Second
 }
-
 
 func constructRegex(pattern string) *regexp.Regexp {
 	r, err := regexp.Compile(pattern)

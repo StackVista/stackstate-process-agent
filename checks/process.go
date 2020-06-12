@@ -41,16 +41,12 @@ type ProcessCheck struct {
 
 	// Use this as the process cache to calculate rate metrics and drop short-lived processes
 	cache *cache.Cache
-
-	// Flag to filter processes that are considered short-lived
-	shortLivedProcessFilterEnabled bool
 }
 
 // Init initializes the singleton ProcessCheck.
 func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	p.sysInfo = info
 	p.cache = cache.New(cfg.ProcessCacheDuration, cfg.ProcessCacheDuration)
-	p.shortLivedProcessFilterEnabled = cfg.EnableShortLivedProcessFilter
 }
 
 // Name returns the name of the ProcessCheck.
@@ -86,6 +82,11 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, features features.Features, 
 
 	// End check early if this is our first run.
 	if p.lastRun.IsZero() {
+		// fill in the process cache
+		for _, fp := range procs {
+			putCache(p.cache, fp)
+		}
+
 		p.lastCPUTime = cpuTimes[0]
 		p.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
 		p.lastRun = time.Now()
@@ -360,47 +361,39 @@ func (p *ProcessCheck) fmtProcesses(
 
 		// Check to see if we have this process cached and whether we have observed it for the configured time, otherwise skip
 		if processCache, ok := isCached(p.cache, fp); ok {
-			if isProcessShortLived(p.shortLivedProcessFilterEnabled, processCache.FirstObserved, cfg) {
-				// process is filtered due to it's short-lived nature, let's log it on trace level
-				log.Tracef("Process [%s] filtered due to it's short-lived nature; " +
-					"meaning we observed it less than %d seconds. If this behaviour is not desired set the " +
-					"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disabled it in agent.yaml " +
-					"under process_config.filters.short_lived_processes.enabled or increase the qualifier seconds using" +
-					"process_config.filters.short_lived_processes.qualifier_secs",
-					createProcessID(fp.Pid, fp.CreateTime), cfg.ShortLivedProcessQualifierSecs,
-				)
-			} else {
-				// mapping to a common process type to do sorting
-				command := formatCommand(fp)
-				memory := formatMemory(fp)
-				cpu := formatCPU(fp, fp.CpuTime, processCache.Process.CpuTime, syst2, syst1)
-				ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
-				commonProcesses = append(commonProcesses, &ProcessCommon{
-					Pid:     fp.Pid,
-					Command: command,
-					Memory:  memory,
-					CPU:     cpu,
-					IOStat:  ioStat,
-				})
 
-				processMap[fp.Pid] = &model.Process{
-					Pid:                    fp.Pid,
-					Command:                command,
-					User:                   formatUser(fp),
-					Memory:                 memory,
-					Cpu:                    cpu,
-					CreateTime:             fp.CreateTime,
-					OpenFdCount:            fp.OpenFdCount,
-					State:                  model.ProcessState(model.ProcessState_value[fp.Status]),
-					IoStat:                 ioStat,
-					VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
-					InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
-					ContainerId:            cidByPid[fp.Pid],
-				}
+			// mapping to a common process type to do sorting
+			command := formatCommand(fp)
+			memory := formatMemory(fp)
+			cpu := formatCPU(fp, fp.CpuTime, processCache.Process.CpuTime, syst2, syst1)
+			ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
+			commonProcesses = append(commonProcesses, &ProcessCommon{
+				Pid:     fp.Pid,
+				Identifier: createProcessID(fp.Pid, fp.CreateTime),
+				FirstObserved: processCache.FirstObserved,
+				Command: command,
+				Memory:  memory,
+				CPU:     cpu,
+				IOStat:  ioStat,
+			})
 
-				totalCPUUsage = totalCPUUsage + cpu.TotalPct
-				totalMemUsage = totalMemUsage + memory.Rss
+			processMap[fp.Pid] = &model.Process{
+				Pid:                    fp.Pid,
+				Command:                command,
+				User:                   formatUser(fp),
+				Memory:                 memory,
+				Cpu:                    cpu,
+				CreateTime:             fp.CreateTime,
+				OpenFdCount:            fp.OpenFdCount,
+				State:                  model.ProcessState(model.ProcessState_value[fp.Status]),
+				IoStat:                 ioStat,
+				VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
+				InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
+				ContainerId:            cidByPid[fp.Pid],
 			}
+
+			totalCPUUsage = totalCPUUsage + cpu.TotalPct
+			totalMemUsage = totalMemUsage + memory.Rss
 		}
 
 		// put it in the cache for the next run
@@ -425,7 +418,7 @@ func (p *ProcessCheck) fmtProcesses(
 	defer close(allProcessesChan)
 	go func() {
 		processes := make([]*model.Process, 0, cfg.MaxPerMessage)
-		processes = deriveFmapCommonProcessToProcess(mapProcess(processMap), deriveFilterBlacklistedProcesses(keepProcess(cfg), allCommonProcesses))
+		processes = deriveFmapCommonProcessToProcess(mapProcess(processMap), deriveFilterProcesses(keepProcess(cfg), allCommonProcesses))
 		allProcessesChan <- processes
 	}()
 

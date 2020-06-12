@@ -28,9 +28,6 @@ type RTProcessCheck struct {
 
 	// Use this as the process cache to calculate rate metrics and drop short-lived processes
 	cache *cache.Cache
-
-	// Flag to filter processes that are considered short-lived
-	shortLivedProcessFilterEnabled bool
 }
 
 // Init initializes a new RTProcessCheck instance.
@@ -38,7 +35,6 @@ func (r *RTProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	r.sysInfo = info
 
 	r.cache = cache.New(cfg.ProcessCacheDuration, cfg.ProcessCacheDuration)
-	r.shortLivedProcessFilterEnabled = cfg.EnableShortLivedProcessFilter
 }
 
 // Name returns the name of the RTProcessCheck.
@@ -69,6 +65,11 @@ func (r *RTProcessCheck) Run(cfg *config.AgentConfig, features features.Features
 
 	// End check early if this is our first run.
 	if r.lastRun.IsZero() {
+		// fill in the process cache
+		for _, fp := range procs {
+			putCache(r.cache, fp)
+		}
+
 		r.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
 		r.lastCPUTime = cpuTimes[0]
 		r.lastRun = time.Now()
@@ -124,7 +125,7 @@ func (r *RTProcessCheck) fmtProcessStats(
 	totalMemUsage = 0
 	for _, fp := range procs {
 		// Check to see if we have this process cached and whether we have observed it for the configured time, otherwise skip
-		if processCache, ok := isCached(r.cache, fp); ok && !isProcessShortLived(r.shortLivedProcessFilterEnabled, processCache.FirstObserved, cfg) {
+		if processCache, ok := isCached(r.cache, fp); ok {
 
 			// mapping to a common process type to do sorting
 			command := formatCommand(fp)
@@ -133,6 +134,8 @@ func (r *RTProcessCheck) fmtProcessStats(
 			ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
 			commonProcesses = append(commonProcesses, &ProcessCommon{
 				Pid:     fp.Pid,
+				Identifier: createProcessID(fp.Pid, fp.CreateTime),
+				FirstObserved: processCache.FirstObserved,
 				Command: command,
 				Memory:  memory,
 				CPU:     cpu,
@@ -180,7 +183,7 @@ func (r *RTProcessCheck) fmtProcessStats(
 	defer close(allProcessesChan)
 	go func() {
 		processes := make([]*model.ProcessStat, 0, cfg.MaxPerMessage)
-		processes = deriveFmapCommonProcessToProcessStat(mapProcessStat(processStatMap), deriveFilterBlacklistedProcesses(keepProcess(cfg), allCommonProcesses))
+		processes = deriveFmapCommonProcessToProcessStat(mapProcessStat(processStatMap), deriveFilterProcesses(keepProcess(cfg), allCommonProcesses))
 		allProcessesChan <- processes
 	}()
 

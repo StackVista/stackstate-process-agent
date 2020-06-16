@@ -31,7 +31,7 @@ const (
 	TopIOWrite string = "usage:top-io-write"
 )
 
-// returns a function to filter processes in blacklist based on the configuration provided
+// returns a function to filter short-lived and blacklisted processes based on the configuration provided
 func keepProcess(cfg *config.AgentConfig) func(*ProcessCommon) bool {
 	return func(process *ProcessCommon) bool {
 		return !isProcessShortLived(process.Identifier, process.FirstObserved, cfg) && !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
@@ -349,7 +349,7 @@ func isProcessShortLived(processID string, firstObserved int64, cfg *config.Agen
 	// process is filtered due to it's short-lived nature, let's log it on trace level
 	log.Debugf("Filter process: %s based on it's short-lived nature; "+
 		"meaning we observed it less than %d seconds. If this behaviour is not desired set the "+
-		"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml "+
+		"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disabled it in agent.yaml "+
 		"under process_config.filters.short_lived_processes.enabled or increase the qualifier seconds using"+
 		"process_config.filters.short_lived_processes.qualifier_secs.",
 		processID, cfg.ShortLivedProcessQualifierSecs,

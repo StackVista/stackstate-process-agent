@@ -35,9 +35,6 @@ type ConnectionsCheck struct {
 
 	// Use this as the relation cache to calculate rate metrics and drop short-lived network relations
 	cache *cache.Cache
-
-	// Flag to filter network relations that are considered short-lived
-	shortLivedRelationFilterEnabled bool
 }
 
 // Name returns the name of the ConnectionsCheck.

@@ -13,14 +13,14 @@ import (
 
 // ProcessCommon is the common process type used for sorting / process inclusions
 type ProcessCommon struct {
-	Pid     int32
-	Identifier string
+	Pid           int32
+	Identifier    string
 	FirstObserved int64
-	Command *model.Command
-	Memory  *model.MemoryStat
-	CPU     *model.CPUStat
-	IOStat  *model.IOStat
-	Tags    []string
+	Command       *model.Command
+	Memory        *model.MemoryStat
+	CPU           *model.CPUStat
+	IOStat        *model.IOStat
+	Tags          []string
 }
 
 // Process tags for top usage
@@ -303,7 +303,7 @@ func isProcessBlacklisted(
 	return config.IsBlacklisted(cmdLine, cfg.Blacklist)
 }
 
-func (p *ProcessCheck) createTimesforPIDs(pids []uint32) map[uint32]int64 {
+func (p *ProcessCheck) createTimesForPIDs(pids []uint32) map[uint32]int64 {
 	p.Lock()
 	defer p.Unlock()
 
@@ -349,7 +349,7 @@ func isProcessShortLived(processID string, firstObserved int64, cfg *config.Agen
 	// process is filtered due to it's short-lived nature, let's log it on trace level
 	log.Debugf("Filter process: %s based on it's short-lived nature; "+
 		"meaning we observed it less than %d seconds. If this behaviour is not desired set the "+
-		"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disabled it in agent.yaml "+
+		"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml "+
 		"under process_config.filters.short_lived_processes.enabled or increase the qualifier seconds using"+
 		"process_config.filters.short_lived_processes.qualifier_secs.",
 		processID, cfg.ShortLivedProcessQualifierSecs,

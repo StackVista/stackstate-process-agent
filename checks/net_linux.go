@@ -53,8 +53,7 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 		net.GetRemoteNetworkTracerUtil()
 	}
 
-	c.cache = cache.New(cfg.ProcessCacheDuration, cfg.ProcessCacheDuration)
-	c.shortLivedRelationFilterEnabled = cfg.EnableShortLivedRelationFilter
+	c.cache = cache.New(cfg.RelationCacheDuration, cfg.RelationCacheDuration)
 
 	c.buf = new(bytes.Buffer)
 }

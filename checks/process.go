@@ -368,13 +368,13 @@ func (p *ProcessCheck) fmtProcesses(
 			cpu := formatCPU(fp, fp.CpuTime, processCache.Process.CpuTime, syst2, syst1)
 			ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
 			commonProcesses = append(commonProcesses, &ProcessCommon{
-				Pid:     fp.Pid,
-				Identifier: createProcessID(fp.Pid, fp.CreateTime),
+				Pid:           fp.Pid,
+				Identifier:    createProcessID(fp.Pid, fp.CreateTime),
 				FirstObserved: processCache.FirstObserved,
-				Command: command,
-				Memory:  memory,
-				CPU:     cpu,
-				IOStat:  ioStat,
+				Command:       command,
+				Memory:        memory,
+				CPU:           cpu,
+				IOStat:        ioStat,
 			})
 
 			processMap[fp.Pid] = &model.Process{

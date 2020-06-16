@@ -352,6 +352,7 @@ message Connection {
 	int64 pidCreateTime = 12;
 	string namespace = 50; // local
 	ConnectionDirection direction = 51;
+	string connectionIdentifier = 52;
 }
 
 message Addr {

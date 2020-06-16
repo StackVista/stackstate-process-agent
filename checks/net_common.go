@@ -3,6 +3,8 @@ package checks
 import (
 	"fmt"
 	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
+	"net"
 	"strings"
 )
 
@@ -36,76 +38,129 @@ func endpointKeyNoPort(e *model.EndpointId) string {
 	return strings.Join(values, ":")
 }
 
+// CreateRelationIdentifier returns an identification for the relation this connection may contribute to
+func CreateRelationIdentifier(hostname string, conn common.ConnectionStats) string {
+	isV6 := conn.Family == common.AF_INET6
+	localEndpoint := makeEndpointID(hostname, conn.Local, isV6, int32(conn.LocalPort), conn.NetworkNamespace)
+	remoteEndpoint := makeEndpointID(hostname, conn.Remote, isV6, int32(conn.RemotePort), conn.NetworkNamespace)
+	return createRelationIdentifier(localEndpoint, remoteEndpoint, calculateDirection(conn.Direction))
+}
+
 // connectionRelationIdentifier returns an identification for the relation this connection may contribute to
-func createRelationIdentifier(conn *model.EnrichedConnection) string {
+func createRelationIdentifier(localEndpoint, remoteEndpoint *model.EndpointId, direction model.ConnectionDirection) string {
 
 	// For directional relations, connections with the same source ip are grouped (port is ignored)
 	// For non-directed relations ports are ignored on both sides
-	switch conn.Direction {
+	switch direction {
 	case model.ConnectionDirection_incoming:
-		return fmt.Sprintf("in:%s:%s", endpointKey(conn.LocalEndpoint), endpointKeyNoPort(conn.RemoteEndpoint))
+		return fmt.Sprintf("in:%s:%s", endpointKey(localEndpoint), endpointKeyNoPort(localEndpoint))
 	case model.ConnectionDirection_outgoing:
-		return fmt.Sprintf("out:%s:%s", endpointKeyNoPort(conn.LocalEndpoint), endpointKey(conn.RemoteEndpoint))
+		return fmt.Sprintf("out:%s:%s", endpointKeyNoPort(localEndpoint), endpointKey(remoteEndpoint))
 	default:
-		return fmt.Sprintf("none:%s:%s", endpointKeyNoPort(conn.LocalEndpoint), endpointKeyNoPort(conn.RemoteEndpoint))
+		return fmt.Sprintf("none:%s:%s", endpointKeyNoPort(localEndpoint), endpointKeyNoPort(remoteEndpoint))
 	}
 }
 
-/*
-object ReceiverConnectionsApiRoute {
-  def extractMessageConnection(hostName: String, message: CollectorMessage[CollectorConnections]): Seq[Connection] = {
-    val payload = message.payload
-
-    def toEndpoint(maybeAddr: Option[Addr], family: ConnectionFamily, namespace: Option[String]) =
-      for {
-        addr <- maybeAddr
-        ip <- addr.ip
-        port <- addr.port
-      } yield makeEndpointId(hostName, ip, family.isv6, port, namespace)
-
-    for {
-      connection <- payload.connections
-      // family default value 0 is significant so we expect it
-      family = connection.getFamily
-      pid <- connection.pid
-      pidCreateTime <- connection.pidCreateTime
-      localEndpoint <- toEndpoint(connection.laddr, family, connection.namespace)
-      remoteEndpoint <- toEndpoint(connection.raddr, family, connection.namespace)
-    } yield
-      Connection(
-        localProcessId = ProcessId(pid = pid, pidCreateTime = pidCreateTime),
-        localEndpoint = localEndpoint,
-        direction = getConnectionDirection(connection.getDirection),
-        bytesSentPerSecond = connection.getBytesSentPerSecond.toDouble,
-        bytesReceivedPerSecond = connection.getBytesReceivedPerSecond.toDouble,
-        remoteEndpoint = remoteEndpoint,
-        // cType default value 0 is significant so we expect it
-        connectionType = if (connection.getType.equals(ProtoConnectionType.tcp)) ConnectionType.TCP else ConnectionType.UDP
-      )
-  }
-
-  private def getConnectionDirection(direction: ConnectionDirection): Direction = direction match {
-    case ConnectionDirection.outgoing => Direction.OUTGOING
-    case ConnectionDirection.incoming => Direction.INCOMING
-    case ConnectionDirection.none | ConnectionDirection.Unrecognized(_) => Direction.NONE
-  }
-
-	// check for localhost connection
-	networkScanner := network.MakeLocalNetworkScanner()
-	if networkScanner.ContainsIP(c.Local) && networkScanner.ContainsIP(c.Remote) {
-		c.NetworkNamespace = namespace
+// makeEndpointID returns a EndpointId if the ip is valid and the hostname as the scope for local ips
+func makeEndpointID(hostname, ip string, isV6 bool, port int32, namespace string) *model.EndpointId {
+	ipAddress := net.ParseIP(ip)
+	if ipAddress == nil {
+		return nil
+	}
+	endpoint := &model.EndpointId{
+		Namespace: namespace,
+		Endpoint: &model.Endpoint{
+			Ip: &model.Ip{
+				Address: ipAddress.String(),
+				IsIPv6:  isV6,
+			},
+			Port: port,
+		},
+	}
+	// In order to tell different pod-local ip addresses from each other,
+	// treat each loopback address as local to the network namespace
+	// Reference implementation: https://github.com/weaveworks/scope/blob/master/report/id.go#L40
+	if ipAddress.IsLoopback() {
+		endpoint.Scope = hostname
 	}
 
-  def makeEndpointId(hostName: String, ip: String, isV6: Boolean, port: Int, namespace: Option[String]): EndpointId = {
-    val inetAddress = InetAddress.getByName(ip)
-    EndpointId(
-      // In order to tell different pod-local ip addresses from each other,
-      // treat each loopback address as local to the network namespace
-      // Reference implementation: https://github.com/weaveworks/scope/blob/master/report/id.go#L40
-      scope = if (inetAddress.isLoopbackAddress) Some(hostName) else None,
-      namespace = namespace,
-      endpoint = Endpoint(ip = Ip(address = inetAddress.getHostAddress, isIPv6 = isV6), port = port)
-    )
-  }
+	return endpoint
 }
-*/
+
+// EnrichConnection connection takes a connection stats and converts it into the model.EnrichedConnection type
+func EnrichConnection(connStats common.ConnectionStats, hostname string, pidCreateTime int64) *model.EnrichedConnection {
+	isV6 := connStats.Family == common.AF_INET6
+	conn := &model.EnrichedConnection{
+		LocalProcessId:         &model.ProcessId{Pid: int32(connStats.Pid), PidCreateTime: pidCreateTime},
+		LocalEndpoint:          makeEndpointID(hostname, connStats.Local, isV6, int32(connStats.LocalPort), connStats.NetworkNamespace),
+		Direction:              calculateDirection(connStats.Direction),
+		BytesSentPerSecond:     0,
+		BytesReceivedPerSecond: 0,
+		RemoteEndpoint:         makeEndpointID(hostname, connStats.Remote, isV6, int32(connStats.RemotePort), connStats.NetworkNamespace),
+		ConnectionType:         formatType(connStats.Type),
+		ConnectionIdentifier:   "",
+	}
+
+	return conn
+}
+
+func formatNamespace(clusterName string, n string) string {
+	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
+	var fragments []string
+	if clusterName != "" {
+		fragments = append(fragments, clusterName)
+	}
+	if n != "" {
+		fragments = append(fragments, n)
+	}
+	return strings.Join(fragments, ":")
+}
+
+func formatFamily(f common.ConnectionFamily) model.ConnectionFamily {
+	switch f {
+	case common.AF_INET:
+		return model.ConnectionFamily_v4
+	case common.AF_INET6:
+		return model.ConnectionFamily_v6
+	default:
+		return -1
+	}
+}
+
+func formatType(f common.ConnectionType) model.ConnectionType {
+	switch f {
+	case common.TCP:
+		return model.ConnectionType_tcp
+	case common.UDP:
+		return model.ConnectionType_udp
+	default:
+		return -1
+	}
+}
+
+func calculateDirection(d common.Direction) model.ConnectionDirection {
+	switch d {
+	case common.OUTGOING:
+		return model.ConnectionDirection_outgoing
+	case common.INCOMING:
+		return model.ConnectionDirection_incoming
+	default:
+		return model.ConnectionDirection_none
+	}
+}
+
+// TODO: check if we need this
+//// Networker contains all the functionality needed to enrich the connection
+//func MakeNetworker() *Networker {
+//	return &Networker{network.MakeLocalNetworkScanner()}
+//}
+//
+//// Networker
+//type Networker struct {
+//	network.NetScanner
+//}
+//
+//// IsLocalhostConnection returns whether a connection was local
+//func (n *Networker) IsLocalhostConnection(local, remote string) bool {
+//	return n.ContainsIP(local) && n.ContainsIP(remote)
+//}

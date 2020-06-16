@@ -203,7 +203,7 @@ func isRelationShortLived(relationID string, firstObserved int64, cfg *config.Ag
 		"STS_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml "+
 		"under process_config.filters.short_lived_relations.enabled or increase the qualifier seconds using"+
 		"process_config.filters.short_lived_relations.qualifier_secs.",
-		relationID, cfg.ShortLivedProcessQualifierSecs,
+		relationID, cfg.ShortLivedRelationQualifierSecs,
 	)
 	return true
 }

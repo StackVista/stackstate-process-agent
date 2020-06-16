@@ -120,7 +120,7 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 		}
 
 		relationID := CreateRelationIdentifier(cfg.HostName, conn)
-		// Check to see if we have this process cached and whether we have observed it for the configured time, otherwise skip
+		// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
 		if relationCache, ok := isRelationCached(c.cache, relationID); ok {
 			if !isRelationShortLived(relationID, relationCache.FirstObserved, cfg) {
 				cxs = append(cxs, &model.Connection{
@@ -197,7 +197,7 @@ func isRelationShortLived(relationID string, firstObserved int64, cfg *config.Ag
 		return false
 	}
 
-	// process is filtered due to it's short-lived nature, let's log it on trace level
+	// connection / relation is filtered due to it's short-lived nature, let's log it on trace level
 	log.Debugf("Filter relation: %s based on it's short-lived nature; "+
 		"meaning we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the "+
 		"STS_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml "+

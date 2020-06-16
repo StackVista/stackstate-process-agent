@@ -87,23 +87,6 @@ func makeEndpointID(hostname, ip string, isV6 bool, port int32, namespace string
 	return endpoint
 }
 
-// EnrichConnection connection takes a connection stats and converts it into the model.EnrichedConnection type
-func EnrichConnection(connStats common.ConnectionStats, hostname string, pidCreateTime int64) *model.EnrichedConnection {
-	isV6 := connStats.Family == common.AF_INET6
-	conn := &model.EnrichedConnection{
-		LocalProcessId:         &model.ProcessId{Pid: int32(connStats.Pid), PidCreateTime: pidCreateTime},
-		LocalEndpoint:          makeEndpointID(hostname, connStats.Local, isV6, int32(connStats.LocalPort), connStats.NetworkNamespace),
-		Direction:              calculateDirection(connStats.Direction),
-		BytesSentPerSecond:     0,
-		BytesReceivedPerSecond: 0,
-		RemoteEndpoint:         makeEndpointID(hostname, connStats.Remote, isV6, int32(connStats.RemotePort), connStats.NetworkNamespace),
-		ConnectionType:         formatType(connStats.Type),
-		ConnectionIdentifier:   "",
-	}
-
-	return conn
-}
-
 func formatNamespace(clusterName string, n string) string {
 	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
 	var fragments []string
@@ -148,19 +131,3 @@ func calculateDirection(d common.Direction) model.ConnectionDirection {
 		return model.ConnectionDirection_none
 	}
 }
-
-// TODO: check if we need this
-//// Networker contains all the functionality needed to enrich the connection
-//func MakeNetworker() *Networker {
-//	return &Networker{network.MakeLocalNetworkScanner()}
-//}
-//
-//// Networker
-//type Networker struct {
-//	network.NetScanner
-//}
-//
-//// IsLocalhostConnection returns whether a connection was local
-//func (n *Networker) IsLocalhostConnection(local, remote string) bool {
-//	return n.ContainsIP(local) && n.ContainsIP(remote)
-//}

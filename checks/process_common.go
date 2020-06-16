@@ -31,7 +31,7 @@ const (
 	TopIOWrite string = "usage:top-io-write"
 )
 
-// returns a function to filter processes in blacklist based on the configuration provided
+// returns a function to filter short-lived and blacklisted processes based on the configuration provided
 func keepProcess(cfg *config.AgentConfig) func(*ProcessCommon) bool {
 	return func(process *ProcessCommon) bool {
 		return !isProcessShortLived(process.Identifier, process.FirstObserved, cfg) && !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)

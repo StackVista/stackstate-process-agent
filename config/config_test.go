@@ -798,7 +798,7 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 		"  process_cache_duration: 15",
 		"  filters:",
 		"    short_lived_processes:",
-		"      enabled: true",
+		"      enabled: 'false'",
 		"      qualifier_secs: 20",
 		"    short_lived_relations:",
 		"      enabled: true",
@@ -824,7 +824,7 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert.Equal(append(processChecks, "connections"), agentConfig.EnabledChecks)
 	assert.Equal(10*time.Minute, agentConfig.RelationCacheDuration)
 	assert.Equal(15*time.Minute, agentConfig.ProcessCacheDuration)
-	assert.Equal(true, agentConfig.EnableShortLivedProcessFilter)
+	assert.Equal(false, agentConfig.EnableShortLivedProcessFilter)
 	assert.Equal(20*time.Second, agentConfig.ShortLivedProcessQualifierSecs)
 	assert.Equal(true, agentConfig.EnableShortLivedRelationFilter)
 	assert.Equal(30*time.Second, agentConfig.ShortLivedRelationQualifierSecs)

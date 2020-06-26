@@ -54,13 +54,13 @@ type YamlAgentConfig struct {
 			// The ShortLivedRelations filter determines whether a network relation is considered "shortlived" and filters it based on the
 			// configured qualifier seconds
 			ShortLivedRelations struct {
-				Enabled       bool `yaml:"enabled"`
+				Enabled       string `yaml:"enabled"`
 				QualifierSecs int  `yaml:"qualifier_secs"`
 			} `yaml:"short_lived_relations"`
 			// The ShortLived filter determines whether a process is considered "shortlived" and filters it based on the
 			// configured qualifier seconds
 			ShortLivedProcesses struct {
-				Enabled       bool `yaml:"enabled"`
+				Enabled       string `yaml:"enabled"`
 				QualifierSecs int  `yaml:"qualifier_secs"`
 			} `yaml:"short_lived_processes"`
 		} `yaml:"filters"`
@@ -206,9 +206,13 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage,
 		yc.Process.Blacklist.Inclusions.CPUPercentageUsageThreshold, yc.Process.Blacklist.Inclusions.MemoryUsageThreshold)
 
-	setProcessFilters(agentConf, yc.Process.Filters.ShortLivedProcesses.Enabled, yc.Process.Filters.ShortLivedProcesses.QualifierSecs)
+	if enabled, err := isAffirmative(yc.Process.Filters.ShortLivedProcesses.Enabled); err == nil {
+		setProcessFilters(agentConf, enabled, yc.Process.Filters.ShortLivedProcesses.QualifierSecs)
+	}
 
-	setRelationFilters(agentConf, yc.Process.Filters.ShortLivedRelations.Enabled, yc.Process.Filters.ShortLivedRelations.QualifierSecs)
+	if enabled, err := isAffirmative(yc.Process.Filters.ShortLivedRelations.Enabled); err == nil {
+		setRelationFilters(agentConf, enabled, yc.Process.Filters.ShortLivedRelations.QualifierSecs)
+	}
 
 	if yc.Process.ProcessCacheDuration > 0 {
 		agentConf.ProcessCacheDuration = time.Duration(yc.Process.ProcessCacheDuration) * time.Minute

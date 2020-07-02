@@ -38,8 +38,8 @@ func endpointKeyNoPort(e *model.EndpointId) string {
 	return strings.Join(values, ":")
 }
 
-// CreateRelationIdentifier returns an identification for the relation this connection may contribute to
-func CreateRelationIdentifier(hostname string, conn common.ConnectionStats) string {
+// CreateNetworkRelationIdentifier returns an identification for the relation this connection may contribute to
+func CreateNetworkRelationIdentifier(hostname string, conn common.ConnectionStats) string {
 	isV6 := conn.Family == common.AF_INET6
 	localEndpoint := makeEndpointID(hostname, conn.Local, isV6, int32(conn.LocalPort), conn.NetworkNamespace)
 	remoteEndpoint := makeEndpointID(hostname, conn.Remote, isV6, int32(conn.RemotePort), conn.NetworkNamespace)

@@ -33,7 +33,7 @@ type ConnectionsCheck struct {
 
 	buf *bytes.Buffer // Internal buffer
 
-	// Use this as the relation cache to calculate rate metrics and drop short-lived network relations
+	// Use this as the network relation cache to calculate rate metrics and drop short-lived network relations
 	cache *cache.Cache
 }
 
@@ -71,8 +71,8 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	if c.prevCheckTime.IsZero() { // End check early if this is our first run.
 		// fill in the relation cache
 		for _, conn := range conns {
-			relationID := CreateRelationIdentifier(cfg.HostName, conn)
-			putRelationCache(c.cache, relationID, conn)
+			relationID := CreateNetworkRelationIdentifier(cfg.HostName, conn)
+			PutNetworkRelationCache(c.cache, relationID, conn)
 		}
 		c.prevCheckTime = time.Now()
 		return nil, nil
@@ -111,38 +111,37 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 
 	cxs := make([]*model.Connection, 0, len(conns))
 	for _, conn := range conns {
-		if _, ok := createTimeForPID[conn.Pid]; !ok {
-			log.Debugf("Filter connection: it's corresponding pid [%d] is not present in the last process state", conn.Pid)
-			continue
-		}
-
-		relationID := CreateRelationIdentifier(cfg.HostName, conn)
-		// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
-		if relationCache, ok := isRelationCached(c.cache, relationID); ok {
-			if !isRelationShortLived(relationID, relationCache.FirstObserved, cfg) {
-				cxs = append(cxs, &model.Connection{
-					Pid:           int32(conn.Pid),
-					PidCreateTime: createTimeForPID[conn.Pid],
-					Family:        formatFamily(conn.Family),
-					Type:          formatType(conn.Type),
-					Laddr: &model.Addr{
-						Ip:   conn.Local,
-						Port: int32(conn.LocalPort),
-					},
-					Raddr: &model.Addr{
-						Ip:   conn.Remote,
-						Port: int32(conn.RemotePort),
-					},
-					BytesSentPerSecond:     calculateRate(conn.SendBytes, relationCache.ConnectionStats.SendBytes, lastCheckTime),
-					BytesReceivedPerSecond: calculateRate(conn.RecvBytes, relationCache.ConnectionStats.RecvBytes, lastCheckTime),
-					Direction:              calculateDirection(conn.Direction),
-					Namespace:              formatNamespace(cfg.ClusterName, conn.NetworkNamespace),
-					ConnectionIdentifier:   relationID,
-				})
+		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
+		if pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid); ok {
+			relationID := CreateNetworkRelationIdentifier(cfg.HostName, conn)
+			// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
+			if relationCache, ok := IsNetworkRelationCached(c.cache, relationID); ok {
+				if !isRelationShortLived(relationID, relationCache.FirstObserved, cfg) {
+					cxs = append(cxs, &model.Connection{
+						Pid:           int32(conn.Pid),
+						PidCreateTime: pidCreateTime,
+						Family:        formatFamily(conn.Family),
+						Type:          formatType(conn.Type),
+						Laddr: &model.Addr{
+							Ip:   conn.Local,
+							Port: int32(conn.LocalPort),
+						},
+						Raddr: &model.Addr{
+							Ip:   conn.Remote,
+							Port: int32(conn.RemotePort),
+						},
+						BytesSentPerSecond:     calculateRate(conn.SendBytes, relationCache.ConnectionMetrics.SendBytes, lastCheckTime),
+						BytesReceivedPerSecond: calculateRate(conn.RecvBytes, relationCache.ConnectionMetrics.RecvBytes, lastCheckTime),
+						Direction:              calculateDirection(conn.Direction),
+						Namespace:              formatNamespace(cfg.ClusterName, conn.NetworkNamespace),
+						ConnectionIdentifier:   relationID,
+					})
+				}
 			}
+
+			// put it in the cache for the next run
+			PutNetworkRelationCache(c.cache, relationID, conn)
 		}
-		// put it in the cache for the next run
-		putRelationCache(c.cache, relationID, conn)
 	}
 	c.prevCheckTime = time.Now()
 	return cxs
@@ -183,24 +182,37 @@ func connectionPIDs(conns []common.ConnectionStats) []uint32 {
 	return pids
 }
 
+// isProcessPresent checks to see if this process was present in the pidCreateTimes map created by the Process check,
+// otherwise we don't report connections for this pid
+func isProcessPresent(pidCreateTimes map[uint32]int64, pid uint32) (int64, bool) {
+	pidCreateTime, ok := pidCreateTimes[pid]
+	if !ok {
+		log.Debugf("Filter connection: it's corresponding pid [%d] is not present in the last process state", pid)
+		return pidCreateTime, false
+	}
+
+	return pidCreateTime, true
+}
+
+// isRelationShortLived checks to see whether a network connection is considered a short-lived network relation
 func isRelationShortLived(relationID string, firstObserved int64, cfg *config.AgentConfig) bool {
 	// short-lived filtering is disabled, return false
-	if !cfg.EnableShortLivedRelationFilter {
+	if !cfg.EnableShortLivedNetworkRelationFilter {
 		return false
 	}
 
 	// firstObserved is before ShortLivedTime. Relation is not short-lived, return false
-	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedRelationQualifierSecs)) {
+	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedNetworkRelationQualifierSecs)) {
 		return false
 	}
 
 	// connection / relation is filtered due to it's short-lived nature, let's log it on trace level
 	log.Debugf("Filter relation: %s based on it's short-lived nature; "+
 		"meaning we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the "+
-		"STS_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml "+
-		"under process_config.filters.short_lived_relations.enabled or increase the qualifier seconds using"+
-		"process_config.filters.short_lived_relations.qualifier_secs.",
-		relationID, cfg.ShortLivedRelationQualifierSecs,
+		"STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml "+
+		"under process_config.filters.short_lived_network_relations.enabled or increase the qualifier seconds using"+
+		"process_config.filters.short_lived_network_relations.qualifier_secs.",
+		relationID, cfg.ShortLivedNetworkRelationQualifierSecs,
 	)
 	return true
 }

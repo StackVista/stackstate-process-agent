@@ -53,7 +53,7 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 		net.GetRemoteNetworkTracerUtil()
 	}
 
-	c.cache = cache.New(cfg.RelationCacheDuration, cfg.RelationCacheDuration)
+	c.cache = cache.New(cfg.NetworkRelationCacheDurationMin, cfg.NetworkRelationCacheDurationMin)
 
 	c.buf = new(bytes.Buffer)
 }

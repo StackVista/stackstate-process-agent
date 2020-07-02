@@ -34,7 +34,7 @@ type RTProcessCheck struct {
 func (r *RTProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	r.sysInfo = info
 
-	r.cache = cache.New(cfg.ProcessCacheDuration, cfg.ProcessCacheDuration)
+	r.cache = cache.New(cfg.ProcessCacheDurationMin, cfg.ProcessCacheDurationMin)
 }
 
 // Name returns the name of the RTProcessCheck.
@@ -67,7 +67,7 @@ func (r *RTProcessCheck) Run(cfg *config.AgentConfig, features features.Features
 	if r.lastRun.IsZero() {
 		// fill in the process cache
 		for _, fp := range procs {
-			putCache(r.cache, fp)
+			PutProcessCache(r.cache, fp)
 		}
 
 		r.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
@@ -125,13 +125,13 @@ func (r *RTProcessCheck) fmtProcessStats(
 	totalMemUsage = 0
 	for _, fp := range procs {
 		// Check to see if we have this process cached and whether we have observed it for the configured time, otherwise skip
-		if processCache, ok := isCached(r.cache, fp); ok {
+		if processCache, ok := IsProcessCached(r.cache, fp); ok {
 
 			// mapping to a common process type to do sorting
 			command := formatCommand(fp)
 			memory := formatMemory(fp)
-			cpu := formatCPU(fp, fp.CpuTime, processCache.Process.CpuTime, syst2, syst1)
-			ioStat := formatIO(fp, processCache.Process.IOStat, lastRun)
+			cpu := formatCPU(fp, fp.CpuTime, processCache.ProcessMetrics.CPUTime, syst2, syst1)
+			ioStat := formatIO(fp, processCache.ProcessMetrics.IOStat, lastRun)
 			commonProcesses = append(commonProcesses, &ProcessCommon{
 				Pid:           fp.Pid,
 				Identifier:    createProcessID(fp.Pid, fp.CreateTime),
@@ -162,7 +162,7 @@ func (r *RTProcessCheck) fmtProcessStats(
 		}
 
 		// put it in the cache for the next run
-		putCache(r.cache, fp)
+		PutProcessCache(r.cache, fp)
 	}
 
 	// Process inclusions

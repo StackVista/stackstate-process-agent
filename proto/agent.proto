@@ -433,19 +433,3 @@ message EndpointId {
     string namespace = 2;
     Endpoint endpoint = 3;
 }
-
-message ProcessId {
-    int32 pid = 1;
-    int64 pidCreateTime = 2;
-}
-
-message EnrichedConnection {
-    ProcessId localProcessId = 1;
-    EndpointId localEndpoint = 2;
-    ConnectionDirection direction = 3;
-    double bytesSentPerSecond = 4;
-    double bytesReceivedPerSecond = 5;
-    EndpointId remoteEndpoint = 6;
-    ConnectionType connectionType = 7;
-    string connectionIdentifier = 8;
-}

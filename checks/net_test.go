@@ -265,7 +265,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			networkRelationShortLivedEnabled: true,
 		},
 		{
-			name: fmt.Sprintf("Should not filter a relation that has been observed longer than the short-lived qualifier "+
+			name: fmt.Sprintf("Should not filter a similar relation that has been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
 			prepCache: func(c *cache.Cache) {
 				// use a "similar" connection; thus we observed a similar connection in the previous run

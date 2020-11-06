@@ -152,7 +152,7 @@ func (a AgentConfig) CheckInterval(checkName string) time.Duration {
 }
 
 const (
-	defaultEndpoint = "https://process.datadoghq.com"
+	defaultEndpoint = "http://localhost"
 	maxMessageBatch = 100
 )
 

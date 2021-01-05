@@ -6,6 +6,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/patrickmn/go-cache"
 	"regexp"
 	"sort"
 
@@ -21,6 +22,7 @@ import (
 func makeProcessWithResource(pid int32, cmdline string, resMemory, readCount, writeCount uint64, userCPU, systemCPU float64) *process.FilledProcess {
 	return &process.FilledProcess{
 		Pid:         pid,
+		CreateTime:  time.Now().Add(-5 * time.Minute).Unix(),
 		Cmdline:     strings.Split(cmdline, " "),
 		MemInfo:     &process.MemoryInfoStat{RSS: resMemory},
 		CtxSwitches: &process.NumCtxSwitchesStat{},
@@ -38,10 +40,25 @@ func makeProcess(pid int32) *model.Process {
 	}
 }
 
+func makeProcessWithContainer(pid int32, containerID string) *model.Process {
+	return &model.Process{
+		Pid:         pid,
+		ContainerId: containerID,
+	}
+}
+
 func makeTaggedProcess(pid int32, tags []string) *model.Process {
 	return &model.Process{
 		Pid:  pid,
 		Tags: tags,
+	}
+}
+
+func makeTaggedProcessWithContainer(pid int32, containerID string, tags []string) *model.Process {
+	return &model.Process{
+		Pid:         pid,
+		ContainerId: containerID,
+		Tags:        tags,
 	}
 }
 
@@ -223,6 +240,24 @@ func TestProcessBlacklisting(t *testing.T) {
 				},
 			},
 			expected: true,
+		},
+		{
+			name: "Should filter process with arguments that does not match a pattern in the blacklist, but is not " +
+				"observed for longer than the configured short-lived seconds",
+			blacklist: []string{"non-matching-pattern"},
+			process: &ProcessCommon{
+				Pid:           1,
+				Identifier:    fmt.Sprintf("1:%d", time.Now().Add(-5*time.Millisecond).Unix()),
+				FirstObserved: time.Now().Add(-5 * time.Millisecond).Unix(),
+				Command: &model.Command{
+					Args:   []string{"some", "args"},
+					Cwd:    "this/working/directory",
+					Root:   "",
+					OnDisk: false,
+					Exe:    "",
+				},
+			},
+			expected: false,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -500,22 +535,22 @@ func TestBuildIncrementProcesses(t *testing.T) {
 	commands := buildIncrement(pNow, []*model.Container{}, buildProcState(pLast), make(map[string]*model.Container))
 
 	expected := []*model.CollectorCommand{
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_UpdateProcessMetrics{
 				UpdateProcessMetrics: makeTaggedProcess(2, []string{"tag"}),
 			},
 		},
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_UpdateProcess{
 				UpdateProcess: makeTaggedProcess(3, []string{"newtag"}),
 			},
 		},
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_UpdateProcess{
 				UpdateProcess: makeProcess(4),
 			},
 		},
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_DeleteProcess{
 				DeleteProcess: makeProcess(1),
 			},
@@ -544,22 +579,22 @@ func TestBuildIncrementContainers(t *testing.T) {
 	commands := buildIncrement([]*model.Process{}, cNow, make(map[int32]*model.Process), buildCtrState(cLast))
 
 	expected := []*model.CollectorCommand{
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_UpdateContainerMetrics{
 				UpdateContainerMetrics: makeTaggedModelContainer("2", []string{"tag"}),
 			},
 		},
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_UpdateContainer{
 				UpdateContainer: makeTaggedModelContainer("3", []string{"newtag"}),
 			},
 		},
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_UpdateContainer{
 				UpdateContainer: makeModelContainer("4"),
 			},
 		},
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_DeleteContainer{
 				DeleteContainer: makeModelContainer("1"),
 			},
@@ -570,6 +605,110 @@ func TestBuildIncrementContainers(t *testing.T) {
 
 	for i := 0; i < len(expected); i++ {
 		assert.EqualValues(t, expected[i], commands[i])
+	}
+}
+
+func TestBuildIncrementContainersProcessKubernetesReplication(t *testing.T) {
+
+	for _, tc := range []struct {
+		name             string
+		processes        []*model.Process
+		lastProcesses    map[int32]*model.Process
+		containers       []*model.Container
+		lastContainers   map[string]*model.Container
+		expectedCommands []*model.CollectorCommand
+	}{
+		{
+			name: "Should replicate only kubernetes tags from container onto the process",
+			processes: []*model.Process{
+				makeProcessWithContainer(1, "123"),
+			},
+			lastProcesses: map[int32]*model.Process{},
+			containers: []*model.Container{
+				makeTaggedModelContainer("123", []string{"non-replicate:tag", "cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+			},
+			lastContainers: map[string]*model.Container{},
+			expectedCommands: []*model.CollectorCommand{
+				{
+					Command: &model.CollectorCommand_UpdateContainer{
+						UpdateContainer: makeTaggedModelContainer("123", []string{"non-replicate:tag", "cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+					},
+				},
+				{
+					Command: &model.CollectorCommand_UpdateProcess{
+						UpdateProcess: makeTaggedProcessWithContainer(1, "123", []string{"cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+					},
+				},
+			},
+		},
+		{
+			name: "Should update a process with kubernetes tags from a container",
+			processes: []*model.Process{
+				makeProcessWithContainer(1, "123"),
+			},
+			lastProcesses: map[int32]*model.Process{},
+			containers: []*model.Container{
+				makeTaggedModelContainer("123", []string{"cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+			},
+			lastContainers: map[string]*model.Container{
+				"123": makeTaggedModelContainer("123", []string{"cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+			},
+			expectedCommands: []*model.CollectorCommand{
+				{
+					Command: &model.CollectorCommand_UpdateContainerMetrics{
+						UpdateContainerMetrics: makeTaggedModelContainer("123", []string{"cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+					},
+				},
+				{
+					Command: &model.CollectorCommand_UpdateProcess{
+						UpdateProcess: makeTaggedProcessWithContainer(1, "123", []string{"cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			commands := buildIncrement(tc.processes, tc.containers, tc.lastProcesses, tc.lastContainers)
+			assert.EqualValues(t, tc.expectedCommands, commands)
+		})
+	}
+}
+
+func TestEnrichProcessWithKubernetesTags(t *testing.T) {
+
+	for _, tc := range []struct {
+		name              string
+		processes         []*model.Process
+		containers        []*model.Container
+		expectedProcesses []*model.Process
+	}{
+		{
+			name: "Should replicate tags from Kubernetes container onto the process",
+			processes: []*model.Process{
+				makeProcessWithContainer(1, "123"),
+			},
+			containers: []*model.Container{
+				makeTaggedModelContainer("123", []string{"cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+			},
+			expectedProcesses: []*model.Process{
+				makeTaggedProcessWithContainer(1, "123", []string{"cluster-name:test-cluster-name", "pod-name:some-pod-name-xyz", "namespace:some-namespace"}),
+			},
+		},
+		{
+			name: "Should do nothing with processes not running in a container",
+			processes: []*model.Process{
+				makeProcess(1),
+			},
+			containers: []*model.Container{},
+			expectedProcesses: []*model.Process{
+				makeProcess(1),
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			processes := enrichProcessWithKubernetesTags(tc.processes, tc.containers)
+			assert.EqualValues(t, tc.expectedProcesses, processes)
+		})
 	}
 }
 
@@ -585,12 +724,12 @@ func TestBuildIncrementContainerPrecedeProcesses(t *testing.T) {
 	commands := buildIncrement(pNow, cNow, make(map[int32]*model.Process), make(map[string]*model.Container))
 
 	expected := []*model.CollectorCommand{
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_UpdateContainer{
 				UpdateContainer: makeModelContainer("1"),
 			},
 		},
-		&model.CollectorCommand{
+		{
 			Command: &model.CollectorCommand_UpdateProcess{
 				UpdateProcess: makeProcess(1),
 			},
@@ -605,6 +744,8 @@ func TestBuildIncrementContainerPrecedeProcesses(t *testing.T) {
 }
 
 func TestProcessFormatting(t *testing.T) {
+	now := time.Now()
+
 	pNow := []*process.FilledProcess{
 		// generic processes
 		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),
@@ -663,7 +804,7 @@ func TestProcessFormatting(t *testing.T) {
 		makeProcessWithResource(20, "write io resource process 3", 0, 0, 10, 0, 0),
 		makeProcessWithResource(21, "write io resource process 4", 0, 0, 10, 0, 0),
 	}
-	containers := []*containers.Container{}
+	var containers []*containers.Container
 	lastRun := time.Now().Add(-5 * time.Second)
 	syst1, syst2 := cpu.TimesStat{
 		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
@@ -746,16 +887,23 @@ func TestProcessFormatting(t *testing.T) {
 
 			cur := make(map[int32]*process.FilledProcess)
 			for _, c := range tc.cur {
-				c.CpuTime.Timestamp = 60 * 100 //in Windows uses CpuTime.Timestamp set to now in nanos
+				c.CpuTime.Timestamp = 60 * 100 //in Windows uses CPUTime.Timestamp set to now in nanos
 				cur[c.Pid] = c
 			}
 			last := make(map[int32]*process.FilledProcess)
 			for _, c := range tc.last {
-				c.CpuTime.Timestamp = 30 * 100 //in Windows uses CpuTime.Timestamp set to now in nanos
+				c.CpuTime.Timestamp = 30 * 100 //in Windows uses CPUTime.Timestamp set to now in nanos
 				last[c.Pid] = c
 			}
 
-			chunked := chunkProcesses(fmtProcesses(cfg, cur, last, containers, syst2, syst1, lastRun), cfg.MaxPerMessage, make([][]*model.Process, 0))
+			Process.Init(cfg, &model.SystemInfo{})
+
+			// fill in the process cache
+			for _, fp := range tc.last {
+				fillProcessCache(Process.cache, fp, now.Add(-5*time.Minute).Unix(), now.Unix())
+			}
+
+			chunked := chunkProcesses(Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun), cfg.MaxPerMessage, make([][]*model.Process, 0))
 			assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
 			total := 0
 			pids := make([]int32, 0)
@@ -771,7 +919,14 @@ func TestProcessFormatting(t *testing.T) {
 			})
 			assert.Equal(t, tc.expectedPids, pids, "expected pIds: %v, found pIds: %v", tc.expectedPids, pids)
 
-			chunkedStat := fmtProcessStats(cfg, cur, last, containers, syst2, syst1, lastRun)
+			RTProcess.Init(cfg, &model.SystemInfo{})
+
+			// fill in the real-time process cache
+			for _, fp := range tc.last {
+				fillProcessCache(RTProcess.cache, fp, now.Add(-5*time.Minute).Unix(), now.Unix())
+			}
+
+			chunkedStat := RTProcess.fmtProcessStats(cfg, cur, containers, syst2, syst1, lastRun)
 			assert.Len(t, chunkedStat, tc.expectedChunks, "len stat %d", i)
 			total = 0
 			pids = make([]int32, 0)
@@ -788,6 +943,8 @@ func TestProcessFormatting(t *testing.T) {
 			assert.Equal(t, tc.expectedPids, pids, "expected pIds: %v, found pIds: %v", tc.expectedPids, pids)
 		})
 	}
+
+	Process.cache.Flush()
 }
 
 func TestPercentCalculation(t *testing.T) {
@@ -816,7 +973,182 @@ func TestRateCalculation(t *testing.T) {
 	assert.True(t, floatEquals(calculateRate(5, 1, empty), 0))
 }
 
+func TestProcessCache(t *testing.T) {
+	cfg := config.NewDefaultAgentConfig()
+	cfg.ShortLivedProcessQualifierSecs = 500 * time.Millisecond
+	cfg.ProcessCacheDurationMin = 600 * time.Millisecond
+	var containers []*containers.Container
+	lastRun := time.Now().Add(-5 * time.Second)
+	syst1, syst2 := cpu.TimesStat{
+		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+		GuestNice: 0, Idle: 0, Stolen: 0,
+	}, cpu.TimesStat{
+		User: 20, System: 40, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+		GuestNice: 0, Idle: 0, Stolen: 0,
+	}
+	cur := make(map[int32]*process.FilledProcess)
+	for _, c := range []*process.FilledProcess{
+		// generic processes
+		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),
+		makeProcessWithResource(2, "mine-bitcoins -all -x", 0, 0, 0, 0, 0),
+		makeProcessWithResource(3, "datadog-process-agent -ddconfig datadog.conf", 0, 0, 0, 0, 0),
+		makeProcessWithResource(4, "foo -bar -bim", 0, 0, 0, 0, 0),
+	} {
+		c.CpuTime.Timestamp = 60 * 100 //in Windows uses CPUTime.Timestamp set to now in nanos
+		cur[c.Pid] = c
+	}
+
+	Process.Init(cfg, &model.SystemInfo{})
+
+	// assert an empty cache.
+	assert.Zero(t, Process.cache.ItemCount(), "Cache should be empty before running")
+
+	// first run on an empty cache; expect no process, but cache should be filled in now.
+	firstRun := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	assert.Zero(t, len(firstRun), "Processes should be empty when the cache is not present")
+	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
+
+	// wait for the shortlived qualifier seconds
+	time.Sleep(cfg.ShortLivedProcessQualifierSecs)
+
+	// second run with filled in cache; expect all processes.
+	secondRun := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	assert.Equal(t, 4, len(secondRun), "Processes should contain 4 elements")
+	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
+
+	// delete pid 4 from the process map, expect it to be excluded from the process list, but not the cache
+	delete(cur, 4)
+	thirdRun := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	assert.Equal(t, 3, len(thirdRun), "Processes should contain 3 elements")
+	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
+
+	// wait for cfg.ProcessCacheDurationMin + a 250 Millisecond buffer to allow the cache expiration to complete
+	time.Sleep(cfg.ProcessCacheDurationMin + 250*time.Millisecond)
+	assert.Zero(t, Process.cache.ItemCount(), "Cache should be empty again")
+
+	Process.cache.Flush()
+}
+
+func TestProcessShortLivedFiltering(t *testing.T) {
+	cfg := config.NewDefaultAgentConfig()
+	var containers []*containers.Container
+	lastRun := time.Now().Add(-5 * time.Second)
+	syst1, syst2 := cpu.TimesStat{
+		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+		GuestNice: 0, Idle: 0, Stolen: 0,
+	}, cpu.TimesStat{
+		User: 20, System: 40, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
+		GuestNice: 0, Idle: 0, Stolen: 0,
+	}
+	cur := make(map[int32]*process.FilledProcess)
+	for _, c := range []*process.FilledProcess{
+		// generic processes
+		makeProcessWithResource(1, "git clone google.com", 0, 0, 0, 0, 0),
+	} {
+		c.CpuTime.Timestamp = 60 * 100 //in Windows uses CPUTime.Timestamp set to now in nanos
+		cur[c.Pid] = c
+	}
+
+	for _, tc := range []struct {
+		name                     string
+		prepCache                func(c *cache.Cache)
+		expected                 bool
+		processShortLivedEnabled bool
+	}{
+		{
+			name: fmt.Sprintf("Should not filter a process that has been observed longer than the short-lived qualifier "+
+				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
+			prepCache: func(c *cache.Cache) {
+				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Minute).Unix(), lastRun.Unix())
+			},
+			expected:                 true,
+			processShortLivedEnabled: true,
+		},
+		{
+			name: fmt.Sprintf("Should filter a process that has not been observed longer than the short-lived qualifier "+
+				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
+			prepCache: func(c *cache.Cache) {
+				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Second).Unix(), lastRun.Unix())
+			},
+			expected:                 false,
+			processShortLivedEnabled: true,
+		},
+		{
+			name: fmt.Sprintf("Should not filter a process when the processShortLivedEnabled is set to false"),
+			prepCache: func(c *cache.Cache) {
+
+				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Second).Unix(), lastRun.Unix())
+			},
+			expected:                 true,
+			processShortLivedEnabled: false,
+		},
+	} {
+
+		t.Run(tc.name, func(t *testing.T) {
+			cfg.EnableShortLivedProcessFilter = tc.processShortLivedEnabled
+
+			// Process Check
+			Process.Init(cfg, &model.SystemInfo{})
+			tc.prepCache(Process.cache)
+			// fill in the process cache
+			processes := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+			var pids []string
+			for _, p := range processes {
+				pids = append(pids, createProcessID(p.Pid, p.CreateTime))
+			}
+
+			p := cur[1]
+			processID := createProcessID(p.Pid, p.CreateTime)
+
+			if tc.expected {
+				assert.Len(t, processes, 1, "Process should be present in the returned payload for the Process Check")
+				assert.Contains(t, pids, processID, "%s should not be filtered from the process identifiers for the Process Check", processID)
+			} else {
+				assert.Len(t, processes, 0, "The process should be filtered in the returned payload for the Process Check")
+				assert.NotContains(t, pids, processID, "%s should be filtered from the process identifiers for the Process Check", processID)
+			}
+
+			// Process RT Check
+			RTProcess.Init(cfg, &model.SystemInfo{})
+			// fill in the real-time process cache
+			tc.prepCache(RTProcess.cache)
+
+			chunkedStat := RTProcess.fmtProcessStats(cfg, cur, containers, syst2, syst1, lastRun)
+			pids = make([]string, 0)
+			for _, c := range chunkedStat {
+				for _, p := range c {
+					pids = append(pids, createProcessID(p.Pid, p.CreateTime))
+				}
+			}
+			if tc.expected {
+				assert.Len(t, processes, 1, "Process should be present in the returned payload for the RTProcess Check")
+				assert.Contains(t, pids, processID, "%s should not be filtered from the process identifiers for the RTProcess Check", processID)
+			} else {
+				assert.Len(t, processes, 0, "The process should be filtered in the returned payload for the RTProcess Check")
+				assert.NotContains(t, pids, processID, "%s should be filtered from the process identifiers for the RTProcess Check", processID)
+			}
+		})
+	}
+
+	Process.cache.Flush()
+	RTProcess.cache.Flush()
+}
+
 func floatEquals(a, b float32) bool {
 	var e float32 = 0.00000001 // Difference less than some epsilon
 	return a-b < e && b-a < e
+}
+
+func fillProcessCache(c *cache.Cache, fp *process.FilledProcess, firstObserved, lastObserved int64) {
+	processID := createProcessID(fp.Pid, fp.CreateTime)
+	cachedProcess := &ProcessCache{
+		ProcessMetrics: ProcessMetrics{
+			CPUTime: fp.CpuTime,
+			IOStat:  fp.IOStat,
+		},
+		FirstObserved: firstObserved,
+		LastObserved:  lastObserved,
+	}
+
+	c.Set(processID, cachedProcess, cache.DefaultExpiration)
 }

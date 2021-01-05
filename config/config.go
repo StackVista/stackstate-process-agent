@@ -83,6 +83,20 @@ type AgentConfig struct {
 	StatsdHost    string
 	StatsdPort    int
 
+	// Process Cache Expiration, In Minutes
+	ProcessCacheDurationMin time.Duration
+
+	// ShortLived process filtering
+	EnableShortLivedProcessFilter  bool
+	ShortLivedProcessQualifierSecs time.Duration
+
+	// Relation Cache Expiration, In Minutes
+	NetworkRelationCacheDurationMin time.Duration
+
+	// ShortLived network relation filtering
+	EnableShortLivedNetworkRelationFilter  bool
+	ShortLivedNetworkRelationQualifierSecs time.Duration
+
 	// Top resource using process inclusion amounts
 	AmountTopCPUPercentageUsage int
 	CPUPercentageUsageThreshold int
@@ -201,6 +215,20 @@ func NewDefaultAgentConfig() *AgentConfig {
 
 		EnableIncrementalPublishing:          true,
 		IncrementalPublishingRefreshInterval: 1 * time.Minute,
+
+		// Network Relation Cache Expiration duration
+		NetworkRelationCacheDurationMin: 5 * time.Minute,
+
+		// ShortLived network relation filtering
+		EnableShortLivedNetworkRelationFilter:  true,
+		ShortLivedNetworkRelationQualifierSecs: 60 * time.Second,
+
+		// Process Cache Expiration duration
+		ProcessCacheDurationMin: 5 * time.Minute,
+
+		// ShortLived process filtering
+		EnableShortLivedProcessFilter:  true,
+		ShortLivedProcessQualifierSecs: 60 * time.Second,
 
 		// Network collection configuration
 		EnableNetworkTracing:              false,
@@ -430,6 +458,18 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 		cfg.Windows.ArgsRefreshInterval = -1
 	}
 
+	if cfg.EnableShortLivedProcessFilter {
+		log.Infof("Process ShortLived filter enabled for processes younger than %s", cfg.ShortLivedProcessQualifierSecs)
+	} else {
+		log.Info("Process ShortLived filter disabled")
+	}
+
+	if cfg.EnableShortLivedNetworkRelationFilter {
+		log.Infof("Relation ShortLived filter enabled for connections that are once off and were observed for less than %d seconds", cfg.ShortLivedNetworkRelationQualifierSecs)
+	} else {
+		log.Infof("Relation ShortLived filter disabled")
+	}
+
 	return cfg, nil
 }
 
@@ -651,6 +691,24 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.ClusterName = v
 	}
 
+	if v := os.Getenv("STS_PROCESS_CACHE_DURATION_MIN"); v != "" {
+		durationS, _ := strconv.Atoi(v)
+		c.ProcessCacheDurationMin = time.Duration(durationS) * time.Minute
+	}
+
+	if v := os.Getenv("STS_NETWORK_RELATION_CACHE_DURATION_MIN"); v != "" {
+		durationS, _ := strconv.Atoi(v)
+		c.NetworkRelationCacheDurationMin = time.Duration(durationS) * time.Minute
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS")); err == nil {
+		setProcessFilters(c, true, v)
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS")); err == nil {
+		setNetworkRelationFilters(c, true, v)
+	}
+
 	return c
 }
 
@@ -662,6 +720,8 @@ func setProcessBlacklist(agentConf *AgentConfig,
 	if len(patterns) > 0 {
 		log.Infof("Overriding processes blacklist to %v", patterns)
 		agentConf.Blacklist = deriveFmapConstructRegex(constructRegex, patterns)
+	} else {
+		log.Infof("Using default processes blacklist %v", agentConf.Blacklist)
 	}
 	if amountTopCPUPercentageUsage != 0 {
 		log.Infof("Overriding top CPU percentage using processes inclusions to %d", amountTopCPUPercentageUsage)
@@ -708,6 +768,26 @@ func setProcessBlacklist(agentConf *AgentConfig,
 
 }
 
+// setProcessFilters sets the short-lived process filters
+func setProcessFilters(agentConf *AgentConfig, enableShortLivedProcessFilter bool, shortLivedProcessQualifierSecs int) {
+	if enableShortLivedProcessFilter && shortLivedProcessQualifierSecs > 0 {
+		agentConf.EnableShortLivedProcessFilter = enableShortLivedProcessFilter
+	} else {
+		agentConf.EnableShortLivedProcessFilter = false
+	}
+	agentConf.ShortLivedProcessQualifierSecs = time.Duration(shortLivedProcessQualifierSecs) * time.Second
+}
+
+// setNetworkRelationFilters sets the short-lived relation filters
+func setNetworkRelationFilters(agentConf *AgentConfig, enableShortLivedNetworkRelationFilter bool, shortLivedNetworkRelationQualifierSecs int) {
+	if enableShortLivedNetworkRelationFilter && shortLivedNetworkRelationQualifierSecs > 0 {
+		agentConf.EnableShortLivedNetworkRelationFilter = enableShortLivedNetworkRelationFilter
+	} else {
+		agentConf.EnableShortLivedNetworkRelationFilter = false
+	}
+	agentConf.ShortLivedNetworkRelationQualifierSecs = time.Duration(shortLivedNetworkRelationQualifierSecs) * time.Second
+}
+
 func constructRegex(pattern string) *regexp.Regexp {
 	r, err := regexp.Compile(pattern)
 	if err != nil {
@@ -721,6 +801,7 @@ func IsBlacklisted(cmdline []string, blacklist []*regexp.Regexp) bool {
 	cmd := strings.Join(cmdline, " ")
 	for _, b := range blacklist {
 		if b.MatchString(cmd) {
+			log.Debugf("Filter process: %s based on blacklist: %s", cmd, b.String())
 			return true
 		}
 	}

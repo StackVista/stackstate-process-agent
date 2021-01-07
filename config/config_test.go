@@ -72,7 +72,6 @@ func TestBlacklist(t *testing.T) {
 	}
 }
 
-
 func TestBlacklistIncludeOnly(t *testing.T) {
 	testBlacklist := []string{
 		"^[^bla].*",

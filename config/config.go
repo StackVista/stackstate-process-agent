@@ -550,7 +550,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if c.proxy, err = proxyFromEnv(c.proxy); err != nil {
 		log.Errorf("error parsing proxy settings, not using a proxy: %s", err)
 		c.proxy = nil
-  }
+	}
 
 	// STS
 	if v := os.Getenv("STS_STS_URL"); v != "" {

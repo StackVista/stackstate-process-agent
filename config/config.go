@@ -152,7 +152,7 @@ func (a AgentConfig) CheckInterval(checkName string) time.Duration {
 }
 
 const (
-	defaultEndpoint = "https://process.datadoghq.com"
+	defaultEndpoint = "http://localhost:7077/stsAgent"
 	maxMessageBatch = 100
 )
 
@@ -422,7 +422,7 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 	}
 
 	// Use environment to override any additional config.
-	cfg = mergeEnvironmentVariables(cfg)
+	cfg = mergeEnvironmentVariables(cfg, agentYaml)
 
 	// Python-style log level has WARNING vs WARN
 	if strings.ToLower(cfg.LogLevel) == "warning" {
@@ -485,7 +485,7 @@ func NewNetworkAgentConfig(networkYaml *YamlAgentConfig) (*AgentConfig, error) {
 		}
 	}
 
-	cfg = mergeEnvironmentVariables(cfg)
+	cfg = mergeEnvironmentVariables(cfg, networkYaml)
 
 	// (Re)configure the logging from our configuration, with the network tracer logfile
 	if err := NewLoggerLevel(cfg.LogLevel, cfg.NetworkTracerLogFile, cfg.LogToConsole); err != nil {
@@ -496,7 +496,7 @@ func NewNetworkAgentConfig(networkYaml *YamlAgentConfig) (*AgentConfig, error) {
 }
 
 // mergeEnvironmentVariables applies overrides from environment variables to the process agent configuration
-func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
+func mergeEnvironmentVariables(c *AgentConfig, yc *YamlAgentConfig) *AgentConfig {
 	var err error
 	if enabled, err := isAffirmative(os.Getenv("DD_PROCESS_AGENT_ENABLED")); enabled {
 		c.Enabled = true
@@ -554,12 +554,15 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	// STS
 	if v := os.Getenv("STS_STS_URL"); v != "" {
-		u, err := url.Parse(v)
-		if err != nil {
-			log.Warnf("STS_STS_URL is invalid: %s", err)
-		} else {
-			log.Infof("overriding API endpoint from env STS_STS_URL")
-			c.APIEndpoints[0].Endpoint = u
+		// check if we don't already have a api endpoint configured, specific process configuration takes precedence.
+		if yc.Process.ProcessDDURL == "" {
+			u, err := url.Parse(v)
+			if err != nil {
+				log.Warnf("STS_STS_URL is invalid: %s", err)
+			} else {
+				log.Infof("overriding API endpoint from env STS_STS_URL")
+				c.APIEndpoints[0].Endpoint = u
+			}
 		}
 	}
 	// /STS

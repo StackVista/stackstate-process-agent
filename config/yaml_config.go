@@ -159,6 +159,19 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		agentConf.Enabled = true
 		agentConf.EnabledChecks = containerChecks
 	}
+
+	if yc.LogToConsole {
+		agentConf.LogToConsole = true
+	}
+	if yc.Process.LogFile != "" {
+		agentConf.LogFile = yc.Process.LogFile
+	}
+
+	// (Re)configure the logging from our configuration
+	if err := NewLoggerLevel(agentConf.LogLevel, agentConf.LogFile, agentConf.LogToConsole); err != nil {
+		return nil, err
+	}
+
 	url, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "process_config.process_dd_url"))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing process_dd_url: %s", err)
@@ -179,12 +192,7 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	}
 	// /STS custom
 	agentConf.APIEndpoints[0].Endpoint = url
-	if yc.LogToConsole {
-		agentConf.LogToConsole = true
-	}
-	if yc.Process.LogFile != "" {
-		agentConf.LogFile = yc.Process.LogFile
-	}
+
 	if enabled, err := isAffirmative(yc.IncrementalPublishingEnabled); err == nil {
 		log.Infof("Overriding incremental publishing with %ds", yc.IncrementalPublishingEnabled)
 		agentConf.EnableIncrementalPublishing = enabled

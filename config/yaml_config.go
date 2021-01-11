@@ -169,11 +169,13 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		if err == nil {
 			url = specificURL
 		}
+		log.Infof("Setting process api endpoint using `process_config.process_sts_url`: %s", specificURL)
 	} else if yc.ProcessDDURL != "" {
 		defaultURL, err := url.Parse(yc.ProcessDDURL)
 		if err == nil {
 			url = defaultURL
 		}
+		log.Infof("Setting process api endpoint using `process_config.process_sts_url`: %s", defaultURL)
 	}
 	// /STS custom
 	agentConf.APIEndpoints[0].Endpoint = url

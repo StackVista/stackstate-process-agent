@@ -563,6 +563,7 @@ func mergeEnvironmentVariables(c *AgentConfig, yc *YamlAgentConfig) *AgentConfig
 				log.Infof("overriding API endpoint from env STS_STS_URL")
 				c.APIEndpoints[0].Endpoint = u
 			}
+			log.Infof("Overriding process api endpoint with environment variable `STS_STS_URL`: %s", u)
 		}
 	}
 	// /STS
@@ -578,6 +579,7 @@ func mergeEnvironmentVariables(c *AgentConfig, yc *YamlAgentConfig) *AgentConfig
 		if site := os.Getenv("DD_SITE"); site != "" {
 			log.Infof("Using 'process_dd_url' (%s) and ignoring 'site' (%s)", v, site)
 		}
+		log.Infof("Overriding process api endpoint with environment variable `STS_PROCESS_AGENT_URL`: %s", u)
 	}
 
 	// Process Arguments Scrubbing

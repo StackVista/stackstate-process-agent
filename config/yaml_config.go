@@ -20,7 +20,7 @@ import (
 type YamlAgentConfig struct {
 	APIKey       string `yaml:"api_key"`
 	Site         string `yaml:"site"`
-	ProcessDDURL string `yaml:"sts_url"`
+	StsURL string `yaml:"sts_url"`
 	// Whether or not the process-agent should output logs to console
 	LogToConsole bool `yaml:"log_to_console"`
 	// Incremental publishing: send only changes to server, instead of snapshots
@@ -183,8 +183,8 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 			url = specificURL
 		}
 		log.Infof("Setting process api endpoint from config using `process_config.process_sts_url`: %s", specificURL)
-	} else if yc.ProcessDDURL != "" {
-		defaultURL, err := url.Parse(yc.ProcessDDURL)
+	} else if yc.StsURL != "" {
+		defaultURL, err := url.Parse(yc.StsURL)
 		if err == nil {
 			url = defaultURL
 		}

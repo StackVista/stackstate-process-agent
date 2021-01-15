@@ -1219,7 +1219,7 @@ func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
-//case 7: STS_URL as env	PROCESS_AGENT_URL as yaml - process agent config wins, more specific
+//case 7: STS_URL as env	PROCESS_AGENT_URL as yaml - STS URL wins, more specific
 func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
 	assert := assert.New(t)
 	os.Unsetenv("DD_PROCESS_AGENT_URL")
@@ -1247,7 +1247,7 @@ func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
 
 	ep := agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
+	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
 //case 8: STS_URL as yaml, PROCESS_AGENT_URL as env - ENV wins

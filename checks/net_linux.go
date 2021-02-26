@@ -4,15 +4,15 @@ package checks
 
 import (
 	"bytes"
-	"github.com/patrickmn/go-cache"
-
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-process-agent/net"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	tracerConfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 	log "github.com/cihub/seelog"
+	"github.com/patrickmn/go-cache"
 	"os"
+	"time"
 )
 
 // Init initializes a ConnectionsCheck instance.
@@ -39,7 +39,7 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 		conf.MaxConnections = cfg.MaxPerMessage
 		conf.BackfillFromProc = cfg.NetworkInitialConnectionsFromProc
 
-		t, err := tracer.NewTracer(conf)
+		t, err := retryTracerInit(conf)
 		if err != nil {
 			log.Errorf("failed to create network tracer: %s.  Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", err)
 			return
@@ -56,4 +56,26 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 	c.cache = cache.New(cfg.NetworkRelationCacheDurationMin, cfg.NetworkRelationCacheDurationMin)
 
 	c.buf = new(bytes.Buffer)
+}
+
+func retryTracerInit(conf *tracerConfig.Config) (tracer.Tracer, error) {
+	retryTicker := time.NewTicker(5 * time.Second)
+	retriesLeft := 3
+
+	var t tracer.Tracer
+	var err error
+
+retry:
+	for {
+		select {
+		case <-retryTicker.C:
+			t, err = tracer.NewTracer(conf)
+			if err == nil || retriesLeft == 0 {
+				break retry
+			}
+			retriesLeft = retriesLeft - 1
+		}
+	}
+
+	return t, err
 }

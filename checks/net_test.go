@@ -2,11 +2,8 @@ package checks
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
-	tracerConfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 	"github.com/patrickmn/go-cache"
 	"testing"
 	"time"
@@ -355,72 +352,6 @@ func TestFormatNamespace(t *testing.T) {
 	assert.Equal(t, "c", formatNamespace("c", "h", makeConnectionStats(1, "10.0.0.1", "127.0.0.1", 12345, 8080)))
 	assert.Equal(t, "c:h:ns", formatNamespace("c", "h", makeConnectionStats(1, "127.0.0.1", "127.0.0.1", 12345, 8080)))
 	assert.Equal(t, "c:h", formatNamespace("c", "h", makeConnectionStatsNoNs(1, "127.0.0.1", "127.0.0.1", 12345, 8080)))
-}
-
-func TestConnectionsCheck_retryTracerInit(t *testing.T) {
-	retryDuration := 40 * time.Millisecond
-	retryAmount := 3
-	testRetry := 0
-
-	for _, tc := range []struct {
-		name               string
-		mockMakeTracerFunc func(config *tracerConfig.Config) (tracer.Tracer, error)
-		expectedTracer     tracer.Tracer
-		expectedError      string
-	}{
-		{
-			name: "Returns the tracer when the make tracer function returns one",
-			mockMakeTracerFunc: func(config *tracerConfig.Config) (tracer.Tracer, error) {
-				return &tracer.LinuxTracer{}, nil
-			},
-			expectedTracer: &tracer.LinuxTracer{},
-			expectedError:  "",
-		},
-		{
-			name: "Returns the tracer when the amount of retries are below the configured amount. ie retrying makes it work.",
-			mockMakeTracerFunc: func(config *tracerConfig.Config) (tracer.Tracer, error) {
-				if testRetry < retryAmount-1 {
-					testRetry = testRetry + 1
-					return nil, errors.New("failed to create tracer")
-				}
-				return &tracer.LinuxTracer{}, nil
-			},
-			expectedTracer: &tracer.LinuxTracer{},
-			expectedError:  "",
-		},
-		{
-			name: "Returns an error when max retries are reached.",
-			mockMakeTracerFunc: func(config *tracerConfig.Config) (tracer.Tracer, error) {
-				if testRetry <= retryAmount-1 {
-					testRetry = testRetry + 1
-					return nil, errors.New("failed to create tracer")
-				}
-				return &tracer.LinuxTracer{}, nil
-			},
-			expectedTracer: nil,
-			expectedError:  "failed to create tracer",
-		},
-		{
-			name: "Return an error when the make tracer function returns an error",
-			mockMakeTracerFunc: func(config *tracerConfig.Config) (tracer.Tracer, error) {
-				return nil, errors.New("failed to create tracer")
-			},
-			expectedError: "failed to create tracer",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			tr, err := retryTracerInit(retryDuration, retryAmount, tracerConfig.DefaultConfig, tc.mockMakeTracerFunc)
-			if tc.expectedError != "" {
-				assert.EqualError(t, err, tc.expectedError)
-			} else {
-				assert.NoError(t, err)
-			}
-			assert.EqualValues(t, tc.expectedTracer, tr)
-
-			// reset the test retries
-			testRetry = 0
-		})
-	}
 }
 
 func fillNetworkRelationCache(hostname string, c *cache.Cache, conn common.ConnectionStats, firstObserved, lastObserved int64) {

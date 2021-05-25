@@ -117,6 +117,8 @@ func fmtContainers(
 			tags = []string{}
 		}
 
+		log.Infof("Container %s has tags %v", ctr.ID, tags)
+
 		containers = append(containers, &model.Container{
 			Id:          ctr.ID,
 			Type:        ctr.Type,

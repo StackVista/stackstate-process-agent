@@ -33,6 +33,8 @@ func GetContainers() ([]*containers.Container, error) {
 		return nil, err
 	}
 
+	log.Infof("Detector returned preferred collector: %s (%v)", name, l)
+
 	// Get containers from cache and update metrics
 	cacheKey := cache.BuildAgentKey("containers", name)
 	cached, hit := cache.Cache.Get(cacheKey)
@@ -52,7 +54,7 @@ func GetContainers() ([]*containers.Container, error) {
 		return nil, err
 	}
 	cache.Cache.Set(cacheKey, containers, containerCacheDuration)
-	log.Tracef("Got %d containers from source %s", len(containers), name)
+	log.Infof("Got %d containers from source %s", len(containers), name)
 	return containers, nil
 }
 

@@ -22,7 +22,7 @@
         "PATH": "${containerEnv:PATH}:/home/vscode/.local/bin",
         "VENV_BASE_PATH": "/home/vscode/.venv",
     },
-    "workspaceMount": "src=${localWorkspaceFolder}/..,dst=/go/src/github.com/StackVista,type=bind",
+    "workspaceMount": "src=${localWorkspaceFolder},dst=/go/src/github.com/StackVista/stackstate-process-agent,type=bind",
     "workspaceFolder": "/go/src/github.com/StackVista/stackstate-process-agent",
     "postCreateCommand": "./.devcontainer/postCreateCommand.sh",
     "settings": {

@@ -26,7 +26,7 @@ func SetContainerSource(name string) {
 func GetContainers() ([]*containers.Container, error) {
 	// Detect source
 	if detector == nil {
-		detector = collectors.NewDetector("")
+		detector = collectors.NewDetector("kubelet")
 	}
 	l, name, err := detector.GetPreferred()
 	if err != nil {

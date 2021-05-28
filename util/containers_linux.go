@@ -27,13 +27,13 @@ func GetContainers() ([]*containers.Container, error) {
 	coll := &collectors.KubeletCollector{}
 	if err := coll.Detect(); err != nil {
 		log.Errorf("Kubelet collector threw error: %s", err)
-	}
-
-	c, err := coll.List()
-	if err != nil {
-		log.Errorf("Kubelet collector List threw error: %s", err)
 	} else {
-		return c, nil
+		c, err := coll.List()
+		if err != nil {
+			log.Errorf("Kubelet collector List threw error: %s", err)
+		} else {
+			return c, nil
+		}
 	}
 
 	// Detect source

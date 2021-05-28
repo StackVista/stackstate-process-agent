@@ -24,7 +24,7 @@ func SetContainerSource(name string) {
 // GetContainers returns containers found on the machine, autodetecting
 // the best backend from available sources
 func GetContainers() ([]*containers.Container, error) {
-	coll := &KubeletCollector{}
+	coll := &collectors.KubeletCollector{}
 	if err := coll.Detect(); err != nil {
 		log.Errorf("Kubelet collector threw error: %s", err)
 	}

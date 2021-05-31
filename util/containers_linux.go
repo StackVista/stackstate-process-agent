@@ -8,7 +8,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/util/cache"
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-agent/pkg/util/containers/collectors"
-	"github.com/StackVista/stackstate-agent/pkg/util/log"
+	log "github.com/cihub/seelog"
 )
 
 var (
@@ -32,6 +32,7 @@ func GetContainers() ([]*containers.Container, error) {
 		if err != nil {
 			log.Errorf("Kubelet collector List threw error: %s", err)
 		} else {
+			log.Infof("Returning containers: %v", c)
 			return c, nil
 		}
 	}

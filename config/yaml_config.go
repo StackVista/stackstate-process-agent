@@ -186,11 +186,12 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		return nil, err
 	}
 
-	parsedURL, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "process_config.process_dd_url"))
+	// [sts] default to sts_url instead of process_sts_url
+	parsedURL, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "sts_url"))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing process_dd_url: %s", err)
 	}
-	// STS custom
+	// [sts]
 	if yc.Process.ProcessDDURL != "" {
 		specificURL, err := url.Parse(yc.Process.ProcessDDURL)
 		if err == nil {
@@ -204,7 +205,7 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		}
 		log.Infof("Setting process api endpoint from config using `sts_url`: %s", defaultURL)
 	}
-	// /STS custom
+	// [sts]
 	agentConf.APIEndpoints[0].Endpoint = parsedURL
 
 	if enabled, err := isAffirmative(yc.IncrementalPublishingEnabled); err == nil {

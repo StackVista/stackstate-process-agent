@@ -186,8 +186,7 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		return nil, err
 	}
 
-	// [sts] default to sts_url instead of process_sts_url
-	parsedURL, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "sts_url"))
+	parsedURL, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "process_config.process_dd_url"))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing process_dd_url: %s", err)
 	}

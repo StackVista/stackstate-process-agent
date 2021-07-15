@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -81,6 +82,10 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		return nil, err
 	}
 
+	for _, conn := range conns {
+		fmt.Printf("l=%v:%d r=%v:%d d=%v recv=%d, sent=%d\n", conn.Local, conn.LocalPort, conn.Remote, conn.RemotePort, conn.Direction, conn.RecvBytes, conn.SendBytes)
+	}
+
 	if c.prevCheckTime.IsZero() { // End check early if this is our first run.
 		// fill in the relation cache
 		for _, conn := range conns {
@@ -94,7 +99,10 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		return nil, nil
 	}
 
-	formattedConnections := c.formatConnections(cfg, conns, c.prevCheckTime)
+	currentTime := time.Now()
+	formattedConnections := c.formatConnections(cfg, conns, currentTime.Sub(c.prevCheckTime))
+	c.prevCheckTime = currentTime
+
 	log.Debugf("collected connections in %s, connections found: %v", time.Since(start), formattedConnections)
 	return batchConnections(cfg, groupID, formattedConnections), nil
 }
@@ -121,11 +129,14 @@ func (c *ConnectionsCheck) getConnections() ([]common.ConnectionStats, error) {
 
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
-func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, lastCheckTime time.Time) []*model.Connection {
+func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, prevCheckTimeDiff time.Duration) []*model.Connection {
 	// Process create-times required to construct unique process hash keys on the backend
 	createTimeForPID := Process.createTimesForPIDs(connectionPIDs(conns))
 
 	cxs := make([]*model.Connection, 0, len(conns))
+	sort.Slice(conns, func(i, j int) bool {
+		return conns[i].LocalPort < conns[j].LocalPort
+	})
 	for _, conn := range conns {
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		if pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid); ok {
@@ -137,6 +148,10 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 			}
 			// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
 			if relationCache, ok := IsNetworkRelationCached(c.cache, relationID); ok {
+				log.Infof("connection %v", conn.GetConnection())
+				log.Infof("BytesSentPerSecond: (%d - %d)/%v = %f", conn.SendBytes, relationCache.ConnectionMetrics.SendBytes, prevCheckTimeDiff, float32(calculateNormalizedRate(conn.SendBytes-relationCache.ConnectionMetrics.SendBytes, prevCheckTimeDiff)))
+				log.Infof("BytesReceivedPerSecond: (%d - %d)/%v = %f\n", conn.RecvBytes, relationCache.ConnectionMetrics.RecvBytes, prevCheckTimeDiff, float32(calculateNormalizedRate(conn.RecvBytes-relationCache.ConnectionMetrics.RecvBytes, prevCheckTimeDiff)))
+
 				if !isRelationShortLived(relationID, relationCache.FirstObserved, cfg) {
 					cxs = append(cxs, &model.Connection{
 						Pid:           int32(conn.Pid),
@@ -151,13 +166,13 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 							Ip:   conn.Remote,
 							Port: int32(conn.RemotePort),
 						},
-						BytesSentPerSecond:     calculateRate(conn.SendBytes, relationCache.ConnectionMetrics.SendBytes, lastCheckTime),
-						BytesReceivedPerSecond: calculateRate(conn.RecvBytes, relationCache.ConnectionMetrics.RecvBytes, lastCheckTime),
+						BytesSentPerSecond:     float32(calculateNormalizedRate(conn.SendBytes-relationCache.ConnectionMetrics.SendBytes, prevCheckTimeDiff)),
+						BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.RecvBytes-relationCache.ConnectionMetrics.RecvBytes, prevCheckTimeDiff)),
 						Direction:              calculateDirection(conn.Direction),
 						Namespace:              namespace,
 						ConnectionIdentifier:   relationID,
 						ApplicationProtocol:    conn.ApplicationProtocol,
-						Metrics:                formatMetrics(conn.Metrics, time.Now().Sub(lastCheckTime)),
+						Metrics:                formatMetrics(conn.Metrics, prevCheckTimeDiff),
 					})
 				}
 			}
@@ -166,7 +181,6 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 			PutNetworkRelationCache(c.cache, relationID, conn)
 		}
 	}
-	c.prevCheckTime = time.Now()
 	return cxs
 }
 

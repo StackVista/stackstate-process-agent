@@ -72,6 +72,7 @@ PROTOC_VERSION=3.6.1
 curl -OL https://github.com/google/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip
 
 # Unzip
+sudo apt install -y unzip
 unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d protoc3
 
 # Move protoc to /usr/local/bin/
@@ -96,3 +97,6 @@ source ~/.profile
 
 # Install the gogo-proto binaries from the vendor directory to make sure we have the correct version
 cd /opt/stackstate-go/src/github.com/StackVista/stackstate-process-agent/vendor/github.com/gogo/protobuf && make install
+
+# Install rake
+sudo apt install rake

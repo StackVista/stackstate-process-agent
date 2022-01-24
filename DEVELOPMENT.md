@@ -26,6 +26,7 @@ On macOS get dependencies.
 ```shell
 cd stackstate-process-agent
 rake deps
+rake derive
 ```
 
 Start Vagrant VM and build the process agent binary.

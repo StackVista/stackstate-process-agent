@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+
+sudo apt-get update
+
 sudo apt-get install -y \
     rake \
     apt-transport-https \
@@ -16,7 +19,7 @@ sudo add-apt-repository \
 
 sudo add-apt-repository ppa:gophers/archive
 
-sudo apt-get update && sudo apt-get install -y mercurial golang-1.10-go docker-ce go-dep
+sudo sudo apt-get install -y mercurial golang-1.10-go docker-ce go-dep
 
 # Install additional dependencies to test with the process agent
 arr=($@)
@@ -97,6 +100,3 @@ source ~/.profile
 
 # Install the gogo-proto binaries from the vendor directory to make sure we have the correct version
 cd /opt/stackstate-go/src/github.com/StackVista/stackstate-process-agent/vendor/github.com/gogo/protobuf && make install
-
-# Install rake
-sudo apt install rake

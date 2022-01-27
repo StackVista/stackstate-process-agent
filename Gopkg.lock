@@ -595,6 +595,7 @@
   packages = [
     "prometheus",
     "prometheus/internal",
+    "prometheus/promhttp",
   ]
   pruneopts = ""
   revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
@@ -1212,6 +1213,8 @@
     "github.com/gogo/protobuf/proto",
     "github.com/mailru/easyjson",
     "github.com/patrickmn/go-cache",
+    "github.com/prometheus/client_golang/prometheus",
+    "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/shirou/w32",
     "github.com/stretchr/testify/assert",
     "golang.org/x/sys/windows/svc",

@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-process-agent/telemetry"
 
 	"github.com/StackVista/stackstate-agent/pkg/pidfile"
 	log "github.com/cihub/seelog"
 
 	"github.com/StackVista/stackstate-agent/pkg/tagger"
-	"github.com/StackVista/stackstate-agent/pkg/telemetry"
 	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/statsd"

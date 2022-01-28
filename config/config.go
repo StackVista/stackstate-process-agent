@@ -237,7 +237,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		DDAgentPyEnv: []string{defaultDDAgentPyEnv},
 
 		OpenMetricsEnabled: false,
-		OpenMetricsPort:    5001,
+		OpenMetricsPort:    5123,
 
 		EnableIncrementalPublishing:          true,
 		IncrementalPublishingRefreshInterval: 1 * time.Minute,

@@ -1,5 +1,15 @@
 # StackState Process Agent releases
 
+## 3.0.1
+
+**Bugfix**
+- Process agent now acknowledges STS_SKIP_SSL_VALIDATION environment variable
+
+## 3.0.0
+
+**Bugfix**
+- Fixed endianness in payload data
+
 ## 2.7.8
 
 **Features**

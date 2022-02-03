@@ -10,6 +10,18 @@
 **Bugfix**
 - Fixed endianness in payload data
 
+## 2.8.7
+
+**Bugfix**
+- Fixed bytes sent/received metrics for network connections going enormously high sometimes. 
+
+## 2.8.6
+
+**Bugfix**
+- Namespaces are not always reported for containers/processes running in k8s
+- Increase network connection tracking limits and make them configurable 
+- Pods merge with the same ip address while using argo 
+
 ## 2.7.8
 
 **Features**

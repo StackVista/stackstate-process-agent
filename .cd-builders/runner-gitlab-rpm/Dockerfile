@@ -1,4 +1,4 @@
-FROM stackstate/stackstate-agent-runner-gitlab:centos6
+FROM stackstate/stackstate-process-agent-runner-gitlab:centos6-runner-base-20220210
 
 RUN yum install -y rsync \
     && gem install rake fpm deb-s3 \

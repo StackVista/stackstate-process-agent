@@ -37,7 +37,21 @@ build_centos6:
     - cd .cd-builders/runner-gitlab-centos6
     - BUILD_TAG="stackstate/stackstate-process-agent-runner-gitlab:centos6_$(date +%Y%m%d)"
     - docker build -t "${BUILD_TAG}" .
+    - docker push "${BUILD_TAG}"
   when: manual
+
+build_centos6_runner_base:
+  <<: *docker_build_base
+  needs:
+    - build_centos6
+  stage: build
+  script:
+    - cd .cd-builders/runner-gitlab-centos6-runner-base
+    - BUILD_TAG="stackstate/stackstate-process-agent-runner-gitlab:centos6-runner-base_$(date +%Y%m%d)"
+    - CENTOS6_BUILD_TAG="stackstate/stackstate-process-agent-runner-gitlab:centos6_$(date +%Y%m%d)"
+    - docker build --build-arg BASE_CENTOS_IMAGE_VERSION=${CENTOS6_BUILD_TAG} -t "${BUILD_TAG}" .
+    - docker push "${BUILD_TAG}"
+  when: on_success
 
 build_linux:
   image: stackstate/stackstate-agent-runner-gitlab:centos7_20211004_v7_0

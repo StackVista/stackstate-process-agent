@@ -35,7 +35,8 @@ build_centos6:
   stage: build
   script:
     - cd .cd-builders/runner-gitlab-centos6
-    - make
+    - BUILD_TAG="stackstate/stackstate-process-agent-runner-gitlab:centos6_$(date +%Y%m%d)"
+    - docker build -t "${BUILD_TAG}" .
   when: manual
 
 build_linux:

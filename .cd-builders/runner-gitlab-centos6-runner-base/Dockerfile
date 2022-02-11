@@ -1,4 +1,5 @@
-FROM stackstate/stackstate-process-agent-runner-gitlab:centos6-20220210
+ARG BASE_CENTOS_IMAGE_VERSION=centos6_latest
+FROM stackstate/stackstate-process-agent-runner-gitlab:${BASE_CENTOS_IMAGE_VERSION}
 
 ENV SYSTEMD_VERSION=219
 ENV GIT_VERSION=2.21.0

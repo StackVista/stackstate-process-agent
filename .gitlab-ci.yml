@@ -11,6 +11,33 @@ variables:
   STS_DOCKER_RELEASE_REPO: stackstate-process-agent
   STS_DOCKER_TEST_REPO: stackstate-process-agent-test
   GO111MODULE: "on"
+  DOCKER_DRIVER: overlay
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+before_script:
+  # login to both docker registries
+  - docker login -u "${docker_user}" -p "${docker_password}" "${DOCKER_REGISTRY}"
+
+.docker_build_base: &docker_build_base
+  # use docker as the image builder
+  image: artifactory.tooling.stackstate.io/docker-virtual/docker:18.06.0
+  services:
+    - name: artifactory.tooling.stackstate.io/docker-virtual/docker:18.09-dind
+      alias: docker
+  retry:
+    max: 2
+    when:
+      # TODO: figure out what causes flakiness in the docker builds, sometimes pulling fails on builder the image or the base image is not available yet for the runner to pull
+      - always
+
+build_centos6:
+  <<: *docker_build_base
+  stage: build
+  script:
+    - cd .cd-builders/runner-gitlab-centos6
+    - make
+  when: manual
 
 build_linux:
   image: stackstate/stackstate-agent-runner-gitlab:centos7_20211004_v7_0

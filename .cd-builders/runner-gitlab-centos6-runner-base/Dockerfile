@@ -19,11 +19,15 @@ RUN curl "https://codeload.github.com/systemd/systemd/tar.gz/v$SYSTEMD_VERSION" 
     && tar xzf systemd-$SYSTEMD_VERSION.tar.gz \
     && mv systemd-$SYSTEMD_VERSION/src/systemd/ /usr/include/
 
-RUN curl "https://mirrors.edge.kernel.org/pub/software/scm/git/git-$GIT_VERSION.tar.gz" -o "git-$GIT_VERSION.tar.gz" \
-    && tar xzf git-$GIT_VERSION.tar.gz \
-    && cd git-$GIT_VERSION \
-    && make prefix=/usr/src/git all \
-    && make prefix=/usr/src/git install
+# Git
+RUN curl -OL https://www.kernel.org/pub/software/scm/git/git-2.10.1.tar.gz
+# --no-same-owner: git tarball has a file with UID 110493 which makes pulling this image fail, because we use docker user namespacing and we can't have >65K UIDs.
+RUN tar xzf git-2.10.1.tar.gz --no-same-owner
+RUN cd git-2.10.1 && make prefix=/usr/local all
+RUN cd git-2.10.1 && make prefix=/usr/local install
+RUN rm -rf git-2.10.1 git-2.10.1.tar.gz
+
+RUN git config --global user.email "gitlab@stackstate" && git config --global user.name "Gitlab Stackstate"
 
 ENV PATH=$PATH:/usr/src/git/bin
 
@@ -92,11 +96,7 @@ RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 
 RUN git config --global user.email "gitlab@stackstate" && git config --global user.name "Gitlab Stackstate"
 
-RUN pip install awscli boto3 sa-rpm-s3
-
-RUN yum -y install net-snmp-devel python-deltarpm yum-utils libtool rpm-sign createrepo
-
-RUN pip install awscli boto3 sa-rpm-s3
+RUN pip install awscli==1.16.314 boto3==1.17.68 sts-rpm-s3
 
 RUN yum -y install net-snmp-devel python-deltarpm yum-utils libtool rpm-sign createrepo
 

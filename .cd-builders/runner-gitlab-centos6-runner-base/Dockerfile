@@ -1,14 +1,14 @@
-ARG BASE_CENTOS_IMAGE_VERSION=centos6_latest
-FROM stackstate/stackstate-process-agent-runner-gitlab:${BASE_CENTOS_IMAGE_VERSION}
+ARG BASE_CENTOS_IMAGE_VERSION
+FROM stackstate/stackstate-process-agent-runner-gitlab:$BASE_CENTOS_IMAGE_VERSION
 
 ENV SYSTEMD_VERSION=219
 ENV GIT_VERSION=2.21.0
 ENV PYTHON_VERSION=2.7.15
-ENV GIMME_GO_VERSION=1.13.11
-ARG GIMME_URL=raw.githubusercontent.com/travis-ci/gimme/master/gimme
-ARG GIMME_DEBUG=0
+ENV GOLANG_VERSION=1.17.7
 ENV RBENV_VERSION=2.4.4
 ENV BUNDLER_VERSION=1.15.3
+ENV CONDA_PATH=/root/miniconda3
+ENV DD_CONDA_VERSION=4.7.10
 
 RUN yum -y install curl-devel expat-devel gettext-devel perl-ExtUtils-MakeMaker \
                    gcc make openssl-devel bzip2 bzip2-devel readline-devel \
@@ -31,21 +31,25 @@ RUN git config --global user.email "gitlab@stackstate" && git config --global us
 
 ENV PATH=$PATH:/usr/src/git/bin
 
-RUN curl "https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz" -o "Python-$PYTHON_VERSION.tgz" \
-    && tar xzf Python-$PYTHON_VERSION.tgz \
-    && cd Python-$PYTHON_VERSION \
-    && ./configure --enable-optimizations \
-    && make altinstall
+# Conda
+RUN curl -sL -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-${DD_CONDA_VERSION}-Linux-x86_64.sh
+RUN bash ~/miniconda.sh -b
+COPY ./conda.sh /etc/profile.d/
+ENV PATH "${CONDA_PATH}/bin:${PATH}"
 
-RUN curl "https://bootstrap.pypa.io/2.6/get-pip.py" -o "get-pip.py" \
-    && python get-pip.py \
-    && rm get-pip.py \
-    && pip install virtualenv==15.2.0
+ENV PKG_CONFIG_LIBDIR $PKG_CONFIG_LIBDIR:$CONDA_PATH/lib/pkgconfig
 
-RUN eval "$(curl -sL https://$GIMME_URL | \
-    GIMME_GO_VERSION="$GIMME_GO_VERSION" \
-    GIMME_DEBUG=$GIMME_DEBUG \
-    bash)"
+# Setup pythons
+RUN conda create -n processagentpy3 python python=3.8
+
+# CONDA prep
+RUN conda init bash
+
+# Golang
+RUN curl -sL -o /bin/gimme https://raw.githubusercontent.com/travis-ci/gimme/master/gimme
+RUN chmod +x /bin/gimme
+RUN GIMME_DEBUG=1 gimme $GOLANG_VERSION
+COPY ./gobin.sh /etc/profile.d/
 
 ENV GOPATH /go
 ENV GOBIN /root/.gimme/versions/go"$GOLANG_VERSION".linux.amd64/bin
@@ -60,44 +64,31 @@ RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
 RUN go get -u golang.org/x/lint/golint
 
-RUN git clone git://github.com/rbenv/rbenv.git /usr/local/rbenv \
-    &&  git clone git://github.com/rbenv/ruby-build.git /usr/local/rbenv/plugins/ruby-build \
-    &&  git clone git://github.com/jf/rbenv-gemset.git /usr/local/rbenv/plugins/rbenv-gemset \
-    &&  /usr/local/rbenv/plugins/ruby-build/install.sh
+# Ruby + Rake
+COPY ./rvm/gpg-keys /gpg-keys
+RUN gpg --import /gpg-keys/*
+RUN rm -rf /gpg-keys
+RUN curl -sSL https://get.rvm.io | bash -s stable --version latest-1.29
 
-ENV PATH /usr/local/rbenv/bin:$PATH
-ENV RBENV_ROOT /usr/local/rbenv
+RUN mkdir -p /usr/local/etc \
+    && { \
+    echo 'install: --no-document'; \
+    echo 'update: --no-document'; \
+    } >> /usr/local/etc/gemrc
 
-RUN echo 'export RBENV_ROOT=/usr/local/rbenv' >> /etc/profile.d/rbenv.sh \
-    &&  echo 'export PATH=/usr/local/rbenv/bin:$PATH' >> /etc/profile.d/rbenv.sh \
-    &&  echo 'eval "$(rbenv init -)"' >> /etc/profile.d/rbenv.sh
+RUN /bin/bash -l -c "rvm requirements"
+RUN /bin/bash -l -c "rvm install 2.4.2 && rvm cleanup all"
+RUN /bin/bash -l -c "gem install bundler --no-document"
 
-RUN echo 'export RBENV_ROOT=/usr/local/rbenv' >> /root/.bashrc \
-    &&  echo 'export PATH=/usr/local/rbenv/bin:$PATH' >> /root/.bashrc \
-    &&  echo 'eval "$(rbenv init -)"' >> /root/.bashrc
-
-ENV CONFIGURE_OPTS --disable-install-doc
-ENV PATH /usr/local/rbenv/bin:/usr/local/rbenv/shims:$PATH
-
-RUN eval "$(rbenv init -)"; rbenv install $RBENV_VERSION \
-    &&  eval "$(rbenv init -)"; rbenv global $RBENV_VERSION \
-    &&  eval "$(rbenv init -)"; gem update --system \
-    &&  eval "$(rbenv init -)"; gem install bundler -f --version "$BUNDLER_VERSION" \
-    &&  rm -rf /tmp/*
-
-ENV GEM_HOME /usr/local/bundle
-ENV BUNDLE_PATH="$GEM_HOME" \
-    BUNDLE_BIN="$GEM_HOME/bin" \
-    BUNDLE_SILENCE_ROOT_WARNING=1 \
-    BUNDLE_APP_CONFIG="$GEM_HOME"
-ENV PATH $BUNDLE_BIN:$PATH
-RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
-    && chmod 777 "$GEM_HOME" "$BUNDLE_BIN"
-
+# Setup git
 RUN git config --global user.email "gitlab@stackstate" && git config --global user.name "Gitlab Stackstate"
 
+# Pip install deps
 RUN pip install awscli==1.16.314 boto3==1.17.68 sts-rpm-s3
 
+# Yum
 RUN yum -y install net-snmp-devel python-deltarpm yum-utils libtool rpm-sign createrepo
 
 ADD rpmmacros /root/.rpmmacros
+
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,5 +1,5 @@
 ARG BASE_CENTOS_IMAGE_VERSION
-FROM stackstate/stackstate-process-agent-runner-gitlab:$BASE_CENTOS_IMAGE_VERSION
+FROM docker.io/stackstate/stackstate-process-agent-runner-gitlab:${BASE_CENTOS_IMAGE_VERSION}
 
 ENV SYSTEMD_VERSION=219
 ENV GIT_VERSION=2.21.0

@@ -5,15 +5,24 @@ RUN yum install -y rsync \
     && /bin/bash -l -c "gem install rake fpm deb-s3" \
     && curl https://glide.sh/get | sh
 
-# Provide kernel 4.4 header that include eBPF header needed to build linux network tracer
-# headers downloaded from http://mirrors.gigenet.com/gigenet/elrepo-archive/kernel/el6/x86_64/RPMS/kernel-lt-headers-4.4.176-1.el6.elrepo.x86_64.rpm \
-COPY ./kernel-lt-headers-4.4.176-1.el6.elrepo.x86_64.rpm /kernel-lt-headers-4.4.176-1.el6.elrepo.x86_64.rpm
-RUN rpm2cpio /kernel-lt-headers-4.4.176-1.el6.elrepo.x86_64.rpm | cpio -idm \
-    && rsync -r ./usr/ /usr/ \
-    && rm -rf /kernel-lt-headers-4.4.176-1.el6.elrepo.x86_64.rpm ./usr
+# Install clang and llvm version 8
+# Using build for sles11 because the versions built for other distros target glibcs that are too new to be used from this image
+RUN curl -LO https://releases.llvm.org/${CLANG_VERSION}/clang+llvm-${CLANG_VERSION}-x86_64-linux-sles11.3.tar.xz && \
+    tar -xf clang+llvm-${CLANG_VERSION}-x86_64-linux-sles11.3.tar.xz --no-same-owner --strip 1 -kC /usr/ && \
+    rm clang+llvm-${CLANG_VERSION}-x86_64-linux-sles11.3.tar.xz
 
-# Upgrade gcc to 4.7 needed to build gobpf/elf
-RUN curl https://people.centos.org/tru/devtools-1.1/devtools-1.1.repo -o /etc/yum.repos.d/devtools-1.1.repo \
-    && yum install -y devtoolset-1.1-gcc
+# To build the EBPF code we need kernel headers for Linux 4.9
+RUN rm -r /usr/src/kernels/* && \
+    curl -Sl -O https://dd-agent-omnibus.s3.amazonaws.com/kernel-4.9-headers-rpm-x64.tgz && \
+    tar xf kernel-4.9-headers-rpm-x64.tgz --no-same-owner --strip 1 -C /usr && \
+    rm kernel-4.9-headers-rpm-x64.tgz
+
+# Update GCC: CentOS6 gcc-4.4 is a little too far behind what we use with the debian builder
+RUN curl -o /etc/yum.repos.d/devtools-1.1.repo https://people.centos.org/tru/devtools-1.1/devtools-1.1.repo
+RUN yum --enablerepo=testing-1.1-devtools-6 -y install devtoolset-1.1-gcc devtoolset-1.1-gcc-c++
+
+ENV CC=/opt/centos/devtoolset-1.1/root/usr/bin/gcc
+ENV CPP=/opt/centos/devtoolset-1.1/root/usr/bin/cpp
+ENV CXX=/opt/centos/devtoolset-1.1/root/usr/bin/c++
 
 SHELL ["/bin/bash", "-c"]

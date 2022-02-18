@@ -41,6 +41,7 @@ build_centos6:
   when: manual
   only:
     - master
+    - build-centos6-runner
 
 build_centos6_runner_base:
   <<: *docker_build_base
@@ -57,6 +58,7 @@ build_centos6_runner_base:
   when: on_success
   only:
     - master
+    - build-centos6-runner
 
 build_centos6_runner:
   <<: *docker_build_base
@@ -74,6 +76,7 @@ build_centos6_runner:
   when: on_success
   only:
     - master
+    - build-centos6-runner
 
 build_linux:
   image: stackstate/stackstate-process-agent-runner-gitlab:centos6-runner_20220218

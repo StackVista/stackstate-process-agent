@@ -5,7 +5,6 @@ ENV SYSTEMD_VERSION=219
 ENV GIT_VERSION=2.21.0
 ENV PYTHON_VERSION=2.7.15
 ENV GOLANG_VERSION=1.17.7
-ENV RBENV_VERSION=2.4.4
 ENV BUNDLER_VERSION=1.15.3
 ENV CONDA_PATH=/root/miniconda3
 ENV DD_CONDA_VERSION=4.7.10
@@ -77,7 +76,7 @@ RUN mkdir -p /usr/local/etc \
     } >> /usr/local/etc/gemrc
 
 RUN /bin/bash -l -c "rvm requirements"
-RUN /bin/bash -l -c "rvm install 2.4.2 && rvm cleanup all"
+RUN /bin/bash -l -c "rvm install 2.4.4 && rvm cleanup all"
 RUN /bin/bash -l -c "gem install bundler --no-document"
 
 # Setup git

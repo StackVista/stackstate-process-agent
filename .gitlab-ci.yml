@@ -44,7 +44,7 @@ build_centos6_runner_base:
   <<: *docker_build_base
   needs:
     - build_centos6
-  stage: build
+  stage: pre_release
   script:
     - cd .cd-builders/runner-gitlab-centos6-runner-base
     - BUILD_TAG="stackstate/stackstate-process-agent-runner-gitlab:centos6-runner-base_$(date +%Y%m%d)"
@@ -57,8 +57,9 @@ build_centos6_runner_base:
 build_centos6_runner:
   <<: *docker_build_base
   needs:
+    - build_centos6
     - build_centos6_runner_base
-  stage: build
+  stage: release
   script:
     - cd .cd-builders/runner-gitlab-centos6-runner
     - BUILD_TAG="stackstate/stackstate-process-agent-runner-gitlab:centos6-runner_$(date +%Y%m%d)"

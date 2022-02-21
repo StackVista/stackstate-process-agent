@@ -7,6 +7,7 @@ RUN yum install -y rsync \
 
 # Install clang and llvm version 8
 # Using build for sles11 because the versions built for other distros target glibcs that are too new to be used from this image
+ENV CLANG_VERSION=8.0.0
 RUN curl -LO https://releases.llvm.org/${CLANG_VERSION}/clang+llvm-${CLANG_VERSION}-x86_64-linux-sles11.3.tar.xz && \
     tar -xf clang+llvm-${CLANG_VERSION}-x86_64-linux-sles11.3.tar.xz --no-same-owner --strip 1 -kC /usr/ && \
     rm clang+llvm-${CLANG_VERSION}-x86_64-linux-sles11.3.tar.xz

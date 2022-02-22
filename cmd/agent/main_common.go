@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"time"
+
+	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-process-agent/telemetry"
 
 	"github.com/StackVista/stackstate-agent/pkg/pidfile"
 	log "github.com/cihub/seelog"
@@ -170,6 +172,12 @@ func runAgent(exit chan bool) {
 			os.Exit(0)
 		}
 		return
+	}
+
+	if cfg.OpenMetricsEnabled {
+		// Expose the registered metrics via HTTP.
+		http.Handle("/metrics", telemetry.Handler())
+		go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", cfg.OpenMetricsPort), nil) //nolint:errcheck
 	}
 
 	if opts.info {

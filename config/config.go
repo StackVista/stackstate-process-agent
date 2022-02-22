@@ -103,6 +103,10 @@ type AgentConfig struct {
 	EnableShortLivedProcessFilter  bool
 	ShortLivedProcessQualifierSecs time.Duration
 
+	// Expose agent metrics via openmetrics endpoint
+	OpenMetricsEnabled bool
+	OpenMetricsPort    int
+
 	// Relation Cache Expiration, In Minutes
 	NetworkRelationCacheDurationMin time.Duration
 
@@ -231,6 +235,9 @@ func NewDefaultAgentConfig() *AgentConfig {
 		// Path and environment for the dd-agent embedded python
 		DDAgentPy:    defaultDDAgentPy,
 		DDAgentPyEnv: []string{defaultDDAgentPyEnv},
+
+		OpenMetricsEnabled: false,
+		OpenMetricsPort:    5123,
 
 		EnableIncrementalPublishing:          true,
 		IncrementalPublishingRefreshInterval: 1 * time.Minute,
@@ -764,6 +771,13 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		setNetworkRelationFilters(c, true, v)
 	}
 
+	if ok, _ := isAffirmative(os.Getenv("STS_PROCESS_AGENT_OPEN_METRICS_ENABLED")); ok {
+		c.OpenMetricsEnabled = true
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_AGENT_OPEN_METRICS_PORT")); err == nil {
+		c.OpenMetricsPort = v
+	}
 	return c
 }
 

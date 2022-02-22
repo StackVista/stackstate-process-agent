@@ -23,6 +23,10 @@ type YamlAgentConfig struct {
 	StsURL string `yaml:"sts_url"`
 	// Whether or not the process-agent should output logs to console
 	LogToConsole bool `yaml:"log_to_console"`
+
+	OpenMetricsEnabled bool `yaml:"open_metrics_enabled"`
+	OpenMetricsPort    int  `yaml:"open_metrics_port"`
+
 	// Incremental publishing: send only changes to server, instead of snapshots
 	IncrementalPublishingEnabled string `yaml:"incremental_publishing_enabled"`
 	// Periodically resend all data to allow downstream to recover from any lost data
@@ -186,6 +190,13 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	}
 	if yc.Process.LogFile != "" {
 		agentConf.LogFile = yc.Process.LogFile
+	}
+
+	if yc.OpenMetricsEnabled {
+		agentConf.OpenMetricsEnabled = true
+	}
+	if yc.OpenMetricsPort != 0 {
+		agentConf.OpenMetricsPort = yc.OpenMetricsPort
 	}
 
 	// (Re)configure the logging from our configuration

@@ -24,6 +24,7 @@ replace github.com/kubernetes-incubator/custom-metrics-apiserver => github.com/k
 
 // Pinned to kubernetes-1.16.2
 replace (
+	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8
@@ -60,7 +61,6 @@ require (
 	github.com/StackVista/stackstate-agent v0.0.0-20220408162826-ba4ecc9075a2
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
-	github.com/awalterschulze/goderive v0.0.0-20211221145202-5dcbfa700308 // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/go-ini/ini v1.55.0
 	github.com/gogo/protobuf v1.3.1
@@ -73,9 +73,9 @@ require (
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/stretchr/testify v1.7.0
 	gitlab.com/stackvista/agent/agent-transport-protocol.git v0.0.0-20220706092917-cd850baf3dda
-	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220406163625-3f8b81556e12
-	golang.org/x/tools v0.1.10 // indirect
+	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 )

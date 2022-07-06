@@ -51,9 +51,9 @@ RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
 RUN go get -u golang.org/x/lint/golint
 
-RUN git clone git://github.com/rbenv/rbenv.git /usr/local/rbenv \
-    &&  git clone git://github.com/rbenv/ruby-build.git /usr/local/rbenv/plugins/ruby-build \
-    &&  git clone git://github.com/jf/rbenv-gemset.git /usr/local/rbenv/plugins/rbenv-gemset \
+RUN git clone https://github.com/rbenv/rbenv.git /usr/local/rbenv \
+    &&  git clone https://github.com/rbenv/ruby-build.git /usr/local/rbenv/plugins/ruby-build \
+    &&  git clone https://github.com/jf/rbenv-gemset.git /usr/local/rbenv/plugins/rbenv-gemset \
     &&  /usr/local/rbenv/plugins/ruby-build/install.sh
 
 ENV PATH /usr/local/rbenv/bin:$PATH

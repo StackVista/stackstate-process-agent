@@ -26,6 +26,7 @@ build_linux:
     - export PROCESS_AGENT_VERSION=$(packaging/version.sh)
     - export EBPF=${EBPF:-true}
     - source ~/.bashrc
+    - git config --global url."git@gitlab.com:".insteadOf "https://gitlab.com/"
     - go get golang.org/x/tools/cmd/gorename
     - go get golang.org/x/tools/cmd/eg
     - go get golang.org/x/lint/golint

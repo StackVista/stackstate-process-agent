@@ -55,6 +55,10 @@ func (p *ProcessCheck) Name() string { return "process" }
 // Endpoint returns the endpoint where this check is submitted.
 func (p *ProcessCheck) Endpoint() string { return "/api/v1/collector" }
 
+// NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
+// if the value is different than "" (empty string)
+func (p *ProcessCheck) NatsSubject() string { return "" }
+
 // RealTime indicates if this check only runs in real-time mode.
 func (p *ProcessCheck) RealTime() bool { return false }
 

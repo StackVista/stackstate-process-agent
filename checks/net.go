@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
+	natsmodel "gitlab.com/stackvista/agent/agent-transport-protocol.git/pkg/model"
+	"gitlab.com/stackvista/agent/agent-transport-protocol.git/pkg/transport/nats"
 	"strconv"
 	"strings"
 	"time"
@@ -60,6 +62,10 @@ func (c *ConnectionsCheck) Name() string { return "connections" }
 
 // Endpoint returns the endpoint where this check is submitted.
 func (c *ConnectionsCheck) Endpoint() string { return "/api/v1/connections" }
+
+// NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
+// if the value is different than "" (empty string)
+func (c *ConnectionsCheck) NatsSubject() string { return nats.ProcessAgentConnections }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (c *ConnectionsCheck) RealTime() bool { return false }
@@ -148,11 +154,11 @@ func makeMetricsLookupMap(conns []common.ConnectionStats) map[common.ConnTuple]c
 
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
-func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, prevCheckTimeDiff time.Duration, prevConnStats map[common.ConnTuple]connectionMetrics) []*model.Connection {
+func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, prevCheckTimeDiff time.Duration, prevConnStats map[common.ConnTuple]connectionMetrics) []*natsmodel.Connection {
 	// Process create-times required to construct unique process hash keys on the backend
 	createTimeForPID := Process.createTimesForPIDs(connectionPIDs(conns))
 
-	cxs := make([]*model.Connection, 0, len(conns))
+	cxs := make([]*natsmodel.Connection, 0, len(conns))
 	for _, conn := range conns {
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		if pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid); ok {
@@ -172,16 +178,16 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 						prevRecvBytes = prevValues.RecvBytes
 					}
 
-					cxs = append(cxs, &model.Connection{
+					cxs = append(cxs, &natsmodel.Connection{
 						Pid:           int32(conn.Pid),
 						PidCreateTime: pidCreateTime,
 						Family:        formatFamily(conn.Family),
 						Type:          formatType(conn.Type),
-						Laddr: &model.Addr{
+						Laddr: &natsmodel.Addr{
 							Ip:   conn.Local,
 							Port: int32(conn.LocalPort),
 						},
-						Raddr: &model.Addr{
+						Raddr: &natsmodel.Addr{
 							Ip:   conn.Remote,
 							Port: int32(conn.RemotePort),
 						},
@@ -203,8 +209,8 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 	return cxs
 }
 
-func formatMetrics(metrics []common.ConnectionMetric, elapsedDuration time.Duration) []*model.ConnectionMetric {
-	formattedMetrics := make([]*model.ConnectionMetric, 0, len(metrics))
+func formatMetrics(metrics []common.ConnectionMetric, elapsedDuration time.Duration) []*natsmodel.ConnectionMetric {
+	formattedMetrics := make([]*natsmodel.ConnectionMetric, 0, len(metrics))
 
 	groups := initialStatusCodeGroups()
 
@@ -270,24 +276,24 @@ func formatMetrics(metrics []common.ConnectionMetric, elapsedDuration time.Durat
 	return formattedMetrics
 }
 
-func makeConnectionMetricWithHistogram(name common.MetricName, tags map[string]string, histogram *ddsketch.DDSketch) *model.ConnectionMetric {
-	return &model.ConnectionMetric{
+func makeConnectionMetricWithHistogram(name common.MetricName, tags map[string]string, histogram *ddsketch.DDSketch) *natsmodel.ConnectionMetric {
+	return &natsmodel.ConnectionMetric{
 		Name: string(name),
 		Tags: tags,
-		Value: &model.ConnectionMetricValue{
-			Value: &model.ConnectionMetricValue_Histogram{
+		Value: &natsmodel.ConnectionMetricValue{
+			Value: &natsmodel.ConnectionMetricValue_Histogram{
 				Histogram: histogram.ToProto(),
 			},
 		},
 	}
 }
 
-func makeConnectionMetricWithNumber(name common.MetricName, tags map[string]string, number float64) *model.ConnectionMetric {
-	return &model.ConnectionMetric{
+func makeConnectionMetricWithNumber(name common.MetricName, tags map[string]string, number float64) *natsmodel.ConnectionMetric {
+	return &natsmodel.ConnectionMetric{
 		Name: string(name),
 		Tags: tags,
-		Value: &model.ConnectionMetricValue{
-			Value: &model.ConnectionMetricValue_Number{
+		Value: &natsmodel.ConnectionMetricValue{
+			Value: &natsmodel.ConnectionMetricValue_Number{
 				Number: number,
 			},
 		},
@@ -360,14 +366,14 @@ func mergeWithHistogram(metricSketch *ddsketch.DDSketch, rtHist *ddsketch.DDSket
 	return rtHist
 }
 
-func batchConnections(cfg *config.AgentConfig, groupID int32, cxs []*model.Connection, interval time.Duration) []model.MessageBody {
+func batchConnections(cfg *config.AgentConfig, groupID int32, cxs []*natsmodel.Connection, interval time.Duration) []model.MessageBody {
 	groupSize := groupSize(len(cxs), cfg.MaxConnectionsPerMessage)
 	batches := make([]model.MessageBody, 0, groupSize)
 
 	for len(cxs) > 0 {
 		batchSize := min(cfg.MaxConnectionsPerMessage, len(cxs))
 
-		batch := &model.CollectorConnections{
+		batch := &natsmodel.CollectorConnections{
 			HostName:           cfg.HostName,
 			Connections:        cxs[:batchSize],
 			GroupId:            groupID,

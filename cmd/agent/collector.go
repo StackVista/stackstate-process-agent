@@ -88,11 +88,13 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 	result, err := c.Run(l.cfg, features, atomic.AddInt32(&l.groupID, 1), currentTime)
 	// defer commit to after check run
 	defer c.Sender().Commit()
+	//transport.NewConnectionNATS()
 
 	if err != nil {
 		log.Criticalf("Unable to run check '%s': %s", c.Name(), err)
 	} else {
 		if result != nil {
+
 			l.send <- checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), currentTime}
 			// update proc and container count for info
 			updateProcContainerCount(result.CollectorMessages)

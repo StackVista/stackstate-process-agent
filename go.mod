@@ -72,6 +72,7 @@ require (
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/stretchr/testify v1.7.0
+	gitlab.com/stackvista/agent/agent-transport-protocol.git v0.0.0-20220706092917-cd850baf3dda
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/sys v0.0.0-20220406163625-3f8b81556e12
 	golang.org/x/tools v0.1.10 // indirect

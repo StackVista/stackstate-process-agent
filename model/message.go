@@ -93,7 +93,8 @@ type MessageBody interface {
 	ProtoMessage()
 	Reset()
 	String() string
-	Size() int
+	// TODO Size is not used but default .pb.go does not implement it
+	//Size() int
 }
 
 // DecodeMessage decodes raw message bytes into a specific type that satisfies

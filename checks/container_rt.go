@@ -40,7 +40,7 @@ func (r *RTContainerCheck) Endpoint() string { return "/api/v1/container" }
 
 // NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
 // if the value is different than "" (empty string)
-func (c *RTContainerCheck) NatsSubject() string { return "" }
+func (r *RTContainerCheck) NatsSubject() string { return "" }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (r *RTContainerCheck) RealTime() bool { return true }

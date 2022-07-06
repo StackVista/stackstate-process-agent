@@ -20,13 +20,18 @@ variables:
 build_linux:
   image: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-20220218
   stage: build
+  before_script:
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$AGENT_TRANSPORT_PROTOCOL_SSH_PRIVATE_KEY")
+    - mkdir -p ~/.ssh
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+    - git config --global url."git@gitlab.com:".insteadOf "https://gitlab.com/"
 
   script:
     - printenv
     - export PROCESS_AGENT_VERSION=$(packaging/version.sh)
     - export EBPF=${EBPF:-true}
     - source ~/.bashrc
-    - git config --global url."git@gitlab.com:".insteadOf "https://gitlab.com/"
     - go get golang.org/x/tools/cmd/gorename
     - go get golang.org/x/tools/cmd/eg
     - go get golang.org/x/lint/golint

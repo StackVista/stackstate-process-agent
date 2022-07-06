@@ -28,7 +28,6 @@ build_linux:
     - git config --global url."git@gitlab.com:".insteadOf "https://gitlab.com/"
 
   script:
-    - printenv
     - export PROCESS_AGENT_VERSION=$(packaging/version.sh)
     - export EBPF=${EBPF:-true}
     - source ~/.bashrc

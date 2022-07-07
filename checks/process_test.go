@@ -3,9 +3,9 @@ package checks
 import (
 	"fmt"
 	"github.com/DataDog/gopsutil/cpu"
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/patrickmn/go-cache"
 	"regexp"
 	"sort"

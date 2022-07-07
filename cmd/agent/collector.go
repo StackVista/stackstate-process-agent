@@ -20,22 +20,22 @@ import (
 
 	log "github.com/cihub/seelog"
 
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 )
 
-type checkPayload struct {
-	messages  []model.MessageBody
-	metrics   []telemetry.RawMetrics
-	endpoint  string
-	timestamp time.Time
+type MetricsPayload struct {
+	Metrics  []telemetry.RawMetrics
+	Endpoint string
 }
 
 // Collector will collect metrics from the local system and ship to the backend.
 type Collector struct {
-	send          chan checkPayload
+	send          chan model.CheckPayload
+	sendMetrics   chan MetricsPayload
 	rtIntervalCh  chan time.Duration
+	natsSend      chan model.CheckPayload
 	cfg           *config.AgentConfig
 	httpClient    http.Client
 	groupID       int32
@@ -67,7 +67,7 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 	}
 
 	return Collector{
-		send:          make(chan checkPayload, cfg.QueueSize),
+		send:          make(chan model.CheckPayload, cfg.QueueSize),
 		rtIntervalCh:  make(chan time.Duration),
 		cfg:           cfg,
 		groupID:       rand.Int31(),
@@ -95,7 +95,11 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 	} else {
 		if result != nil {
 
-			l.send <- checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), currentTime}
+			l.send <- model.CheckPayload{result.CollectorMessages, c.Endpoint(), currentTime}
+			l.sendMetrics <- MetricsPayload{
+				result.Metrics,
+				c.Endpoint(),
+			}
 			// update proc and container count for info
 			updateProcContainerCount(result.CollectorMessages)
 		} else {
@@ -154,13 +158,17 @@ func (l *Collector) run(exit chan bool) {
 					// Limit number of items kept in memory while we wait.
 					<-l.send
 				}
-				for _, m := range payload.messages {
-					l.postMessage(payload.endpoint, m, payload.timestamp)
+				for _, m := range payload.Messages {
+					l.postMessage(payload.Endpoint, m, payload.Timestamp)
 				}
-				for _, metric := range payload.metrics {
-					batcher.GetBatcher().SubmitRawMetricsData(check.ID(payload.endpoint), metric)
+
+			case metricsPayload := <-l.sendMetrics:
+
+				_batcher := batcher.GetBatcher()
+				for _, metric := range metricsPayload.Metrics {
+					_batcher.SubmitRawMetricsData(check.ID(metricsPayload.Endpoint), metric)
 				}
-				batcher.GetBatcher().SubmitComplete(check.ID(payload.endpoint))
+				_batcher.SubmitComplete(check.ID(metricsPayload.Endpoint))
 			case <-heartbeat.C:
 				log.Tracef("got heartbeat.C message. (Ignored)")
 				s.Gauge("stackstate.process_agent.running", 1, l.cfg.HostName, []string{"version:" + versionString()})

@@ -11,7 +11,7 @@ import (
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
 
-	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 )
 
 func formatUser(fp *process.FilledProcess) *model.ProcessUser {

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/stretchr/testify/assert"
 )
 

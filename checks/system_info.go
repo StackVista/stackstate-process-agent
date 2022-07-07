@@ -5,8 +5,8 @@ import (
 	"github.com/DataDog/gopsutil/host"
 	"github.com/DataDog/gopsutil/mem"
 
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 )
 
 // CollectSystemInfo collects a set of system-level information that will not

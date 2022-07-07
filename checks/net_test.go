@@ -3,6 +3,7 @@ package checks
 import (
 	"bytes"
 	"fmt"
+	"github.com/patrickmn/go-cache"
 	"math"
 	"sort"
 	"strings"
@@ -10,21 +11,18 @@ import (
 	"time"
 
 	"github.com/DataDog/sketches-go/ddsketch"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
-	"github.com/patrickmn/go-cache"
-
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	"github.com/stretchr/testify/assert"
-	natsmodel "gitlab.com/stackvista/agent/agent-transport-protocol.git/pkg/model"
 )
 
-func makeConnection(pid int32) *natsmodel.Connection {
-	return &natsmodel.Connection{Pid: pid}
+func makeConnection(pid int32) *model.Connection {
+	return &model.Connection{Pid: pid}
 }
 
 func TestNetworkConnectionBatching(t *testing.T) {
-	p := []*natsmodel.Connection{
+	p := []*model.Connection{
 		makeConnection(1),
 		makeConnection(2),
 		makeConnection(3),
@@ -34,37 +32,37 @@ func TestNetworkConnectionBatching(t *testing.T) {
 	cfg := config.NewDefaultAgentConfig()
 
 	for i, tc := range []struct {
-		cur, last      []*natsmodel.Connection
+		cur, last      []*model.Connection
 		maxSize        int
 		expectedTotal  int
 		expectedChunks int
 	}{
 		{
-			cur:            []*natsmodel.Connection{p[0], p[1], p[2]},
+			cur:            []*model.Connection{p[0], p[1], p[2]},
 			maxSize:        1,
 			expectedTotal:  3,
 			expectedChunks: 3,
 		},
 		{
-			cur:            []*natsmodel.Connection{p[0], p[1], p[2]},
+			cur:            []*model.Connection{p[0], p[1], p[2]},
 			maxSize:        2,
 			expectedTotal:  3,
 			expectedChunks: 2,
 		},
 		{
-			cur:            []*natsmodel.Connection{p[0], p[1], p[2], p[3]},
+			cur:            []*model.Connection{p[0], p[1], p[2], p[3]},
 			maxSize:        10,
 			expectedTotal:  4,
 			expectedChunks: 1,
 		},
 		{
-			cur:            []*natsmodel.Connection{p[0], p[1], p[2], p[3]},
+			cur:            []*model.Connection{p[0], p[1], p[2], p[3]},
 			maxSize:        3,
 			expectedTotal:  4,
 			expectedChunks: 2,
 		},
 		{
-			cur:            []*natsmodel.Connection{p[0], p[1], p[2], p[3], p[2], p[3]},
+			cur:            []*model.Connection{p[0], p[1], p[2], p[3], p[2], p[3]},
 			maxSize:        2,
 			expectedTotal:  6,
 			expectedChunks: 3,
@@ -76,7 +74,7 @@ func TestNetworkConnectionBatching(t *testing.T) {
 		assert.Len(t, chunks, tc.expectedChunks, "len %d", i)
 		total := 0
 		for _, c := range chunks {
-			connections := c.(*natsmodel.CollectorConnections)
+			connections := c.(*model.CollectorConnections)
 			total += len(connections.Connections)
 			assert.Equal(t, int32(tc.expectedChunks), connections.GroupSize, "group size test %d", i)
 			assert.Equal(t, int32(10), connections.GetCollectionInterval())
@@ -681,7 +679,7 @@ func TestFormatMetrics(t *testing.T) {
 	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[20], "success", 1.5)
 }
 
-func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *natsmodel.ConnectionMetric, statusCode string, min int, max int, total int) {
+func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode string, min int, max int, total int) {
 	assert.Equal(t, "http_response_time_seconds", formattedMetric.Name)
 	codeIsOk := assert.Equal(t, map[string]string{
 		"code": statusCode,
@@ -699,7 +697,7 @@ func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *natsm
 	}
 }
 
-func assertHTTPRequestsPerSecondConnectionMetric(t *testing.T, formattedMetric *natsmodel.ConnectionMetric, statusCode string, expectedRate float64) {
+func assertHTTPRequestsPerSecondConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode string, expectedRate float64) {
 	assert.Equal(t, "http_requests_per_second", formattedMetric.Name)
 	codeIsOk := assert.Equal(t, map[string]string{
 		"code": statusCode,

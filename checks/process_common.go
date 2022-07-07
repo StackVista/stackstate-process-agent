@@ -3,8 +3,8 @@ package checks
 import (
 	"fmt"
 	"github.com/DataDog/gopsutil/process"
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 	log "github.com/cihub/seelog"
 	"sort"
 	"strings"

@@ -7,8 +7,8 @@ import (
 	"bytes"
 	"os"
 
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-process-agent/net"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	tracerConfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"

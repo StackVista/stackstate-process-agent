@@ -1,12 +1,12 @@
 package checks
 
 import (
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-agent/pkg/collector/check"
 	"github.com/StackVista/stackstate-agent/pkg/telemetry"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 	processUtils "github.com/StackVista/stackstate-process-agent/util"
 	log "github.com/cihub/seelog"
 	"time"

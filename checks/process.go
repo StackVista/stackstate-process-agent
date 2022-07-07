@@ -10,10 +10,10 @@ import (
 
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 	log "github.com/cihub/seelog"
 	cache "github.com/patrickmn/go-cache"
 )

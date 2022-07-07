@@ -1,7 +1,7 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 )
 
 // chunkContainers chunks the ctrList into a slice of chunks using a specific

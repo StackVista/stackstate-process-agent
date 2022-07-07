@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/stackstate-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 )
 
 var (
@@ -136,7 +136,7 @@ func updateProcContainerCount(msgs []model.MessageBody) {
 	infoContainerCount = containerCount
 }
 
-func updateQueueSize(c chan checkPayload) {
+func updateQueueSize(c chan model.CheckPayload) {
 	infoMutex.Lock()
 	defer infoMutex.Unlock()
 	infoQueueSize = len(c)

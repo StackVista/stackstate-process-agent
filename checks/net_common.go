@@ -2,11 +2,11 @@ package checks
 
 import (
 	"fmt"
+	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	tracerConfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 	log "github.com/cihub/seelog"
-	"gitlab.com/stackvista/agent/agent-transport-protocol.git/pkg/model"
 	"net"
 	"strconv"
 	"strings"

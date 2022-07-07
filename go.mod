@@ -56,14 +56,13 @@ replace (
 require (
 	github.com/DataDog/gopsutil v0.0.0-20200624212600-1b53412ef321
 	github.com/DataDog/sketches-go v1.1.0
-	github.com/DataDog/zstd v0.0.0-20160706220725-2bf71ec48360
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705
+	github.com/StackVista/agent-transport-protocol v0.0.0-20220707133929-86353f8c12b1
 	github.com/StackVista/stackstate-agent v0.0.0-20220408162826-ba4ecc9075a2
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/go-ini/ini v1.55.0
-	github.com/gogo/protobuf v1.3.1
 	github.com/iovisor/gobpf v0.1.2 // indirect
 	github.com/kubernetes-incubator/custom-metrics-apiserver v0.0.0-20190116221620-b7016fc85e1c // indirect
 	github.com/mailru/easyjson v0.7.7
@@ -72,7 +71,6 @@ require (
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/stretchr/testify v1.7.0
-	gitlab.com/stackvista/agent/agent-transport-protocol.git v0.0.0-20220706092917-cd850baf3dda
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220406163625-3f8b81556e12
 	golang.org/x/text v0.3.7 // indirect

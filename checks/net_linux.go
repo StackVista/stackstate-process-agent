@@ -5,6 +5,7 @@ package checks
 
 import (
 	"bytes"
+	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"os"
 
 	"github.com/StackVista/agent-transport-protocol/pkg/model"
@@ -16,7 +17,7 @@ import (
 )
 
 // Init initializes a ConnectionsCheck instance.
-func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemInfo) {
+func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemInfo, natsClient *nats.Client) {
 	var err error
 
 	if cfg.EnableLocalNetworkTracer {
@@ -59,4 +60,11 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 	c.cache = NewNetworkRelationCache(cfg.NetworkRelationCacheDurationMin)
 
 	c.buf = new(bytes.Buffer)
+
+	if natsClient != nil {
+		// Bind Nats channel to process-agent connections subject
+		sendNatsCh := make(chan *model.Message)
+		_ = natsClient.BindSendChan(nats.ProcessAgentConnections, sendNatsCh)
+		c.natsCn = sendNatsCh
+	}
 }

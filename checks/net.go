@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"strconv"
 	"strings"
@@ -42,6 +41,8 @@ type ConnectionsCheck struct {
 
 	// Use this as the network relation cache to calculate rate metrics and drop short-lived network relations
 	cache *NetworkRelationCache
+
+	natsCn chan *model.Message
 }
 
 type connectionMetrics struct {
@@ -62,9 +63,8 @@ func (c *ConnectionsCheck) Name() string { return "connections" }
 // Endpoint returns the endpoint where this check is submitted.
 func (c *ConnectionsCheck) Endpoint() string { return "/api/v1/connections" }
 
-// NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
-// if the value is different than "" (empty string)
-func (c *ConnectionsCheck) NatsSubject() string { return nats.ProcessAgentConnections }
+// NatsChan returns the Nats channel where messages are submitted.
+func (c *ConnectionsCheck) NatsChan() chan *model.Message { return c.natsCn }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (c *ConnectionsCheck) RealTime() bool { return false }

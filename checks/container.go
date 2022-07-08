@@ -5,6 +5,7 @@ package checks
 
 import (
 	"fmt"
+	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-agent/pkg/telemetry"
 	"runtime"
@@ -35,7 +36,7 @@ type ContainerCheck struct {
 }
 
 // Init initializes a ContainerCheck instance.
-func (c *ContainerCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
+func (c *ContainerCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo, natsClient *nats.Client) {
 	c.sysInfo = info
 }
 
@@ -45,9 +46,8 @@ func (c *ContainerCheck) Name() string { return "container" }
 // Endpoint returns the endpoint where this check is submitted.
 func (c *ContainerCheck) Endpoint() string { return "/api/v1/container" }
 
-// NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
-// if the value is different than "" (empty string)
-func (c *ContainerCheck) NatsSubject() string { return "" }
+// NatsChan returns the Nats channel where messages are submitted.
+func (c *ContainerCheck) NatsChan() chan *model.Message { return nil }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (c *ContainerCheck) RealTime() bool { return false }

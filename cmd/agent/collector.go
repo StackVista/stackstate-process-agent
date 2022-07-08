@@ -21,21 +21,23 @@ import (
 	log "github.com/cihub/seelog"
 
 	"github.com/StackVista/agent-transport-protocol/pkg/model"
+	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
 )
 
-type MetricsPayload struct {
-	Metrics  []telemetry.RawMetrics
-	Endpoint string
+type checkPayload struct {
+	messages  []model.MessageBody
+	metrics   []telemetry.RawMetrics
+	endpoint  string
+	sendCh    chan *model.Message
+	timestamp time.Time
 }
 
 // Collector will collect metrics from the local system and ship to the backend.
 type Collector struct {
-	send          chan model.CheckPayload
-	sendMetrics   chan MetricsPayload
+	send          chan checkPayload
 	rtIntervalCh  chan time.Duration
-	natsSend      chan model.CheckPayload
 	cfg           *config.AgentConfig
 	httpClient    http.Client
 	groupID       int32
@@ -49,6 +51,7 @@ type Collector struct {
 	// Set to 1 if enabled 0 is not. We're using an integer
 	// so we can use the sync/atomic for thread-safe access.
 	realTimeEnabled int32
+	natsClient      nats.Client
 }
 
 // NewCollector creates a new Collector
@@ -58,16 +61,17 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 		return Collector{}, err
 	}
 
+	natsClient := nats.NewNATSClient()
 	enabledChecks := make([]checks.Check, 0)
 	for _, c := range checks.All {
 		if cfg.CheckIsEnabled(c.Name()) {
-			c.Init(cfg, sysInfo)
+			c.Init(cfg, sysInfo, &natsClient)
 			enabledChecks = append(enabledChecks, c)
 		}
 	}
 
 	return Collector{
-		send:          make(chan model.CheckPayload, cfg.QueueSize),
+		send:          make(chan checkPayload, cfg.QueueSize),
 		rtIntervalCh:  make(chan time.Duration),
 		cfg:           cfg,
 		groupID:       rand.Int31(),
@@ -77,6 +81,7 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 		// Defaults for real-time on start
 		realTimeInterval: 2 * time.Second,
 		realTimeEnabled:  0,
+		natsClient:       natsClient,
 	}, nil
 }
 
@@ -88,18 +93,12 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 	result, err := c.Run(l.cfg, features, atomic.AddInt32(&l.groupID, 1), currentTime)
 	// defer commit to after check run
 	defer c.Sender().Commit()
-	//transport.NewConnectionNATS()
 
 	if err != nil {
 		log.Criticalf("Unable to run check '%s': %s", c.Name(), err)
 	} else {
 		if result != nil {
-
-			l.send <- model.CheckPayload{result.CollectorMessages, c.Endpoint(), currentTime}
-			l.sendMetrics <- MetricsPayload{
-				result.Metrics,
-				c.Endpoint(),
-			}
+			l.send <- checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), c.NatsChan(), currentTime}
 			// update proc and container count for info
 			updateProcContainerCount(result.CollectorMessages)
 		} else {
@@ -138,6 +137,8 @@ func (l *Collector) run(exit chan bool) {
 	}
 	defer s.Commit()
 
+	defer l.natsClient.Close()
+
 	// Channel to announce new features detected
 	featuresCh := make(chan features.Features, 1)
 
@@ -158,17 +159,19 @@ func (l *Collector) run(exit chan bool) {
 					// Limit number of items kept in memory while we wait.
 					<-l.send
 				}
-				for _, m := range payload.Messages {
-					l.postMessage(payload.Endpoint, m, payload.Timestamp)
+				if payload.sendCh != nil {
+					for _, m := range payload.messages {
+						l.sendMessageToNATS(payload.sendCh, m, payload.timestamp)
+					}
+				} else {
+					for _, m := range payload.messages {
+						l.postMessage(payload.endpoint, m, payload.timestamp)
+					}
 				}
-
-			case metricsPayload := <-l.sendMetrics:
-
-				_batcher := batcher.GetBatcher()
-				for _, metric := range metricsPayload.Metrics {
-					_batcher.SubmitRawMetricsData(check.ID(metricsPayload.Endpoint), metric)
+				for _, metric := range payload.metrics {
+					batcher.GetBatcher().SubmitRawMetricsData(check.ID(payload.endpoint), metric)
 				}
-				_batcher.SubmitComplete(check.ID(metricsPayload.Endpoint))
+				batcher.GetBatcher().SubmitComplete(check.ID(payload.endpoint))
 			case <-heartbeat.C:
 				log.Tracef("got heartbeat.C message. (Ignored)")
 				s.Gauge("stackstate.process_agent.running", 1, l.cfg.HostName, []string{"version:" + versionString()})
@@ -225,6 +228,28 @@ func (l *Collector) run(exit chan bool) {
 		}(c)
 	}
 	<-exit
+}
+
+func (l *Collector) sendMessageToNATS(sendCh chan *model.Message, m model.MessageBody, timestamp time.Time) {
+	msgType, err := model.DetectMessageType(m)
+	if err != nil {
+		log.Errorf("Unable to detect message type: %s", err)
+		return
+	}
+
+	message := &model.Message{
+		Header: model.MessageHeader{
+			Version:   model.MessageV3,
+			Encoding:  model.MessageEncodingJSON,
+			Type:      msgType,
+			Timestamp: timestamp.UnixNano() / int64(time.Millisecond),
+		}, Body: m}
+
+	if err != nil {
+		log.Errorf("Unable to encode message: %s", err)
+	}
+
+	sendCh <- message
 }
 
 func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp time.Time) {

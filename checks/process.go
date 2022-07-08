@@ -3,6 +3,7 @@
 package checks
 
 import (
+	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"sync"
@@ -44,7 +45,7 @@ type ProcessCheck struct {
 }
 
 // Init initializes the singleton ProcessCheck.
-func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
+func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo, natsClient *nats.Client) {
 	p.sysInfo = info
 	p.cache = cache.New(cfg.ProcessCacheDurationMin, cfg.ProcessCacheDurationMin)
 }
@@ -55,9 +56,8 @@ func (p *ProcessCheck) Name() string { return "process" }
 // Endpoint returns the endpoint where this check is submitted.
 func (p *ProcessCheck) Endpoint() string { return "/api/v1/collector" }
 
-// NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
-// if the value is different than "" (empty string)
-func (p *ProcessCheck) NatsSubject() string { return "" }
+// NatsChan returns the Nats channel where messages are submitted.
+func (p *ProcessCheck) NatsChan() chan *model.Message { return nil }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (p *ProcessCheck) RealTime() bool { return false }

@@ -223,14 +223,14 @@ func debugCheckResults(cfg *config.AgentConfig, check string) error {
 
 	if check == checks.Connections.Name() {
 		// Connections check requires process-check to have occurred first (for process creation ts)
-		checks.Process.Init(cfg, sysInfo)
+		checks.Process.Init(cfg, sysInfo, nil)
 		checks.Process.Run(cfg, features.All(), 0, time.Now())
 	}
 
 	names := make([]string, 0, len(checks.All))
 	for _, ch := range checks.All {
 		if ch.Name() == check {
-			ch.Init(cfg, sysInfo)
+			ch.Init(cfg, sysInfo, nil)
 			return printResults(cfg, ch)
 		}
 		names = append(names, ch.Name())

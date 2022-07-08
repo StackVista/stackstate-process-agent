@@ -136,7 +136,7 @@ func updateProcContainerCount(msgs []model.MessageBody) {
 	infoContainerCount = containerCount
 }
 
-func updateQueueSize(c chan model.CheckPayload) {
+func updateQueueSize(c chan checkPayload) {
 	infoMutex.Lock()
 	defer infoMutex.Unlock()
 	infoQueueSize = len(c)

@@ -61,6 +61,7 @@ require (
 	github.com/StackVista/stackstate-agent v0.0.0-20220408162826-ba4ecc9075a2
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
+	github.com/awalterschulze/goderive v0.0.0-20220428144255-849e9385b9d1 // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/go-ini/ini v1.55.0
 	github.com/iovisor/gobpf v0.1.2 // indirect
@@ -71,9 +72,9 @@ require (
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220406163625-3f8b81556e12
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
+	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d
+	golang.org/x/tools v0.1.11 // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 )

@@ -4,7 +4,6 @@
 package checks
 
 import (
-	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"runtime"
 	"time"
@@ -29,7 +28,7 @@ type RTContainerCheck struct {
 }
 
 // Init initializes a RTContainerCheck instance.
-func (r *RTContainerCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemInfo, natsClient *nats.Client) {
+func (r *RTContainerCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemInfo) {
 	r.sysInfo = sysInfo
 }
 
@@ -39,8 +38,9 @@ func (r *RTContainerCheck) Name() string { return "rtcontainer" }
 // Endpoint returns the endpoint where this check is submitted.
 func (r *RTContainerCheck) Endpoint() string { return "/api/v1/container" }
 
-// NatsChan returns the Nats channel where messages are submitted.
-func (r *RTContainerCheck) NatsChan() chan *model.Message { return nil }
+// NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
+// if the value is different than "" (empty string)
+func (r *RTContainerCheck) NatsSubject() string { return "" }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (r *RTContainerCheck) RealTime() bool { return true }

@@ -2,7 +2,6 @@ package checks
 
 import (
 	"github.com/StackVista/agent-transport-protocol/pkg/model"
-	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-agent/pkg/collector/check"
 	"github.com/StackVista/stackstate-agent/pkg/telemetry"
@@ -18,10 +17,10 @@ import (
 // processed in another way (e.g. printed for debugging).
 // Before checks are used you must called Init.
 type Check interface {
-	Init(cfg *config.AgentConfig, info *model.SystemInfo, natsClient *nats.Client)
+	Init(cfg *config.AgentConfig, info *model.SystemInfo)
 	Name() string
 	Endpoint() string
-	NatsChan() chan *model.Message
+	NatsSubject() string
 	RealTime() bool
 	Run(cfg *config.AgentConfig, features features.Features, groupID int32, currentTime time.Time) (*CheckResult, error)
 	Sender() aggregator.Sender

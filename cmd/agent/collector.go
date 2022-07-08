@@ -27,11 +27,11 @@ import (
 )
 
 type checkPayload struct {
-	messages  []model.MessageBody
-	metrics   []telemetry.RawMetrics
-	endpoint  string
-	sendCh    chan *model.Message
-	timestamp time.Time
+	messages    []model.MessageBody
+	metrics     []telemetry.RawMetrics
+	endpoint    string
+	natsSubject string
+	timestamp   time.Time
 }
 
 // Collector will collect metrics from the local system and ship to the backend.
@@ -52,6 +52,7 @@ type Collector struct {
 	// so we can use the sync/atomic for thread-safe access.
 	realTimeEnabled int32
 	natsClient      nats.Client
+	natsChMap       map[string]chan *model.Message
 }
 
 // NewCollector creates a new Collector
@@ -62,10 +63,18 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 	}
 
 	natsClient := nats.NewNATSClient()
+	natsChMap := make(map[string]chan *model.Message)
+
 	enabledChecks := make([]checks.Check, 0)
 	for _, c := range checks.All {
 		if cfg.CheckIsEnabled(c.Name()) {
-			c.Init(cfg, sysInfo, &natsClient)
+			c.Init(cfg, sysInfo)
+			if c.NatsSubject() != "" {
+				// Bind Nats channel to process-agent connections subject
+				sendNatsCh := make(chan *model.Message)
+				_ = natsClient.BindSendChan(c.NatsSubject(), sendNatsCh)
+				natsChMap[c.NatsSubject()] = sendNatsCh
+			}
 			enabledChecks = append(enabledChecks, c)
 		}
 	}
@@ -82,6 +91,7 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 		realTimeInterval: 2 * time.Second,
 		realTimeEnabled:  0,
 		natsClient:       natsClient,
+		natsChMap:        natsChMap,
 	}, nil
 }
 
@@ -98,7 +108,7 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 		log.Criticalf("Unable to run check '%s': %s", c.Name(), err)
 	} else {
 		if result != nil {
-			l.send <- checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), c.NatsChan(), currentTime}
+			l.send <- checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), c.NatsSubject(), currentTime}
 			// update proc and container count for info
 			updateProcContainerCount(result.CollectorMessages)
 		} else {
@@ -159,9 +169,9 @@ func (l *Collector) run(exit chan bool) {
 					// Limit number of items kept in memory while we wait.
 					<-l.send
 				}
-				if payload.sendCh != nil {
+				if payload.natsSubject != "" {
 					for _, m := range payload.messages {
-						l.sendMessageToNATS(payload.sendCh, m, payload.timestamp)
+						l.sendMessageToNATS(payload.natsSubject, m, payload.timestamp)
 					}
 				} else {
 					for _, m := range payload.messages {
@@ -230,7 +240,7 @@ func (l *Collector) run(exit chan bool) {
 	<-exit
 }
 
-func (l *Collector) sendMessageToNATS(sendCh chan *model.Message, m model.MessageBody, timestamp time.Time) {
+func (l *Collector) sendMessageToNATS(natsSubject string, m model.MessageBody, timestamp time.Time) {
 	msgType, err := model.DetectMessageType(m)
 	if err != nil {
 		log.Errorf("Unable to detect message type: %s", err)
@@ -249,7 +259,7 @@ func (l *Collector) sendMessageToNATS(sendCh chan *model.Message, m model.Messag
 		log.Errorf("Unable to encode message: %s", err)
 	}
 
-	sendCh <- message
+	l.natsChMap[natsSubject] <- message
 }
 
 func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp time.Time) {

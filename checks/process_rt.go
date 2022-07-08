@@ -3,7 +3,6 @@
 package checks
 
 import (
-	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/patrickmn/go-cache"
@@ -33,7 +32,7 @@ type RTProcessCheck struct {
 }
 
 // Init initializes a new RTProcessCheck instance.
-func (r *RTProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo, natsClient *nats.Client) {
+func (r *RTProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	r.sysInfo = info
 
 	r.cache = cache.New(cfg.ProcessCacheDurationMin, cfg.ProcessCacheDurationMin)
@@ -45,8 +44,9 @@ func (r *RTProcessCheck) Name() string { return "rtprocess" }
 // Endpoint returns the endpoint where this check is submitted.
 func (r *RTProcessCheck) Endpoint() string { return "/api/v1/collector" }
 
-// NatsChan returns the Nats channel where messages are submitted.
-func (r *RTProcessCheck) NatsChan() chan *model.Message { return nil }
+// NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
+// if the value is different than "" (empty string)
+func (r *RTProcessCheck) NatsSubject() string { return "" }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (r *RTProcessCheck) RealTime() bool { return true }

@@ -219,7 +219,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		StatsdHost: "127.0.0.1",
 		StatsdPort: 8125,
 
-		Blacklist: deriveFmapConstructRegex(constructRegex, defaultBlacklistPatterns),
+		Blacklist: mapConstructRegex(constructRegex, defaultBlacklistPatterns),
 
 		// Top resource using process inclusion amounts
 		AmountTopCPUPercentageUsage: 0,
@@ -803,7 +803,7 @@ func setProcessBlacklist(agentConf *AgentConfig,
 ) {
 	if len(patterns) > 0 {
 		log.Infof("Overriding processes blacklist to %v", patterns)
-		agentConf.Blacklist = deriveFmapConstructRegex(constructRegex, patterns)
+		agentConf.Blacklist = mapConstructRegex(constructRegex, patterns)
 	} else {
 		log.Infof("Using default processes blacklist %v", agentConf.Blacklist)
 	}
@@ -1051,4 +1051,13 @@ func constructProxy(host, scheme string, port int, user, password string) (proxy
 		return nil, err
 	}
 	return http.ProxyURL(u), nil
+}
+
+// mapConstructRegex returns a list where each element of the input list has been morphed by the input function.
+func mapConstructRegex(f func(string) *regexp.Regexp, list []string) []*regexp.Regexp {
+	out := make([]*regexp.Regexp, len(list))
+	for i, elem := range list {
+		out[i] = f(elem)
+	}
+	return out
 }

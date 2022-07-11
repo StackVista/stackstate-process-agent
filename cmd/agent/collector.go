@@ -21,7 +21,6 @@ import (
 	log "github.com/cihub/seelog"
 
 	"github.com/StackVista/agent-transport-protocol/pkg/model"
-	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
 )
@@ -51,8 +50,7 @@ type Collector struct {
 	// Set to 1 if enabled 0 is not. We're using an integer
 	// so we can use the sync/atomic for thread-safe access.
 	realTimeEnabled int32
-	natsClient      *nats.Client
-	natsChMap       map[string]chan *model.Message
+	natsSender      NatsSender
 }
 
 // NewCollector creates a new Collector
@@ -62,25 +60,18 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 		return Collector{}, err
 	}
 
-	natsEnabled := true
-	natsClient := nats.NewNATSClient()
-	if _, err := natsClient.Connect(); err != nil {
-		_ = log.Errorf("Failed to connect to NATS: %s", err)
-		natsEnabled = false
-	}
-
-	natsChMap := make(map[string]chan *model.Message)
+	natsSender := CreateNatsSender()
 
 	enabledChecks := make([]checks.Check, 0)
 	for _, c := range checks.All {
 		if cfg.CheckIsEnabled(c.Name()) {
 			c.Init(cfg, sysInfo)
-			if c.NatsSubject() != "" && natsEnabled {
-				// Bind Nats channel to process-agent connections subject
-				sendNatsCh := make(chan *model.Message)
-				log.Infof("Binding NATS send chan (%+v) to subject %s", sendNatsCh, c.NatsSubject())
-				_ = natsClient.BindSendChan(c.NatsSubject(), sendNatsCh)
-				natsChMap[c.NatsSubject()] = sendNatsCh
+			if c.NatsSubject() != "" && natsSender.Enabled {
+				err := natsSender.BindSubject(c.NatsSubject())
+				if err != nil {
+					_ = log.Errorf("Could not bind nats send chan, disabling NatsSender. Error: ", err)
+					natsSender.Enabled = false
+				}
 			}
 			enabledChecks = append(enabledChecks, c)
 		}
@@ -97,8 +88,7 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 		// Defaults for real-time on start
 		realTimeInterval: 2 * time.Second,
 		realTimeEnabled:  0,
-		natsClient:       natsClient,
-		natsChMap:        natsChMap,
+		natsSender:       natsSender,
 	}, nil
 }
 
@@ -154,7 +144,7 @@ func (l *Collector) run(exit chan bool) {
 	}
 	defer s.Commit()
 
-	defer l.natsClient.Close()
+	defer l.natsSender.Close()
 
 	// Channel to announce new features detected
 	featuresCh := make(chan features.Features, 1)
@@ -176,10 +166,10 @@ func (l *Collector) run(exit chan bool) {
 					// Limit number of items kept in memory while we wait.
 					<-l.send
 				}
-				if natsCh, ok := l.natsChMap[payload.natsSubject]; ok && payload.natsSubject != "" {
+				if payload.natsSubject != "" && l.natsSender.Enabled {
 					for _, m := range payload.messages {
 						log.Infof("Sending NATS message to subject `%s`", payload.natsSubject)
-						l.sendMessageToNATS(natsCh, m, payload.timestamp)
+						l.sendMessageToNATS(payload.natsSubject, m, payload.timestamp)
 					}
 				} else {
 					for _, m := range payload.messages {
@@ -248,10 +238,10 @@ func (l *Collector) run(exit chan bool) {
 	<-exit
 }
 
-func (l *Collector) sendMessageToNATS(natsCh chan *model.Message, m model.MessageBody, timestamp time.Time) {
+func (l *Collector) sendMessageToNATS(subject string, m model.MessageBody, timestamp time.Time) {
 	msgType, err := model.DetectMessageType(m)
 	if err != nil {
-		log.Errorf("Unable to detect message type: %s", err)
+		_ = log.Errorf("Unable to detect message type: %s", err)
 		return
 	}
 
@@ -263,11 +253,12 @@ func (l *Collector) sendMessageToNATS(natsCh chan *model.Message, m model.Messag
 			Timestamp: timestamp.UnixNano() / int64(time.Millisecond),
 		}, Body: m}
 
-	for k, v := range l.natsChMap {
-		log.Infof(k, "value is", v)
+	if subjectChan, ok := l.natsSender.GetSubjectChan(subject); ok {
+		subjectChan <- message
+		log.Debugf("Sent message to Nats, message = %+v", message)
+	} else {
+		_ = log.Errorf("Could not find nats chan bound to subject `%s`", subject)
 	}
-	natsCh <- message
-	log.Debugf("Sent message to Nats, message = %+v", message)
 }
 
 func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp time.Time) {

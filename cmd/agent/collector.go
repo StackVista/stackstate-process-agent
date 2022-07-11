@@ -258,7 +258,8 @@ func (l *Collector) sendMessageToNATS(natsSubject string, m model.MessageBody, t
 	if err != nil {
 		log.Errorf("Unable to encode message: %s", err)
 	}
-
+	log.Infof("Sending NATS message to subject %s", natsSubject)
+	log.Debugf("Sending NATS message to subject %s, message = %+v", natsSubject, message)
 	l.natsChMap[natsSubject] <- message
 }
 

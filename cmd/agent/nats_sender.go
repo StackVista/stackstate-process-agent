@@ -6,18 +6,14 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-type INatsSender interface {
-	BindSubject(subject string) error
-	GetSubjectChan(subject string) (chan *model.Message, bool)
-	Close()
-}
-
+// NatsSender holds the NATS client and the map of chan for all subjects
 type NatsSender struct {
 	Enabled bool
 	client  *nats.Client
 	chMap   map[string]chan *model.Message
 }
 
+// CreateNatsSender creates a new NatsSender object
 func CreateNatsSender() NatsSender {
 	client := nats.NewNATSClient()
 	if _, err := client.Connect(); err != nil {
@@ -32,6 +28,7 @@ func CreateNatsSender() NatsSender {
 	}
 }
 
+// BindSubject creates a new chan, binds to the parameter subject and add to the map of chan
 func (c *NatsSender) BindSubject(subject string) error {
 	sendNatsCh := make(chan *model.Message)
 	err := c.client.BindSendChan(subject, sendNatsCh)
@@ -42,11 +39,13 @@ func (c *NatsSender) BindSubject(subject string) error {
 	return nil
 }
 
+// GetSubjectChan returns the channel bound to the parameter subject
 func (c *NatsSender) GetSubjectChan(subject string) (chan *model.Message, bool) {
 	ch, ok := c.chMap[subject]
 	return ch, ok
 }
 
+// Close closes the connection to the NATS client
 func (c *NatsSender) Close() {
 	c.client.Close()
 }

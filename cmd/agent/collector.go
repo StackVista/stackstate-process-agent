@@ -72,6 +72,7 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 			if c.NatsSubject() != "" {
 				// Bind Nats channel to process-agent connections subject
 				sendNatsCh := make(chan *model.Message)
+				log.Infof("Binding Nats send chan (%+v) to subject %s", sendNatsCh, c.NatsSubject())
 				_ = natsClient.BindSendChan(c.NatsSubject(), sendNatsCh)
 				natsChMap[c.NatsSubject()] = sendNatsCh
 			}
@@ -255,12 +256,11 @@ func (l *Collector) sendMessageToNATS(natsSubject string, m model.MessageBody, t
 			Timestamp: timestamp.UnixNano() / int64(time.Millisecond),
 		}, Body: m}
 
-	if err != nil {
-		log.Errorf("Unable to encode message: %s", err)
-	}
 	log.Infof("Sending NATS message to subject %s", natsSubject)
-	log.Debugf("Sending NATS message to subject %s, message = %+v", natsSubject, message)
+	log.Infof("natsChMap = %+v", l.natsChMap)
+	log.Infof("nats chan = %+v", l.natsChMap[natsSubject])
 	l.natsChMap[natsSubject] <- message
+	log.Debugf("Sent NATS message to subject %s, message = %+v", natsSubject, message)
 }
 
 func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp time.Time) {

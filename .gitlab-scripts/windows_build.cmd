@@ -10,8 +10,6 @@ set "VCINSTALLDIR=C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Commun
 echo %CD%
 call rake deps windres=true --trace
 if %errorlevel% neq 0 exit /b %errorlevel%
-call rake derive windres=true --trace
-if %errorlevel% neq 0 exit /b %errorlevel%
 call rake test windres=true --trace
 if %errorlevel% neq 0 exit /b %errorlevel%
 call rake build windres=true --trace

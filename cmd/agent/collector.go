@@ -62,17 +62,23 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 		return Collector{}, err
 	}
 
+	natsEnabled := true
 	natsClient := nats.NewNATSClient()
+	if _, err := natsClient.Connect(); err != nil {
+		_ = log.Errorf("Failed to connect to NATS: %s", err)
+		natsEnabled = false
+	}
+
 	natsChMap := make(map[string]chan *model.Message)
 
 	enabledChecks := make([]checks.Check, 0)
 	for _, c := range checks.All {
 		if cfg.CheckIsEnabled(c.Name()) {
 			c.Init(cfg, sysInfo)
-			if c.NatsSubject() != "" {
+			if c.NatsSubject() != "" && natsEnabled {
 				// Bind Nats channel to process-agent connections subject
 				sendNatsCh := make(chan *model.Message)
-				log.Infof("Binding Nats send chan (%+v) to subject %s", sendNatsCh, c.NatsSubject())
+				log.Infof("Binding NATS send chan (%+v) to subject %s", sendNatsCh, c.NatsSubject())
 				_ = natsClient.BindSendChan(c.NatsSubject(), sendNatsCh)
 				natsChMap[c.NatsSubject()] = sendNatsCh
 			}
@@ -170,9 +176,10 @@ func (l *Collector) run(exit chan bool) {
 					// Limit number of items kept in memory while we wait.
 					<-l.send
 				}
-				if payload.natsSubject != "" {
+				if natsCh, ok := l.natsChMap[payload.natsSubject]; ok && payload.natsSubject != "" {
 					for _, m := range payload.messages {
-						l.sendMessageToNATS(payload.natsSubject, m, payload.timestamp)
+						log.Infof("Sending NATS message to subject `%s`", payload.natsSubject)
+						l.sendMessageToNATS(natsCh, m, payload.timestamp)
 					}
 				} else {
 					for _, m := range payload.messages {
@@ -241,7 +248,7 @@ func (l *Collector) run(exit chan bool) {
 	<-exit
 }
 
-func (l *Collector) sendMessageToNATS(natsSubject string, m model.MessageBody, timestamp time.Time) {
+func (l *Collector) sendMessageToNATS(natsCh chan *model.Message, m model.MessageBody, timestamp time.Time) {
 	msgType, err := model.DetectMessageType(m)
 	if err != nil {
 		log.Errorf("Unable to detect message type: %s", err)
@@ -256,14 +263,11 @@ func (l *Collector) sendMessageToNATS(natsSubject string, m model.MessageBody, t
 			Timestamp: timestamp.UnixNano() / int64(time.Millisecond),
 		}, Body: m}
 
-	log.Infof("Sending NATS message to subject `%s`", natsSubject)
 	for k, v := range l.natsChMap {
 		log.Infof(k, "value is", v)
 	}
-	//log.Infof("natsChMap = %+v", l.natsChMap)
-	log.Infof("nats chan = %+v", l.natsChMap[natsSubject])
-	l.natsChMap[natsSubject] <- message
-	log.Debugf("Sent NATS message to subject %s, message = %+v", natsSubject, message)
+	natsCh <- message
+	log.Debugf("Sent message to Nats, message = %+v", message)
 }
 
 func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp time.Time) {

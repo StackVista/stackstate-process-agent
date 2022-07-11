@@ -51,7 +51,7 @@ type Collector struct {
 	// Set to 1 if enabled 0 is not. We're using an integer
 	// so we can use the sync/atomic for thread-safe access.
 	realTimeEnabled int32
-	natsClient      nats.Client
+	natsClient      *nats.Client
 	natsChMap       map[string]chan *model.Message
 }
 

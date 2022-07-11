@@ -256,8 +256,11 @@ func (l *Collector) sendMessageToNATS(natsSubject string, m model.MessageBody, t
 			Timestamp: timestamp.UnixNano() / int64(time.Millisecond),
 		}, Body: m}
 
-	log.Infof("Sending NATS message to subject %s", natsSubject)
-	log.Infof("natsChMap = %+v", l.natsChMap)
+	log.Infof("Sending NATS message to subject `%s`", natsSubject)
+	for k, v := range l.natsChMap {
+		log.Infof(k, "value is", v)
+	}
+	//log.Infof("natsChMap = %+v", l.natsChMap)
 	log.Infof("nats chan = %+v", l.natsChMap[natsSubject])
 	l.natsChMap[natsSubject] <- message
 	log.Debugf("Sent NATS message to subject %s, message = %+v", natsSubject, message)

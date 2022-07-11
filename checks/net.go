@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
+	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats/subjects"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"strconv"
 	"strings"
@@ -64,7 +64,7 @@ func (c *ConnectionsCheck) Endpoint() string { return "/api/v1/connections" }
 
 // NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
 // if the value is different than "" (empty string)
-func (c *ConnectionsCheck) NatsSubject() string { return nats.ProcessAgentConnections }
+func (c *ConnectionsCheck) NatsSubject() string { return subjects.ProcessAgentConnections }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (c *ConnectionsCheck) RealTime() bool { return false }

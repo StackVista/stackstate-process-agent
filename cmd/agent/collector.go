@@ -255,7 +255,7 @@ func (l *Collector) sendMessageToNATS(subject string, m model.MessageBody, times
 	if subjectChan, ok := l.natsSender.GetSubjectChan(subject); ok {
 		log.Infof("Sending NATS message to subject `%s`", subjectChan)
 		subjectChan <- message
-		log.Debugf("Sent message to Nats, message = %+v", message)
+		log.Infof("Sent message to Nats, message = %+v", message)
 	} else {
 		_ = log.Errorf("Could not find nats chan bound to subject `%s`", subject)
 	}

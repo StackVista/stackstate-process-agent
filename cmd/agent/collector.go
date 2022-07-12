@@ -144,8 +144,6 @@ func (l *Collector) run(exit chan bool) {
 	}
 	defer s.Commit()
 
-	defer l.natsSender.Close()
-
 	// Channel to announce new features detected
 	featuresCh := make(chan features.Features, 1)
 
@@ -194,6 +192,7 @@ func (l *Collector) run(exit chan bool) {
 				// Stop polling
 				featuresTicker.Stop()
 			case <-exit:
+				l.natsSender.Close()
 				return
 			}
 		}

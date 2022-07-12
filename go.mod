@@ -57,12 +57,13 @@ require (
 	github.com/DataDog/gopsutil v0.0.0-20200624212600-1b53412ef321
 	github.com/DataDog/sketches-go v1.1.0
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705
-	github.com/StackVista/agent-transport-protocol v0.0.0-20220712133224-8fe392a3b777
+	github.com/StackVista/agent-transport-protocol v0.0.0-20220712140646-3d20370d045d
 	github.com/StackVista/stackstate-agent v0.0.0-20220408162826-ba4ecc9075a2
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/go-ini/ini v1.55.0
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/iovisor/gobpf v0.1.2 // indirect
 	github.com/kubernetes-incubator/custom-metrics-apiserver v0.0.0-20190116221620-b7016fc85e1c // indirect
 	github.com/mailru/easyjson v0.7.7
@@ -74,6 +75,7 @@ require (
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d
 	golang.org/x/tools v0.1.11 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 )

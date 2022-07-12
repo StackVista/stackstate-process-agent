@@ -141,6 +141,8 @@ github.com/StackVista/agent-transport-protocol v0.0.0-20220712125719-5717e4384f6
 github.com/StackVista/agent-transport-protocol v0.0.0-20220712125719-5717e4384f67/go.mod h1:8omsbgaB6XiERBuNPMy6z5TDiDyVeqBZ7extSIvaB5o=
 github.com/StackVista/agent-transport-protocol v0.0.0-20220712133224-8fe392a3b777 h1:6NS7a+DFyjH01D5ASt1NDsaB7HgTLkQ3dCWEGEySaXY=
 github.com/StackVista/agent-transport-protocol v0.0.0-20220712133224-8fe392a3b777/go.mod h1:8omsbgaB6XiERBuNPMy6z5TDiDyVeqBZ7extSIvaB5o=
+github.com/StackVista/agent-transport-protocol v0.0.0-20220712140646-3d20370d045d h1:yKa5Z5uwtwDzqIHGdDWASJr48DUwd6C0kdrruBNtans=
+github.com/StackVista/agent-transport-protocol v0.0.0-20220712140646-3d20370d045d/go.mod h1:PBEGqeBpODZ+INqpgcqcUY5mG69tl/5QjvqJ5+yLQQ8=
 github.com/StackVista/gobpf v0.1.2 h1:A7u+WTC0OLar/5LvcgoI4iK6F22vRbBUXxOYHHj64yI=
 github.com/StackVista/gobpf v0.1.2/go.mod h1:oNzyvRglZNW//1GU+8+FxFk/EBGzXcYtf8UTI4QIk5U=
 github.com/StackVista/sketches-go v1.1.1 h1:ddl+0Iax7jWvC7ADJI+ZeQq6VN4QjfOYx0E1vbdfyCg=

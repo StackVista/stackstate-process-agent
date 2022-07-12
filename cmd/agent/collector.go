@@ -165,7 +165,7 @@ func (l *Collector) run(exit chan bool) {
 					<-l.send
 				}
 				if payload.natsSubject != "" && l.natsSender.Enabled {
-					log.Infof("Sending message to NATS")
+					log.Infof("Sending message to NATS. Subject = %s, len(messages) = %i", payload.natsSubject, len(payload.messages))
 					for _, m := range payload.messages {
 						l.sendMessageToNATS(payload.natsSubject, m, payload.timestamp)
 					}
@@ -239,26 +239,13 @@ func (l *Collector) run(exit chan bool) {
 }
 
 func (l *Collector) sendMessageToNATS(subject string, m model.MessageBody, timestamp time.Time) {
-	msgType, err := model.DetectMessageType(m)
-	if err != nil {
-		_ = log.Errorf("Unable to detect message type: %s", err)
-		return
-	}
-
-	message := &model.Message{
-		Header: model.MessageHeader{
-			Version:   model.MessageV3,
-			Encoding:  model.MessageEncodingJSON,
-			Type:      msgType,
-			Timestamp: timestamp.UnixNano() / int64(time.Millisecond),
-		}, Body: m}
-
+	log.Infof("sendMessageToNATS")
 	if subjectChan, ok := l.natsSender.GetSubjectChan(subject); ok {
 		log.Infof("Sending NATS message to subject `%s`", subjectChan)
 		subjectChan <- &m
-		log.Infof("Sent message to Nats, message = %+v", message)
+		log.Infof("Sent message to Nats, message = %+v", m)
 	} else {
-		_ = log.Errorf("Could not find nats chan bound to subject `%s`", subject)
+		log.Errorf("Could not find NATS chan bound to subject `%s`", subject)
 	}
 }
 

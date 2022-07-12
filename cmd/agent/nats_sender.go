@@ -37,12 +37,15 @@ func (c *NatsSender) BindSubject(subject string) error {
 		return err
 	}
 	c.chMap[subject] = sendNatsCh
+	log.Infof("Bound chan '%v' for NATS subject '%s'", sendNatsCh, subject)
 	return nil
 }
 
 // GetSubjectChan returns the channel bound to the parameter subject
 func (c *NatsSender) GetSubjectChan(subject string) (chan *model.Message, bool) {
+	log.Infof("Getting chan for NATS subject '%s'", subject)
 	ch, ok := c.chMap[subject]
+	log.Infof("Got chan '%v' for NATS subject '%s'", ch, subject)
 	return ch, ok
 }
 

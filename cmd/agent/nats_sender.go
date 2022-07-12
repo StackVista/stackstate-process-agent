@@ -10,7 +10,7 @@ import (
 type NatsSender struct {
 	Enabled bool
 	client  *nats.Client
-	chMap   map[string]chan *model.Message
+	chMap   map[string]chan *model.MessageBody
 }
 
 // CreateNatsSender creates a new NatsSender object
@@ -21,7 +21,7 @@ func CreateNatsSender() NatsSender {
 		return NatsSender{Enabled: false}
 	}
 	log.Infof("Connected to NATS server on ", client.ServerURL)
-	chMap := make(map[string]chan *model.Message)
+	chMap := make(map[string]chan *model.MessageBody)
 	return NatsSender{
 		Enabled: true,
 		client:  client,
@@ -31,7 +31,7 @@ func CreateNatsSender() NatsSender {
 
 // BindSubject creates a new chan, binds to the parameter subject and add to the map of chan
 func (c *NatsSender) BindSubject(subject string) error {
-	sendNatsCh := make(chan *model.Message)
+	sendNatsCh := make(chan *model.MessageBody)
 	err := c.client.BindSendChan(subject, sendNatsCh)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (c *NatsSender) BindSubject(subject string) error {
 }
 
 // GetSubjectChan returns the channel bound to the parameter subject
-func (c *NatsSender) GetSubjectChan(subject string) (chan *model.Message, bool) {
+func (c *NatsSender) GetSubjectChan(subject string) (chan *model.MessageBody, bool) {
 	log.Infof("Getting chan for NATS subject '%s'", subject)
 	ch, ok := c.chMap[subject]
 	log.Infof("Got chan '%v' for NATS subject '%s'", ch, subject)

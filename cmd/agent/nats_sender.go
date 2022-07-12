@@ -20,6 +20,7 @@ func CreateNatsSender() NatsSender {
 		_ = log.Errorf("Failed to connect to NATS: %s", err)
 		return NatsSender{Enabled: false}
 	}
+	log.Infof("Connected to NATS server on ", client.ServerURL)
 	chMap := make(map[string]chan *model.Message)
 	return NatsSender{
 		Enabled: true,

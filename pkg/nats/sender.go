@@ -7,23 +7,23 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-// NatsSender holds the NATS client and the map of chan for all subjects
-type NatsSender struct {
+// Sender holds the NATS client and the map of chan for all subjects
+type Sender struct {
 	Enabled bool
 	client  *nats.Client
 	chMap   map[string]chan *model.MessageBody
 }
 
-// CreateNatsSender creates a new NatsSender object
-func CreateNatsSender() NatsSender {
+// CreateNatsSender creates a new Sender object
+func CreateNatsSender() Sender {
 	client := nats.NewNATSClient()
 	if _, err := client.Connect(); err != nil {
 		_ = log.Errorf("Failed to connect to NATS: %s", err)
-		return NatsSender{Enabled: false}
+		return Sender{Enabled: false}
 	}
 	log.Infof("Connected to NATS server on ", client.ServerURL)
 	chMap := make(map[string]chan *model.MessageBody)
-	return NatsSender{
+	return Sender{
 		Enabled: true,
 		client:  client,
 		chMap:   chMap,
@@ -31,7 +31,7 @@ func CreateNatsSender() NatsSender {
 }
 
 // SendMessage sends a message
-func (s *NatsSender) SendMessage(subject string, encodedMessage []byte) error {
+func (s *Sender) SendMessage(subject string, encodedMessage []byte) error {
 	err := s.client.Conn.Publish(subject, encodedMessage)
 	if err != nil {
 		return fmt.Errorf("could not send message to NATS. Error: %v", err)
@@ -40,6 +40,6 @@ func (s *NatsSender) SendMessage(subject string, encodedMessage []byte) error {
 }
 
 // Close closes the connection to the NATS client
-func (s *NatsSender) Close() {
+func (s *Sender) Close() {
 	s.client.Close()
 }

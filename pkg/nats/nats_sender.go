@@ -1,6 +1,7 @@
-package main
+package nats
 
 import (
+	"fmt"
 	"github.com/StackVista/agent-transport-protocol/pkg/model"
 	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats"
 	log "github.com/cihub/seelog"
@@ -29,27 +30,16 @@ func CreateNatsSender() NatsSender {
 	}
 }
 
-// BindSubject creates a new chan, binds to the parameter subject and add to the map of chan
-func (c *NatsSender) BindSubject(subject string) error {
-	sendNatsCh := make(chan *model.MessageBody)
-	err := c.client.BindSendChan(subject, sendNatsCh)
+// SendMessage sends a message
+func (s *NatsSender) SendMessage(subject string, encodedMessage []byte) error {
+	err := s.client.Conn.Publish(subject, encodedMessage)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not send message to NATS. Error: %v", err)
 	}
-	c.chMap[subject] = sendNatsCh
-	log.Infof("Bound chan '%v' for NATS subject '%s'", sendNatsCh, subject)
 	return nil
 }
 
-// GetSubjectChan returns the channel bound to the parameter subject
-func (c *NatsSender) GetSubjectChan(subject string) (chan *model.MessageBody, bool) {
-	log.Infof("Getting chan for NATS subject '%s'", subject)
-	ch, ok := c.chMap[subject]
-	log.Infof("Got chan '%v' for NATS subject '%s'", ch, subject)
-	return ch, ok
-}
-
 // Close closes the connection to the NATS client
-func (c *NatsSender) Close() {
-	c.client.Close()
+func (s *NatsSender) Close() {
+	s.client.Close()
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/collector/check"
 	"github.com/StackVista/stackstate-agent/pkg/telemetry"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-process-agent/pkg/nats"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -50,7 +51,7 @@ type Collector struct {
 	// Set to 1 if enabled 0 is not. We're using an integer
 	// so we can use the sync/atomic for thread-safe access.
 	realTimeEnabled int32
-	natsSender      NatsSender
+	natsSender      nats.NatsSender
 }
 
 // NewCollector creates a new Collector
@@ -60,19 +61,12 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 		return Collector{}, err
 	}
 
-	natsSender := CreateNatsSender()
+	natsSender := nats.CreateNatsSender()
 
 	enabledChecks := make([]checks.Check, 0)
 	for _, c := range checks.All {
 		if cfg.CheckIsEnabled(c.Name()) {
 			c.Init(cfg, sysInfo)
-			if c.NatsSubject() != "" && natsSender.Enabled {
-				err := natsSender.BindSubject(c.NatsSubject())
-				if err != nil {
-					_ = log.Errorf("Could not bind nats send chan, disabling NatsSender. Error: ", err)
-					natsSender.Enabled = false
-				}
-			}
 			enabledChecks = append(enabledChecks, c)
 		}
 	}
@@ -239,14 +233,28 @@ func (l *Collector) run(exit chan bool) {
 }
 
 func (l *Collector) sendMessageToNATS(subject string, m model.MessageBody, timestamp time.Time) {
-	log.Infof("sendMessageToNATS")
-	if subjectChan, ok := l.natsSender.GetSubjectChan(subject); ok {
-		log.Infof("Sending NATS message to subject `%s`", subjectChan)
-		subjectChan <- &m
-		log.Infof("Sent message to Nats, message = %+v", m)
-	} else {
-		log.Errorf("Could not find NATS chan bound to subject `%s`", subject)
+	msgType, err := model.DetectMessageType(m)
+	if err != nil {
+		log.Errorf("Unable to detect message type: %s", err)
+		return
 	}
+
+	encodedMessage, err := model.EncodeMessage(model.Message{
+		Header: model.MessageHeader{
+			Version:   model.MessageV3,
+			Encoding:  model.MessageEncodingZstdPB,
+			Type:      msgType,
+			Timestamp: timestamp.UnixNano() / int64(time.Millisecond),
+		}, Body: m})
+	if err != nil {
+		log.Errorf("Unable to encode message: %s", err)
+	}
+
+	err = l.natsSender.SendMessage(subject, encodedMessage)
+	if err != nil {
+		log.Errorf("Could not send message to NATS", subject)
+	}
+	log.Infof("Message sent to NATS on subject '%s'", subject)
 }
 
 func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp time.Time) {

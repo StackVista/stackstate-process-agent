@@ -140,7 +140,7 @@ func (l *Collector) run(exit chan bool) {
 	}
 	log.Infof("Starting process-agent for host=%s, endpoints=%s, enabled checks=%v", l.cfg.HostName, eps, l.cfg.EnabledChecks)
 
-	go handleSignals(exit)
+	handleSignals(exit)
 	heartbeat := time.NewTicker(15 * time.Second)
 	queueSizeTicker := time.NewTicker(10 * time.Second)
 	featuresTicker := time.NewTicker(5 * time.Second)

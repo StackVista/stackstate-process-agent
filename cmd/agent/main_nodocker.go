@@ -22,6 +22,7 @@ func handleSignals(exit chan bool) {
 		case sig := <-signalCh:
 			log.Infof("Received signal '%s', shutting down...", sig)
 			signalCh <- nil
+			exit <- true
 		default:
 			// continue
 		}

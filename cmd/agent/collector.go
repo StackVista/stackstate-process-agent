@@ -5,12 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
-	"github.com/StackVista/stackstate-agent/pkg/batcher"
-	"github.com/StackVista/stackstate-agent/pkg/collector/check"
-	"github.com/StackVista/stackstate-agent/pkg/telemetry"
-	"github.com/StackVista/stackstate-agent/pkg/topology"
-	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -18,6 +12,13 @@ import (
 	"reflect"
 	"sync/atomic"
 	"time"
+
+	"github.com/StackVista/stackstate-agent/pkg/aggregator"
+	"github.com/StackVista/stackstate-agent/pkg/batcher"
+	"github.com/StackVista/stackstate-agent/pkg/collector/check"
+	"github.com/StackVista/stackstate-agent/pkg/telemetry"
+	"github.com/StackVista/stackstate-agent/pkg/topology"
+	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 
 	log "github.com/cihub/seelog"
 
@@ -140,7 +141,7 @@ func (l *Collector) run(exit chan bool) {
 	}
 	log.Infof("Starting process-agent for host=%s, endpoints=%s, enabled checks=%v", l.cfg.HostName, eps, l.cfg.EnabledChecks)
 
-	handleSignals(exit)
+	go HandleSignals(exit)
 	heartbeat := time.NewTicker(15 * time.Second)
 	queueSizeTicker := time.NewTicker(10 * time.Second)
 	featuresTicker := time.NewTicker(5 * time.Second)

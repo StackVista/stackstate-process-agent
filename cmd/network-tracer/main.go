@@ -114,7 +114,7 @@ func HandleSignals(exit chan bool) {
 		switch sig {
 		case syscall.SIGINT, syscall.SIGTERM:
 			log.Infof("Caught signal '%s'; terminating.", sig)
-			close(exit)
+			exit <- true
 			return
 		case syscall.SIGPIPE:
 			// By default systemd redirects the stdout to journald. When journald is stopped or crashes we receive a SIGPIPE signal.

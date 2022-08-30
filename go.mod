@@ -17,6 +17,8 @@ replace (
 	github.com/iovisor/gobpf => github.com/StackVista/gobpf v0.1.2
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	github.com/spf13/viper => github.com/DataDog/viper v1.7.1
+	golang.org/x/net => golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
+	google.golang.org/grpc => github.com/grpc/grpc-go v1.26.0
 )
 
 // Pinned to kubernetes-1.16.2
@@ -24,7 +26,6 @@ replace github.com/kubernetes-incubator/custom-metrics-apiserver => github.com/k
 
 // Pinned to kubernetes-1.16.2
 replace (
-	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8

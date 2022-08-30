@@ -59,7 +59,7 @@ require (
 	github.com/DataDog/sketches-go v1.1.0
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705
 	github.com/StackVista/agent-transport-protocol v0.0.0-20220830165318-0e1a220b7e2f
-	github.com/StackVista/stackstate-agent v0.0.0-20220408162826-ba4ecc9075a2
+	github.com/StackVista/stackstate-agent v0.0.0-20220607135049-e87d566f908c
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575

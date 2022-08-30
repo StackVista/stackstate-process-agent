@@ -3,6 +3,7 @@
 package checks
 
 import (
+	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats/subjects"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/patrickmn/go-cache"
@@ -46,7 +47,7 @@ func (r *RTProcessCheck) Endpoint() string { return "/api/v1/collector" }
 
 // NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
 // if the value is different than "" (empty string)
-func (r *RTProcessCheck) NatsSubject() string { return "" }
+func (r *RTProcessCheck) NatsSubject() string { return subjects.ProcessAgentCollector }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (r *RTProcessCheck) RealTime() bool { return true }

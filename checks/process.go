@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"github.com/StackVista/agent-transport-protocol/pkg/transport/nats/subjects"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"sync"
@@ -55,7 +56,7 @@ func (p *ProcessCheck) Endpoint() string { return "/api/v1/collector" }
 
 // NatsSubject returns the Nats Subject where this check is submitted. The check will send there instead of the endpoint.
 // if the value is different than "" (empty string)
-func (p *ProcessCheck) NatsSubject() string { return "" }
+func (p *ProcessCheck) NatsSubject() string { return subjects.ProcessAgentCollector }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (p *ProcessCheck) RealTime() bool { return false }

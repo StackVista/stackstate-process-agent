@@ -178,9 +178,7 @@ func (l *Collector) run(exit chan bool) {
 
 				if result.payload != nil {
 					payload := result.payload
-					for _, m := range payload.messages {
-						l.postMessage(payload.endpoint, m, payload.timestamp)
-					}
+					l.sendMessages(payload)
 
 					for _, metric := range payload.metrics {
 						btch.SubmitRawMetricsData(checkID, metric)
@@ -254,6 +252,18 @@ func (l *Collector) run(exit chan bool) {
 		}(c)
 	}
 	<-exit
+}
+
+func (l *Collector) sendMessages(payload *checkPayload) {
+	if payload.natsSubject != "" && l.natsSender.Enabled {
+		for _, m := range payload.messages {
+			l.sendMessageToNATS(payload.natsSubject, m, payload.timestamp)
+		}
+	} else {
+		for _, m := range payload.messages {
+			l.postMessage(payload.endpoint, m, payload.timestamp)
+		}
+	}
 }
 
 func (l *Collector) sendMessageToNATS(subject string, m model.MessageBody, timestamp time.Time) {

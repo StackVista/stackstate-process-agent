@@ -794,6 +794,7 @@ func TestProcessFormatting(t *testing.T) {
 		cur, last                   []*process.FilledProcess
 		maxSize                     int
 		blacklist                   []string
+		whitelist                   []string
 		expectedTotal               int
 		expectedChunks              int
 		amountTopCPUPercentageUsage int
@@ -848,6 +849,11 @@ func TestProcessFormatting(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := config.NewDefaultAgentConfig()
 
+			wl := make([]*regexp.Regexp, 0, len(tc.whitelist))
+			for _, s := range tc.whitelist {
+				wl = append(wl, regexp.MustCompile(s))
+			}
+			cfg.Whitelist = wl
 			bl := make([]*regexp.Regexp, 0, len(tc.blacklist))
 			for _, s := range tc.blacklist {
 				bl = append(bl, regexp.MustCompile(s))

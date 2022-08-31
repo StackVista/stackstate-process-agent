@@ -26,7 +26,12 @@ type ProcessCommon struct {
 // returns a function to filter short-lived and blacklisted processes based on the configuration provided
 func keepProcess(cfg *config.AgentConfig) func(*ProcessCommon) bool {
 	return func(process *ProcessCommon) bool {
-		return !isProcessShortLived(process.Identifier, process.FirstObserved, cfg) && !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
+		if isProcessWhitelisted(cfg, process.Command.Args) {
+			return true
+		}
+		longLiving := !isProcessShortLived(process.Identifier, process.FirstObserved, cfg)
+		blacklisted := isProcessBlacklisted(cfg, process.Command.Args)
+		return longLiving && !blacklisted
 	}
 }
 
@@ -61,97 +66,77 @@ func sortAndTakeN(processes []*ProcessCommon, sortingFunc func([]*ProcessCommon)
 }
 
 func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentConfig, totalCPUUsage float32, totalMemUsage uint64) []*ProcessCommon {
-	cpuProcessChan := make(chan []*ProcessCommon)
-	cpuProcesses := make([]*ProcessCommon, len(commonProcesses))
-	copy(cpuProcesses, commonProcesses)
-
-	ioReadProcessesChan := make(chan []*ProcessCommon)
-	ioReadProcesses := make([]*ProcessCommon, len(commonProcesses))
-	copy(ioReadProcesses, commonProcesses)
-
-	ioWriteProcessesChan := make(chan []*ProcessCommon)
-	ioWriteProcesses := make([]*ProcessCommon, len(commonProcesses))
-	copy(ioWriteProcesses, commonProcesses)
-
-	memoryProcessesChan := make(chan []*ProcessCommon)
-	memoryProcesses := make([]*ProcessCommon, len(commonProcesses))
-	copy(memoryProcesses, commonProcesses)
-
-	// defer closing of channels
+	cpuProcessChan := calculateProcessesConcurrently(commonProcesses, func(processes []*ProcessCommon) []*ProcessCommon {
+		if totalCPUUsage >= float32(cfg.CPUPercentageUsageThreshold) {
+			return sortAndTakeN(processes, sortProcessesByCPUUsage, cfg.AmountTopCPUPercentageUsage)
+		}
+		return make([]*ProcessCommon, 0)
+	})
 	defer close(cpuProcessChan)
+
+	ioReadProcessesChan := calculateProcessesConcurrently(commonProcesses, func(processes []*ProcessCommon) []*ProcessCommon {
+		return sortAndTakeN(processes, sortProcessesByIORead, cfg.AmountTopIOReadUsage)
+	})
 	defer close(ioReadProcessesChan)
+
+	ioWriteProcessesChan := calculateProcessesConcurrently(commonProcesses, func(processes []*ProcessCommon) []*ProcessCommon {
+		return sortAndTakeN(processes, sortProccessByIOWrite, cfg.AmountTopIOWriteUsage)
+	})
 	defer close(ioWriteProcessesChan)
+
+	memoryProcessesChan := calculateProcessesConcurrently(commonProcesses, func(processes []*ProcessCommon) []*ProcessCommon {
+		if totalMemUsage >= uint64(cfg.MemoryUsageThreshold) {
+			return sortAndTakeN(processes, sortProcessesByMemory, cfg.AmountTopMemoryUsage)
+		}
+		return make([]*ProcessCommon, 0)
+	})
 	defer close(memoryProcessesChan)
 
-	// Top Percentage Using Processes, insert into chunked slice and strip from chunk slice
-	go func() {
-		percentageSort := func(processes []*ProcessCommon) func(i, j int) bool {
-			sortingFunc := func(i, j int) bool {
-				return processes[i].CPU.TotalPct > processes[j].CPU.TotalPct
-			}
-
-			return sortingFunc
-		}
-
-		if totalCPUUsage >= float32(cfg.CPUPercentageUsageThreshold) {
-			cpuProcessChan <- sortAndTakeN(cpuProcesses, percentageSort, cfg.AmountTopCPUPercentageUsage)
-		} else {
-			cpuProcessChan <- make([]*ProcessCommon, 0)
-		}
-	}()
-
-	// Top Read IO Using Processes, insert into chunked slice and strip from chunk slice
-	go func() {
-		readIOSort := func(processes []*ProcessCommon) func(i, j int) bool {
-			sortingFunc := func(i, j int) bool {
-				if processes[j].IOStat == nil {
-					return true
-				} else if processes[i].IOStat == nil {
-					return false
-				}
-				return processes[i].IOStat.ReadRate > processes[j].IOStat.ReadRate
-			}
-
-			return sortingFunc
-		}
-		ioReadProcessesChan <- sortAndTakeN(ioReadProcesses, readIOSort, cfg.AmountTopIOReadUsage)
-	}()
-
-	// Top Write IO Using Processes, insert into chunked slice and strip from chunk slice
-	go func() {
-		writeIOSort := func(processes []*ProcessCommon) func(i, j int) bool {
-			sortingFunc := func(i, j int) bool {
-				if processes[j].IOStat == nil {
-					return true
-				} else if processes[i].IOStat == nil {
-					return false
-				}
-				return processes[i].IOStat.WriteRate > processes[j].IOStat.WriteRate
-			}
-
-			return sortingFunc
-		}
-		ioWriteProcessesChan <- sortAndTakeN(ioWriteProcesses, writeIOSort, cfg.AmountTopIOWriteUsage)
-	}()
-
-	// Top Memory Using Processes, insert into chunked slice and strip from chunk slice
-	go func() {
-		memorySort := func(processes []*ProcessCommon) func(i, j int) bool {
-			sortingFunc := func(i, j int) bool {
-				return processes[i].Memory.Rss > processes[j].Memory.Rss
-			}
-
-			return sortingFunc
-		}
-
-		if totalMemUsage >= uint64(cfg.MemoryUsageThreshold) {
-			memoryProcessesChan <- sortAndTakeN(memoryProcesses, memorySort, cfg.AmountTopMemoryUsage)
-		} else {
-			memoryProcessesChan <- make([]*ProcessCommon, 0)
-		}
-	}()
-
 	return append(append(append(<-cpuProcessChan, <-ioReadProcessesChan...), <-ioWriteProcessesChan...), <-memoryProcessesChan...)
+}
+
+func calculateProcessesConcurrently(processes []*ProcessCommon, calculate func([]*ProcessCommon) []*ProcessCommon) chan []*ProcessCommon {
+	resultCh := make(chan []*ProcessCommon)
+	processesCopy := make([]*ProcessCommon, len(processes))
+	copy(processesCopy, processes)
+	go func() {
+		resultCh <- calculate(processesCopy)
+	}()
+	return resultCh
+}
+
+func sortProcessesByCPUUsage(processes []*ProcessCommon) func(i, j int) bool {
+	return func(i, j int) bool {
+		return processes[i].CPU.TotalPct > processes[j].CPU.TotalPct
+	}
+}
+
+func sortProcessesByIORead(processes []*ProcessCommon) func(i, j int) bool {
+	return func(i, j int) bool {
+		if processes[j].IOStat == nil {
+			return true
+		} else if processes[i].IOStat == nil {
+			return false
+		}
+		return processes[i].IOStat.ReadRate > processes[j].IOStat.ReadRate
+	}
+}
+
+func sortProccessByIOWrite(processes []*ProcessCommon) func(i, j int) bool {
+	return func(i, j int) bool {
+		if processes[j].IOStat == nil {
+			return true
+		} else if processes[i].IOStat == nil {
+			return false
+		}
+		return processes[i].IOStat.WriteRate > processes[j].IOStat.WriteRate
+	}
+}
+
+func sortProcessesByMemory(processes []*ProcessCommon) func(i, j int) bool {
+	return func(i, j int) bool {
+		return processes[i].Memory.Rss > processes[j].Memory.Rss
+	}
 }
 
 // Chunks process stats into predefined max per message size
@@ -301,17 +286,28 @@ func createProcessID(pid int32, createTime int64) string {
 func isProcessBlacklisted(
 	cfg *config.AgentConfig,
 	cmdLine []string,
-	exe string,
 ) bool {
 	if len(cmdLine) == 0 {
 		return true
 	}
-
-	if len(cmdLine) == 0 && len(exe) == 0 {
-		return true
-	}
-
 	return config.IsBlacklisted(cmdLine, cfg.Blacklist)
+}
+
+// isProcessWhitelisted checks if we should keep the process regardless of lifetime
+func isProcessWhitelisted(
+	cfg *config.AgentConfig,
+	cmdLine []string,
+) bool {
+	if len(cmdLine) == 0 {
+		return false
+	}
+	cmd := strings.Join(cmdLine, " ")
+	for _, b := range cfg.Whitelist {
+		if b.MatchString(cmd) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *ProcessCheck) createTimesForPIDs(pids []uint32) map[uint32]int64 {

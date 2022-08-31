@@ -14,6 +14,13 @@ const (
 	defaultDDAgentBin = "/opt/datadog-agent/bin/agent/agent"
 )
 
+var defaultWhitelistPatterns = []string{
+	"stackstate-cluster-agent",
+	"agent run",
+	"trace-agent",
+	"process-agent",
+}
+
 // Process blacklist
 var defaultBlacklistPatterns = []string{
 	"^/usr/bin/stress",

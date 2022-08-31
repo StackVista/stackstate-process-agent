@@ -71,12 +71,13 @@ type YamlAgentConfig struct {
 		// TODO: Move to Filters
 		Blacklist struct {
 			Inclusions struct {
-				AmountTopCPUPercentageUsage int `yaml:"amount_top_cpu_pct_usage"`
-				CPUPercentageUsageThreshold int `yaml:"cpu_pct_usage_threshold"`
-				AmountTopIOReadUsage        int `yaml:"amount_top_io_read_usage"`
-				AmountTopIOWriteUsage       int `yaml:"amount_top_io_write_usage"`
-				AmountTopMemoryUsage        int `yaml:"amount_top_mem_usage"`
-				MemoryUsageThreshold        int `yaml:"mem_usage_threshold"`
+				AmountTopCPUPercentageUsage int      `yaml:"amount_top_cpu_pct_usage"`
+				CPUPercentageUsageThreshold int      `yaml:"cpu_pct_usage_threshold"`
+				AmountTopIOReadUsage        int      `yaml:"amount_top_io_read_usage"`
+				AmountTopIOWriteUsage       int      `yaml:"amount_top_io_write_usage"`
+				AmountTopMemoryUsage        int      `yaml:"amount_top_mem_usage"`
+				MemoryUsageThreshold        int      `yaml:"mem_usage_threshold"`
+				Patterns                    []string `yaml:"patterns"`
 			} `yaml:"inclusions"`
 			// A list of regex patterns that will exclude a process if matched.
 			Patterns []string `yaml:"patterns"`
@@ -249,8 +250,9 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		agentConf.CheckIntervals["connections"] = time.Duration(yc.Process.Intervals.Connections) * time.Second
 	}
 
-	setProcessBlacklist(agentConf,
+	setupProcessFilteringConfiguration(agentConf,
 		yc.Process.Blacklist.Patterns,
+		yc.Process.Blacklist.Inclusions.Patterns,
 		yc.Process.Blacklist.Inclusions.AmountTopCPUPercentageUsage,
 		yc.Process.Blacklist.Inclusions.AmountTopIOReadUsage, yc.Process.Blacklist.Inclusions.AmountTopIOWriteUsage,
 		yc.Process.Blacklist.Inclusions.AmountTopMemoryUsage,

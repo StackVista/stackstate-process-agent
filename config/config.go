@@ -82,6 +82,7 @@ type AgentConfig struct {
 	LogToConsole             bool
 	QueueSize                int
 	Blacklist                []*regexp.Regexp
+	Whitelist                []*regexp.Regexp
 	Scrubber                 *DataScrubber
 	MaxProcFDs               int
 	MaxPerMessage            int
@@ -222,6 +223,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		StatsdPort: 8125,
 
 		Blacklist: deriveFmapConstructRegex(constructRegex, defaultBlacklistPatterns),
+		Whitelist: deriveFmapConstructRegex(constructRegex, defaultWhitelistPatterns),
 
 		// Top resource using process inclusion amounts
 		AmountTopCPUPercentageUsage: 0,
@@ -406,6 +408,16 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 			}
 		}
 		cfg.Blacklist = blacklist
+
+		whitelistPats := agentIni.GetStrArrayDefault(ns, "whitelist", ",", []string{})
+		whitelist := make([]*regexp.Regexp, 0, len(whitelistPats))
+		for _, b := range whitelistPats {
+			r, err := regexp.Compile(b)
+			if err == nil {
+				whitelist = append(whitelist, r)
+			}
+		}
+		cfg.Whitelist = whitelist
 
 		// DataScrubber
 		cfg.Scrubber.Enabled = agentIni.GetBool(ns, "scrub_args", true)
@@ -713,11 +725,14 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.NetworkTracer.EnableProtocolInspection = ok
 	}
 
-	var patterns []string
+	var blacklistPatterns, whitelistPatterns []string
 	amountTopCPUPercentageUsage, amountTopIOReadUsage, amountTopIOWriteUsage, amountTopMemoryUsage := 0, 0, 0, 0
 	CPUPercentageUsageThreshold, memoryUsageThreshold := 0, 0
 	if v := os.Getenv("STS_PROCESS_BLACKLIST_PATTERNS"); v != "" {
-		patterns = strings.Split(v, ",")
+		blacklistPatterns = strings.Split(v, ",")
+	}
+	if v := os.Getenv("STS_PROCESS_WHITELIST_PATTERNS"); v != "" {
+		whitelistPatterns = strings.Split(v, ",")
 	}
 	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_BLACKLIST_INCLUSIONS_TOP_CPU")); err == nil {
 		amountTopCPUPercentageUsage = v
@@ -737,8 +752,8 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_BLACKLIST_INCLUSIONS_MEM_THRESHOLD")); err == nil {
 		memoryUsageThreshold = v
 	}
-	setProcessBlacklist(c,
-		patterns,
+	setupProcessFilteringConfiguration(c,
+		blacklistPatterns, whitelistPatterns,
 		amountTopCPUPercentageUsage, amountTopIOReadUsage, amountTopIOWriteUsage, amountTopMemoryUsage,
 		CPUPercentageUsageThreshold, memoryUsageThreshold)
 
@@ -808,16 +823,23 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	return c
 }
 
-func setProcessBlacklist(agentConf *AgentConfig,
-	patterns []string,
+func setupProcessFilteringConfiguration(
+	agentConf *AgentConfig,
+	blacklistPatterns []string, whitelistPatterns []string,
 	amountTopCPUPercentageUsage int, amountTopIOReadUsage int, amountTopIOWriteUsage int, amountTopMemoryUsage int,
 	CPUPercentageUsageThreshold int, MemoryUsageThreshold int,
 ) {
-	if len(patterns) > 0 {
-		log.Infof("Overriding processes blacklist to %v", patterns)
-		agentConf.Blacklist = deriveFmapConstructRegex(constructRegex, patterns)
+	if len(blacklistPatterns) > 0 {
+		log.Infof("Overriding processes blacklist to %v", blacklistPatterns)
+		agentConf.Blacklist = deriveFmapConstructRegex(constructRegex, blacklistPatterns)
 	} else {
 		log.Infof("Using default processes blacklist %v", agentConf.Blacklist)
+	}
+	if len(whitelistPatterns) > 0 {
+		log.Infof("Overriding processes whitelist to %v", whitelistPatterns)
+		agentConf.Whitelist = deriveFmapConstructRegex(constructRegex, whitelistPatterns)
+	} else {
+		log.Infof("Using default processes whitelist %v", agentConf.Whitelist)
 	}
 	if amountTopCPUPercentageUsage != 0 {
 		log.Infof("Overriding top CPU percentage using processes inclusions to %d", amountTopCPUPercentageUsage)
@@ -854,12 +876,12 @@ func setProcessBlacklist(agentConf *AgentConfig,
 		}
 	}
 
-	// log warning if blacklist inclusions is specified without patterns
+	// log warning if blacklist inclusions is specified without blacklistPatterns
 	if (agentConf.AmountTopCPUPercentageUsage > 0 ||
 		agentConf.AmountTopIOReadUsage > 0 ||
 		agentConf.AmountTopIOWriteUsage > 0 ||
 		agentConf.AmountTopMemoryUsage > 0) && len(agentConf.Blacklist) == 0 {
-		log.Warn("Process blacklist inclusions specified without a blacklist pattern. Please add process blacklist patterns to benefit from the top process inclusions")
+		log.Warn("Process blacklist inclusions specified without a blacklist pattern. Please add process blacklist blacklistPatterns to benefit from the top process inclusions")
 	}
 
 }

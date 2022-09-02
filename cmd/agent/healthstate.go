@@ -46,7 +46,11 @@ func (l *Collector) integrationTopology(check checks.Check) ([]topology.Componen
 	agentID := l.agentID()
 	agentIntegrationID := l.agentIntegrationID(check)
 
-	commonTags := []string{fmt.Sprintf("hostname:%s", hostname)}
+	commonTags := []string{
+		fmt.Sprintf("hostname:%s", hostname),
+		fmt.Sprintf("host:%s", hostname),
+		"agent-observability",
+	}
 	if l.cfg.ClusterName != "" {
 		commonTags = append(commonTags, fmt.Sprintf("cluster-name:%s", l.cfg.ClusterName))
 	}
@@ -82,6 +86,13 @@ func (l *Collector) integrationTopology(check checks.Check) ([]topology.Componen
 			},
 		},
 	}
+
+	if l.cfg.ClusterName != "" {
+		for _, component := range components {
+			component.Data["cluster"] = l.cfg.ClusterName
+		}
+	}
+
 	relations := []topology.Relation{
 		{
 			ExternalID: fmt.Sprintf("%s -> %s", agentID, agentIntegrationID),

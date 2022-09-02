@@ -58,7 +58,8 @@ func (l *Collector) integrationTopology(check checks.Check) ([]topology.Componen
 				Name: "stackstate-agent",
 			},
 			Data: topology.Data{
-				"name":      fmt.Sprintf("StackState Process Agent:%s", hostname),
+				"name":      "Processes Agent",
+				"function":  "process-agent",
 				"hostname":  hostname,
 				"version":   Version,
 				"buildInfo": publishVersion(),

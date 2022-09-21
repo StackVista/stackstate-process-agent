@@ -46,8 +46,8 @@ type ConnectionsCheck struct {
 	cache *NetworkRelationCache
 
 	connTracker           *cache.Cache
-	localPortReuseMeter   prometheus.Histogram
-	newConnectionsCounter prometheus.Counter
+	localPortReuseMeter   *prometheus.HistogramVec
+	newConnectionsCounter *prometheus.CounterVec
 }
 
 type connectionMetrics struct {
@@ -110,19 +110,19 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 			connTrack := conn.(*ConnTrack)
 			if connTrack.Conn != connID {
 				log.Debugf("local ip:port %s is reused by new connection %v (old is %v)", localIPPort, connID, connTrack.Conn)
-				c.localPortReuseMeter.Observe(float64(time.Since(connTrack.Start).Milliseconds()))
+				c.localPortReuseMeter.WithLabelValues(connID.Laddr).Observe(float64(time.Since(connTrack.Start).Milliseconds()))
 				c.connTracker.Set(localIPPort, &ConnTrack{
 					Start: start,
 					Conn:  connID,
 				}, cache.DefaultExpiration)
-				c.newConnectionsCounter.Inc()
+				c.newConnectionsCounter.WithLabelValues(connID.Laddr).Inc()
 			}
 		} else {
 			c.connTracker.Set(localIPPort, &ConnTrack{
 				Start: start,
 				Conn:  connID,
 			}, cache.DefaultExpiration)
-			c.newConnectionsCounter.Inc()
+			c.newConnectionsCounter.WithLabelValues(connID.Laddr).Inc()
 		}
 	}
 

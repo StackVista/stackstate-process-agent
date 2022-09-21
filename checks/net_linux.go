@@ -62,28 +62,31 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 
 	c.cache = NewNetworkRelationCache(cfg.NetworkRelationCacheDurationMin)
 	c.connTracker = cache.New(5*60*time.Second, 10*time.Second)
-	c.newConnectionsCounter = prometheus.NewCounter(prometheus.CounterOpts{
+	c.newConnectionsCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "stackstate",
 		Subsystem: "processagent",
 		Name:      "connections_created",
 		ConstLabels: map[string]string{
 			"hostname": cfg.HostName,
 		},
-	})
-	c.localPortReuseMeter = prometheus.NewHistogram(prometheus.HistogramOpts{
-		Namespace: "stackstate",
-		Subsystem: "processagent",
-		Name:      "localport_reuse_period",
-		ConstLabels: map[string]string{
-			"hostname": cfg.HostName,
+	}, []string{"local_ip"})
+	c.localPortReuseMeter = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: "stackstate",
+			Subsystem: "processagent",
+			Name:      "localport_reuse_period",
+			ConstLabels: map[string]string{
+				"hostname": cfg.HostName,
+			},
+			Buckets: []float64{
+				0.1, 1, 10, 100,
+				1000, 2000, 4000, 6000, 8000,
+				10000, 20000, 30000, 40000, 50000, 60000,
+				120000, 240000, 300000,
+			},
 		},
-		Buckets: []float64{
-			0.1, 1, 10, 100,
-			1000, 2000, 4000, 6000, 8000,
-			10000, 20000, 30000, 40000, 50000, 60000,
-			120000, 240000, 300000,
-		},
-	})
+		[]string{"local_ip"},
+	)
 	err = prometheus.Register(c.newConnectionsCounter)
 	if err != nil {
 		log.Errorf("can't register prometheus connections_created: %v", err)

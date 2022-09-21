@@ -104,23 +104,23 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		Conn  common.ConnTuple
 	}
 	for _, conn := range conns {
-		connId := conn.GetConnection()
-		localIpPort := fmt.Sprintf("%s:%d", connId.Laddr, connId.Lport)
-		if conn, found := c.connTracker.Get(localIpPort); found {
+		connID := conn.GetConnection()
+		localIPPort := fmt.Sprintf("%s:%d", connID.Laddr, connID.Lport)
+		if conn, found := c.connTracker.Get(localIPPort); found {
 			connTrack := conn.(*ConnTrack)
-			if connTrack.Conn != connId {
-				log.Debugf("local ip:port %s is reused by new connection %v (old is %v)", localIpPort, connId, connTrack.Conn)
+			if connTrack.Conn != connID {
+				log.Debugf("local ip:port %s is reused by new connection %v (old is %v)", localIPPort, connID, connTrack.Conn)
 				c.localPortReuseMeter.Observe(float64(time.Since(connTrack.Start).Milliseconds()))
-				c.connTracker.Set(localIpPort, &ConnTrack{
+				c.connTracker.Set(localIPPort, &ConnTrack{
 					Start: start,
-					Conn:  connId,
+					Conn:  connID,
 				}, cache.DefaultExpiration)
 				c.newConnectionsCounter.Inc()
 			}
 		} else {
-			c.connTracker.Set(localIpPort, &ConnTrack{
+			c.connTracker.Set(localIPPort, &ConnTrack{
 				Start: start,
-				Conn:  connId,
+				Conn:  connID,
 			}, cache.DefaultExpiration)
 			c.newConnectionsCounter.Inc()
 		}

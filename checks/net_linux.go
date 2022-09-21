@@ -77,6 +77,12 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 		ConstLabels: map[string]string{
 			"hostname": cfg.HostName,
 		},
+		Buckets: []float64{
+			0.1, 1, 10, 100,
+			1000, 2000, 4000, 6000, 8000,
+			10000, 20000, 30000, 40000, 50000, 60000,
+			120000, 240000, 300000,
+		},
 	})
 	err = prometheus.Register(c.newConnectionsCounter)
 	if err != nil {

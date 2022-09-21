@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
+	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"strings"
 	"time"
@@ -42,6 +44,10 @@ type ConnectionsCheck struct {
 
 	// Use this as the network relation cache to calculate rate metrics and drop short-lived network relations
 	cache *NetworkRelationCache
+
+	connTracker           *cache.Cache
+	localPortReuseMeter   prometheus.Histogram
+	newConnectionsCounter prometheus.Counter
 }
 
 type connectionMetrics struct {
@@ -91,6 +97,33 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	type ConnTrack struct {
+		Start time.Time
+		Conn  common.ConnTuple
+	}
+	for _, conn := range conns {
+		connId := conn.GetConnection()
+		localIpPort := fmt.Sprintf("%s:%d", connId.Laddr, connId.Lport)
+		if conn, found := c.connTracker.Get(localIpPort); found {
+			connTrack := conn.(*ConnTrack)
+			if connTrack.Conn != connId {
+				log.Debugf("local ip:port %s is reused by new connection %v (old is %v)", localIpPort, connId, connTrack.Conn)
+				c.localPortReuseMeter.Observe(float64(time.Since(connTrack.Start).Milliseconds()))
+				c.connTracker.Set(localIpPort, &ConnTrack{
+					Start: start,
+					Conn:  connId,
+				}, cache.DefaultExpiration)
+				c.newConnectionsCounter.Inc()
+			}
+		} else {
+			c.connTracker.Set(localIpPort, &ConnTrack{
+				Start: start,
+				Conn:  connId,
+			}, cache.DefaultExpiration)
+			c.newConnectionsCounter.Inc()
+		}
 	}
 
 	if c.prevCheckTime.IsZero() { // End check early if this is our first run.

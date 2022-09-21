@@ -5,7 +5,9 @@ package checks
 
 import (
 	"bytes"
+	"github.com/prometheus/client_golang/prometheus"
 	"os"
+	"time"
 
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
@@ -13,6 +15,8 @@ import (
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
 	tracerConfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 	log "github.com/cihub/seelog"
+
+	"github.com/patrickmn/go-cache"
 )
 
 // Init initializes a ConnectionsCheck instance.
@@ -57,6 +61,31 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 	}
 
 	c.cache = NewNetworkRelationCache(cfg.NetworkRelationCacheDurationMin)
+	c.connTracker = cache.New(5*60*time.Second, 10*time.Second)
+	c.newConnectionsCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "stackstate",
+		Subsystem: "processagent",
+		Name:      "connections_created",
+		ConstLabels: map[string]string{
+			"hostname": cfg.HostName,
+		},
+	})
+	c.localPortReuseMeter = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "stackstate",
+		Subsystem: "processagent",
+		Name:      "localport_reuse_period",
+		ConstLabels: map[string]string{
+			"hostname": cfg.HostName,
+		},
+	})
+	err = prometheus.Register(c.newConnectionsCounter)
+	if err != nil {
+		log.Errorf("can't register prometheus connections_created: %v", err)
+	}
+	err = prometheus.Register(c.localPortReuseMeter)
+	if err != nil {
+		log.Errorf("can't register prometheus localport_reuse_period: %v", err)
+	}
 
 	c.buf = new(bytes.Buffer)
 }

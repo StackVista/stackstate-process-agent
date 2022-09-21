@@ -70,6 +70,7 @@ require (
 	github.com/kubernetes-incubator/custom-metrics-apiserver v0.0.0-20190116221620-b7016fc85e1c // indirect
 	github.com/mailru/easyjson v0.7.7
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/prometheus/client_golang v1.5.1
 	github.com/pytimer/win-netstat v0.0.0-20180710031115-efa1aff6aafc // indirect
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
 	github.com/smartystreets/goconvey v1.7.2 // indirect

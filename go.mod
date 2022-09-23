@@ -64,6 +64,7 @@ require (
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
 	github.com/awalterschulze/goderive v0.0.0-20220721104540-886b66b111a4 // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
+	github.com/florianl/go-conntrack v0.3.0
 	github.com/go-ini/ini v1.55.0
 	github.com/gogo/protobuf v1.3.1
 	github.com/iovisor/gobpf v0.1.2 // indirect

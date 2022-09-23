@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
+	"github.com/florianl/go-conntrack"
 	"github.com/patrickmn/go-cache"
 	"github.com/prometheus/client_golang/prometheus"
+	net2 "net"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/DataDog/sketches-go/ddsketch"
@@ -62,6 +65,19 @@ type statusCodeGroup struct {
 	ddSketch *ddsketch.DDSketch
 }
 
+var (
+	conntrackClient *conntrack.Nfct
+)
+
+func init() {
+	c, err := conntrack.Open(&conntrack.Config{})
+	if err != nil {
+		log.Errorf("cant open conntrack: %v", err)
+	} else {
+		conntrackClient = c
+	}
+}
+
 // Name returns the name of the ConnectionsCheck.
 func (c *ConnectionsCheck) Name() string { return "connections" }
 
@@ -97,6 +113,17 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	if conntrackClient != nil {
+		for _, conn := range conns {
+			ip, port := c.getActualDestination(conn)
+			if ip != "" && port != 0 {
+				if conn.Remote != ip || conn.RemotePort != port {
+					log.Warnf("conntrack: found mismatch %s:%d (actual is %s:%d)", conn.Local, conn.LocalPort, ip, port)
+				}
+			}
+		}
 	}
 
 	type ConnTrack struct {
@@ -235,6 +262,58 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 		}
 	}
 	return cxs
+}
+
+func (c *ConnectionsCheck) getActualDestination(conn common.ConnectionStats) (string, uint16) {
+	if conn.Type != common.TCP {
+		return "", 0
+	}
+	family := conntrack.IPv4
+	if conn.Family == common.AF_INET6 {
+		family = conntrack.IPv6
+	}
+	tcp := uint8(syscall.IPPROTO_TCP)
+
+	sip := net2.ParseIP(conn.Local)
+	dip := net2.ParseIP(conn.Remote)
+	if sip == nil || dip == nil {
+		return "", 0
+	}
+	sport := conn.LocalPort
+	dport := conn.RemotePort
+
+	req := conntrack.Con{
+		Origin: &conntrack.IPTuple{
+			Src: &sip,
+			Dst: &dip,
+			Proto: &conntrack.ProtoTuple{
+				Number:  &tcp,
+				SrcPort: &sport,
+				DstPort: &dport,
+			},
+		},
+	}
+	sessions, err := conntrackClient.Get(conntrack.Conntrack, family, req)
+	if err != nil {
+		log.Warnf("conntrack: can't lookup connection %v: %v", conn, err)
+		return "", 0
+	}
+	for _, s := range sessions {
+		if !ipTupleValid(s.Origin) || !ipTupleValid(s.Reply) {
+			continue
+		}
+		var reply *conntrack.IPTuple
+		if ipTuplesEqual(req.Origin, s.Origin) {
+			reply = s.Reply
+		} else if ipTuplesEqual(req.Origin, s.Reply) {
+			reply = s.Origin
+		}
+		if reply == nil {
+			continue
+		}
+		return reply.Src.String(), *reply.Proto.SrcPort
+	}
+	return "", 0
 }
 
 func formatMetrics(metrics []common.ConnectionMetric, elapsedDuration time.Duration) []*model.ConnectionMetric {
@@ -479,5 +558,22 @@ func isRelationShortLived(relationID string, firstObserved int64, cfg *config.Ag
 		"process_config.filters.short_lived_network_relations.qualifier_secs.",
 		relationID, cfg.ShortLivedNetworkRelationQualifierSecs,
 	)
+	return true
+}
+
+func ipTuplesEqual(a, b *conntrack.IPTuple) bool {
+	return a.Src.Equal(*b.Src) && a.Dst.Equal(*b.Dst) && *a.Proto.SrcPort == *b.Proto.SrcPort && *a.Proto.DstPort == *b.Proto.DstPort
+}
+
+func ipTupleValid(t *conntrack.IPTuple) bool {
+	if t == nil {
+		return false
+	}
+	if t.Src == nil || t.Dst == nil || t.Proto == nil {
+		return false
+	}
+	if t.Proto.SrcPort == nil || t.Proto.DstPort == nil {
+		return false
+	}
 	return true
 }

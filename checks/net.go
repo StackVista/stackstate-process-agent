@@ -193,6 +193,14 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 						ConnectionIdentifier:   relationID,
 						ApplicationProtocol:    conn.ApplicationProtocol,
 						Metrics:                formatMetrics(conn.Metrics, prevCheckTimeDiff),
+						Natladdr: &model.Addr{
+							Ip:   conn.NATLocal.Host,
+							Port: int32(conn.NATLocal.Port),
+						},
+						Natraddr: &model.Addr{
+							Ip:   conn.NATRemote.Host,
+							Port: int32(conn.NATRemote.Port),
+						},
 					})
 				}
 			}

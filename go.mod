@@ -63,6 +63,7 @@ require (
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
+	github.com/florianl/go-conntrack v0.3.0 // indirect
 	github.com/go-ini/ini v1.55.0
 	github.com/gogo/protobuf v1.3.1
 	github.com/mailru/easyjson v0.7.7

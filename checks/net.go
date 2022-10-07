@@ -173,6 +173,20 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 						prevRecvBytes = prevValues.RecvBytes
 					}
 
+					var natLaddr, natRaddr *model.Addr
+					if conn.NATLocal != nil {
+						natLaddr = &model.Addr{
+							Ip:   conn.NATLocal.Host,
+							Port: int32(conn.NATLocal.Port),
+						}
+					}
+					if conn.NATRemote != nil {
+						natRaddr = &model.Addr{
+							Ip:   conn.NATRemote.Host,
+							Port: int32(conn.NATRemote.Port),
+						}
+					}
+
 					cxs = append(cxs, &model.Connection{
 						Pid:           int32(conn.Pid),
 						PidCreateTime: pidCreateTime,
@@ -193,14 +207,8 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 						ConnectionIdentifier:   relationID,
 						ApplicationProtocol:    conn.ApplicationProtocol,
 						Metrics:                formatMetrics(conn.Metrics, prevCheckTimeDiff),
-						Natladdr: &model.Addr{
-							Ip:   conn.NATLocal.Host,
-							Port: int32(conn.NATLocal.Port),
-						},
-						Natraddr: &model.Addr{
-							Ip:   conn.NATRemote.Host,
-							Port: int32(conn.NATRemote.Port),
-						},
+						Natladdr:               natLaddr,
+						Natraddr:               natRaddr,
 					})
 				}
 			}

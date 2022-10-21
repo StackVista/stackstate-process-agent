@@ -4,7 +4,7 @@ def get_tag_set(opts)
     tag_set = 'docker kubelet kubeapiserver linux cri containerd' # Default tags for non-windows OSes (e.g. linux)
     tag_set += ' linux_bpf' if opts[:bpf]    # Add BPF if ebpf exists
     tag_set += ' netgo' if opts[:bpf] && opts[:static]
-    cmd += " -tags \'#{tag_set}\'"
+    cmd += "-tags \'#{tag_set}\'"
   end
   return cmd
 end

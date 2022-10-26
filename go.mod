@@ -61,7 +61,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705
 	github.com/StackVista/stackstate-agent v0.0.0-20220607135049-e87d566f908c
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
-	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
+	github.com/StackVista/tcptracer-bpf v7.0.7-0.20221026170704-46375436230c+incompatible
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/florianl/go-conntrack v0.3.0 // indirect
 	github.com/go-ini/ini v1.55.0
@@ -118,7 +118,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/emicklei/go-restful v2.9.6+incompatible // indirect
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/florianl/go-conntrack v0.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.3 // indirect
@@ -129,7 +128,7 @@ require (
 	github.com/gogo/googleapis v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/gopacket v1.1.17 // indirect
 	github.com/google/uuid v1.1.1 // indirect
@@ -148,6 +147,7 @@ require (
 	github.com/iovisor/gobpf v0.1.2 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/josharian/native v0.0.0-20200817173448-b6b71def0850 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
@@ -156,7 +156,8 @@ require (
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/mdlayher/netlink v1.1.0 // indirect
+	github.com/mdlayher/netlink v1.4.1 // indirect
+	github.com/mdlayher/socket v0.0.0-20210307095302-262dc9984e00 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -205,7 +206,7 @@ require (
 	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/grpc v1.42.0 // indirect
-	google.golang.org/protobuf v1.27.1 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86 // indirect

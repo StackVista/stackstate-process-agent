@@ -295,17 +295,18 @@ func NewDefaultAgentConfig() *AgentConfig {
 		},
 	}
 
-	isContainerized := os.Getenv("DOCKER_STS_AGENT") != ""
 	// Set default values for proc/sys paths if unset.
 	// Don't set this is /host is not mounted to use context within container.
 	// Generally only applicable for container-only cases like Fargate.
-	if isContainerized && util.PathExists("/host") {
+	if ddconfig.IsContainerized() && util.PathExists("/host") {
 		if v := os.Getenv("HOST_PROC"); v == "" {
 			os.Setenv("HOST_PROC", "/host/proc")
 		}
 		if v := os.Getenv("HOST_SYS"); v == "" {
 			os.Setenv("HOST_SYS", "/host/sys")
 		}
+	}
+	if ddconfig.IsContainerized() && util.PathExists("/host/sys/fs/cgroup/") {
 		ddconfig.Datadog.SetDefault("container_cgroup_root", "/host/sys/fs/cgroup/")
 	}
 

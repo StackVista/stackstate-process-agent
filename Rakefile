@@ -17,6 +17,7 @@ desc "Setup dependencies"
 task :deps do
   system("go install golang.org/x/lint/golint@6edffad5e616")
   system("go install github.com/awalterschulze/goderive@886b66b111a4")
+  system("go mod vendor")
 end
 
 task :default => [:ci]

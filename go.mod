@@ -225,5 +225,4 @@ require (
 	github.com/pytimer/win-netstat v0.0.0-20180710031115-efa1aff6aafc // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/tools v0.2.0 // indirect
-	gopkg.in/ini.v1 v1.66.3 // indirect
 )

@@ -8,6 +8,7 @@ GID    ?= $(shell id -g)
 # Workaround for target completion, because Makefile does not like : in the target commands
 colon  := :
 
+LOCAL_PROTOC_IMAGE = stackstate-process-agent-local-protoc
 LOCAL_BUILD_IMAGE  = stackstate-process-agent-local-build
 VOLUME_GO_PKG_NAME = ${LOCAL_BUILD_IMAGE}-go-volume
 AGENT_SOURCE_MOUNT = /stackstate-process-agent-mount
@@ -19,6 +20,7 @@ DOCKER_ENV		   = --env PROJECT_DIR=${PROJECT_DIR} \
                      --env ARTIFACTORY_PYPI_URL="artifactory.tooling.stackstate.io/artifactory/api/pypi/pypi-local/simple" \
                      --env PYTHON_RUNTIME=2
 
+PROJECT_GOPATH := $(shell go env GOPATH | cut -f1 -d":")
 
 build:
 	cd Dockerfiles/local_builder && \
@@ -35,6 +37,21 @@ dev: build
         --volume ${PWD}${colon}${PROJECT_DIR} \
         ${DOCKER_ENV} ${LOCAL_BUILD_IMAGE}
 
+build-protoc-container:
+	cd DockerFiles/protoc && \
+	docker build -t ${LOCAL_PROTOC_IMAGE} .
+
+compile-proto: build-protoc-container
+	docker run -ti --rm \
+		-v $(PROJECT_GOPATH)/src:/go/src \
+		-v ${PWD}:/go/src/github.com/StackVista/stackstate-process-agent \
+		-v ${PWD}/model:/model \
+		${LOCAL_PROTOC_IMAGE} compile-protobuf
+
+
+#  sh "protoc proto/agent_payload.proto -I $GOPATH/src -I vendor -I proto --gogofaster_out $GOPATH/src"
+#  sh "protoc proto/agent.proto -I $GOPATH/src -I vendor -I proto --gogofaster_out $GOPATH/src"
+
 # Source copy can be used for Omnibus package build
 omnibus: build
 	docker run -it --rm \
@@ -48,6 +65,9 @@ omnibus: build
 
 shell:
 	docker exec -ti ${LOCAL_BUILD_IMAGE} bash --init-file /local_init.sh
+
+protoc-container:
+
 
 
 .PHONY: build dev omnibus shell

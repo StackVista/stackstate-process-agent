@@ -24,7 +24,10 @@ desc "Setup dependencies"
 task :deps do
   shell("go install golang.org/x/lint/golint@6edffad5e616")
   shell("go install github.com/awalterschulze/goderive@886b66b111a4")
-  shell("go install github.com/goware/modvendor@v0.5.0")
+end
+
+desc "Run go mod vendor"
+task :vendor do
   shell("go mod vendor")
 end
 
@@ -144,7 +147,7 @@ task :protobuf do
 end
 
 desc "Datadog Process Agent CI script (fmt, vet, etc)"
-task :ci => [:derive, :vet, :deps, :fmt, :test, :lint, :branding, :build]
+task :ci => [:deps, :derive, :vet, :fmt, :test, :lint, :vendor, :branding, :build]
 
 task :err do
   shell("go install github.com/kisielk/errcheck")

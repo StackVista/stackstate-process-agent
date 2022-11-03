@@ -220,12 +220,9 @@ require (
 )
 
 require (
-	github.com/goware/modvendor v0.5.0 // indirect
 	github.com/iovisor/gobpf v0.1.2 // indirect
 	github.com/kubernetes-incubator/custom-metrics-apiserver v0.0.0-20190116221620-b7016fc85e1c // indirect
-	github.com/mattn/go-zglob v0.0.3 // indirect
 	github.com/pytimer/win-netstat v0.0.0-20180710031115-efa1aff6aafc // indirect
-	github.com/smartystreets/goconvey v1.7.2 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/tools v0.2.0 // indirect
 	gopkg.in/ini.v1 v1.66.3 // indirect

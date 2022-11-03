@@ -11,15 +11,22 @@ def os
     else
       fail 'Unsupported OS'
     end
+end
+
+def shell(cmd)
+  puts "$ #{cmd}"
+  unless system(cmd)
+    fail
   end
+end
 
 desc "Setup dependencies"
 task :deps do
-  system("go install golang.org/x/lint/golint@6edffad5e616")
-  system("go install github.com/awalterschulze/goderive@886b66b111a4")
-  system("go install github.com/goware/modvendor@v0.5.0")
-  system("GO111MODULE=on go mod vendor")
-  system("modvendor -copy='**/*.c **/*.h **/*.proto'")
+  shell("go install golang.org/x/lint/golint@6edffad5e616")
+  shell("go install github.com/awalterschulze/goderive@886b66b111a4")
+  shell("go install github.com/goware/modvendor@v0.5.0")
+  shell("go mod vendor")
+  shell("modvendor -copy='**/*.c **/*.h **/*.proto'")
 end
 
 task :default => [:ci]
@@ -49,8 +56,8 @@ end
 
 desc "Run goderive to generate necessary go code (Windows)"
 task :derive_win do
-  system("go install github.com/awalterschulze/goderive@886b66b111a4")
-  system("go generate ./...")
+  shell("go install github.com/awalterschulze/goderive@886b66b111a4")
+  shell("go generate ./...")
 end
 
 desc "Install Datadog Process agent"
@@ -136,17 +143,17 @@ desc "Datadog Process Agent CI script (fmt, vet, etc)"
 task :ci => [:derive, :fmt, :vet, :test, :lint, :build]
 
 task :err do
-  system("go install github.com/kisielk/errcheck")
+  shell("go install github.com/kisielk/errcheck")
   sh "errcheck github.com/StackVista/stackstate-process-agent"
 end
 
 task 'windows-versioned-artifact' do
   process_agent_version = `bash -c "packaging/version.sh"`.strip!
-  system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
+  shell("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end
 
 task 'windows-tag-or-commit-artifact' do
   process_agent_version = `bash -c "packaging/commit-or-tag.sh"`.strip!
   sh "echo %s" % process_agent_version
-  system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
+  shell("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end

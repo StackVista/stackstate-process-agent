@@ -37,7 +37,7 @@ build_linux:
       - $CI_PROJECT_DIR/packaging/debian/*.deb
     expire_in: 2 week
   retry:
-    max: 2
+    max: 1
     when:
       - always
 
@@ -56,7 +56,7 @@ build_windows:
   tags:
     - windows_agent7_go1.17
   retry:
-    max: 2
+    max: 1
     when:
       - runner_system_failure
       - stuck_or_timeout_failure

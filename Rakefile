@@ -29,6 +29,11 @@ task :deps do
   shell("modvendor -copy='**/*.c **/*.h **/*.proto'")
 end
 
+desc "Apply branding"
+task :branding do
+  shell("./packaging/apply_branding.sh")
+end
+
 task :default => [:ci]
 
 desc "Build Datadog Process agent"
@@ -140,7 +145,7 @@ task :protobuf do
 end
 
 desc "Datadog Process Agent CI script (fmt, vet, etc)"
-task :ci => [:derive, :fmt, :vet, :test, :lint, :build]
+task :ci => [:deps, :derive, :fmt, :vet, :test, :lint, :branding, :build]
 
 task :err do
   shell("go install github.com/kisielk/errcheck")

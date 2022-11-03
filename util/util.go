@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/StackVista/stackstate-agent/pkg/util/docker"
+	_ "github.com/StackVista/tcptracer-bpf"
 )
 
 // ErrNotImplemented is the "not implemented" error given by `gopsutil` when an

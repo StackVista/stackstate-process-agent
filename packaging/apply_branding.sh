@@ -33,6 +33,8 @@ gofmt -l $REPLACE_MODE -r '"DD_SITE" -> "STS_SITE"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_STRIP_PROCESS_ARGS" -> "STS_STRIP_PROCESS_ARGS"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DD_USE_LOCAL_NETWORK_TRACER" -> "STS_USE_LOCAL_NETWORK_TRACER"' $REPLACE_SCOPE
 gofmt -l $REPLACE_MODE -r '"DOCKER_DD_AGENT" -> "DOCKER_STS_AGENT"' $REPLACE_SCOPE
+gofmt -l $REPLACE_MODE -r '"DD" -> "STS"' ../vendor/github.com/StackVista/stackstate-agent/pkg/config
+gofmt -l $REPLACE_MODE -r '"datadog" -> "stackstate"' ../vendor/github.com/StackVista/stackstate-agent/pkg/config
 
 # tests
 sed -i 's/DD_SITE/STS_SITE/g' ../config/config_test.go

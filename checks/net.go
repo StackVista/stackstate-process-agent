@@ -109,12 +109,29 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	}
 
 	aggregatedInterval := currentTime.Sub(c.prevCheckTime)
-	formattedConnections := c.formatConnections(cfg, conns, aggregatedInterval, c.prevConns)
+	formattedConnections, filterStats := c.formatConnections(cfg, conns, aggregatedInterval, c.prevConns)
 	c.prevCheckTime = currentTime
 	c.prevConns = makeMetricsLookupMap(conns)
 
+	// sts send metrics
+	c.reportMetrics(cfg.HostName, conns, formattedConnections, filterStats)
+
 	log.Debugf("collected connections in %s, connections found: %v", time.Since(start), formattedConnections)
 	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, aggregatedInterval)}, nil
+}
+
+func (c *ConnectionsCheck) reportMetrics(
+	hostname string,
+	allConnections []common.ConnectionStats,
+	reportedConnections []*model.Connection,
+	filterStats *FormatStats,
+) {
+	c.Sender().Gauge("stackstate.process_agent.connnections.total", float64(len(allConnections)), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connnections.reported", float64(len(reportedConnections)), hostname, []string{})
+
+	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connnections.invalid", float64(filterStats.Invalid), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connnections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
 }
 
 func (c *ConnectionsCheck) getConnections() ([]common.ConnectionStats, error) {
@@ -148,25 +165,40 @@ func makeMetricsLookupMap(conns []common.ConnectionStats) map[common.ConnTuple]c
 	return lookupMap
 }
 
+type FormatStats struct {
+	NoProcess   int
+	Invalid     int
+	ShortLiving int
+}
+
 var logShortLivingNoticeOnce = &sync.Once{}
 
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
-func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, prevCheckTimeDiff time.Duration, prevConnStats map[common.ConnTuple]connectionMetrics) []*model.Connection {
+func (c *ConnectionsCheck) formatConnections(
+	cfg *config.AgentConfig,
+	conns []common.ConnectionStats,
+	prevCheckTimeDiff time.Duration,
+	prevConnStats map[common.ConnTuple]connectionMetrics,
+) ([]*model.Connection, *FormatStats) {
+
 	// Process create-times required to construct unique process hash keys on the backend
 	createTimeForPID := Process.createTimesForPIDs(connectionPIDs(conns))
+	stats := &FormatStats{}
 
 	cxs := make([]*model.Connection, 0, len(conns))
 	for _, conn := range conns {
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid)
 		if !ok {
+			stats.NoProcess += 1
 			log.Debugf("connection %v is filtered out because process %d is not observed (finished or just started)", conn, conn.Pid)
 			continue
 		}
 		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
 		relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
 		if err != nil {
+			stats.Invalid += 1
 			log.Warnf("invalid connection description - can't determine ID: %v", err)
 			continue
 		}
@@ -175,6 +207,7 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 		if cfg.EnableShortLivedNetworkRelationFilter &&
 			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
 
+			stats.ShortLiving += 1
 			logShortLivingNoticeOnce.Do(func() {
 				log.Infof("Some of network relations are filtered out as short-living. " +
 					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +
@@ -236,7 +269,7 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 		// put it in the cache for the next run
 		c.cache.PutNetworkRelationCache(relationID, conn)
 	}
-	return cxs
+	return cxs, stats
 }
 
 func formatMetrics(metrics []common.ConnectionMetric, elapsedDuration time.Duration) []*model.ConnectionMetric {

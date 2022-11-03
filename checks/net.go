@@ -149,7 +149,7 @@ func (c *ConnectionsCheck) reportMetrics(
 	hostname string,
 	allConnections []common.ConnectionStats,
 	reportedConnections []*model.Connection,
-	filterStats *FormatStats,
+	filterStats *formatStats,
 ) {
 	c.Sender().Gauge("stackstate.process_agent.connnections.total", float64(len(allConnections)), hostname, []string{})
 
@@ -207,7 +207,7 @@ func makeMetricsLookupMap(conns []common.ConnectionStats) map[common.ConnTuple]c
 	return lookupMap
 }
 
-type FormatStats struct {
+type formatStats struct {
 	NoProcess   int
 	Invalid     int
 	ShortLiving int
@@ -222,25 +222,25 @@ func (c *ConnectionsCheck) formatConnections(
 	conns []common.ConnectionStats,
 	prevCheckTimeDiff time.Duration,
 	prevConnStats map[common.ConnTuple]connectionMetrics,
-) ([]*model.Connection, *FormatStats) {
+) ([]*model.Connection, *formatStats) {
 
 	// Process create-times required to construct unique process hash keys on the backend
 	createTimeForPID := Process.createTimesForPIDs(connectionPIDs(conns))
-	stats := &FormatStats{}
+	stats := &formatStats{}
 
 	cxs := make([]*model.Connection, 0, len(conns))
 	for _, conn := range conns {
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid)
 		if !ok {
-			stats.NoProcess += 1
+			stats.NoProcess++
 			log.Debugf("connection %v is filtered out because process %d is not observed (finished or just started)", conn, conn.Pid)
 			continue
 		}
 		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
 		relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
 		if err != nil {
-			stats.Invalid += 1
+			stats.Invalid++
 			log.Warnf("invalid connection description - can't determine ID: %v", err)
 			continue
 		}
@@ -252,7 +252,7 @@ func (c *ConnectionsCheck) formatConnections(
 		if cfg.EnableShortLivedNetworkRelationFilter &&
 			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
 
-			stats.ShortLiving += 1
+			stats.ShortLiving++
 			logShortLivingNoticeOnce.Do(func() {
 				log.Infof("Some of network relations are filtered out as short-living. " +
 					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +

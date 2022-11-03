@@ -145,7 +145,7 @@ task :protobuf do
 end
 
 desc "Datadog Process Agent CI script (fmt, vet, etc)"
-task :ci => [:deps, :vet, :derive, :fmt, :test, :lint, :branding, :build]
+task :ci => [:vet, :deps, :derive, :fmt, :test, :lint, :branding, :build]
 
 task :err do
   shell("go install github.com/kisielk/errcheck")

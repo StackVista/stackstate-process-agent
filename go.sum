@@ -147,6 +147,8 @@ github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350 h1:wF77lR
 github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350/go.mod h1:HK9WZMZBvVwiCUOHBe2Fmr81efRxz25dXn0/LZBvrbI=
 github.com/StackVista/tcptracer-bpf v7.0.7-0.20221103133426-e6b6d98d33dc+incompatible h1:mXKkFYNKltP4FFFzZm8b4dMhlZUt1njdmXB+/3CDNUw=
 github.com/StackVista/tcptracer-bpf v7.0.7-0.20221103133426-e6b6d98d33dc+incompatible/go.mod h1:+Nq8JZ/t2qRoubch8CWCiD9ppwX349HP3FJeTQ3RR20=
+github.com/StackVista/tcptracer-bpf v7.0.7-0.20221103142737-46292459b297+incompatible h1:k/X9aHUrWu0X7BInGFPI95tRp2DMFp/HZMx/I0iAHp4=
+github.com/StackVista/tcptracer-bpf v7.0.7-0.20221103142737-46292459b297+incompatible/go.mod h1:+Nq8JZ/t2qRoubch8CWCiD9ppwX349HP3FJeTQ3RR20=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/alecthomas/participle v0.4.4/go.mod h1:HfdmEuwvr12HXQN44HPWXR0lHmVolVYe4dyL6lQ3duY=

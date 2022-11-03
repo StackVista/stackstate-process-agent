@@ -27,6 +27,7 @@ build_linux:
     - export EBPF=${EBPF:-true}
     - source ~/.bashrc
     - printenv
+    - rake vet
     - rake ci
     - (cd packaging; ./build_staging_package.sh)
   artifacts:

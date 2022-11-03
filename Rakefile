@@ -26,7 +26,6 @@ task :deps do
   shell("go install github.com/awalterschulze/goderive@886b66b111a4")
   shell("go install github.com/goware/modvendor@v0.5.0")
   shell("go mod vendor")
-  shell("modvendor -copy='**/*.c **/*.h **/*.proto'")
 end
 
 desc "Apply branding"
@@ -145,7 +144,7 @@ task :protobuf do
 end
 
 desc "Datadog Process Agent CI script (fmt, vet, etc)"
-task :ci => [:vet, :deps, :derive, :fmt, :test, :lint, :branding, :build]
+task :ci => [:vet, :derive, :deps, :fmt, :test, :lint, :branding, :build]
 
 task :err do
   shell("go install github.com/kisielk/errcheck")

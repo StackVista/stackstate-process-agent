@@ -17,7 +17,9 @@ desc "Setup dependencies"
 task :deps do
   system("go install golang.org/x/lint/golint@6edffad5e616")
   system("go install github.com/awalterschulze/goderive@886b66b111a4")
-  system("go mod vendor")
+  system("go install github.com/goware/modvendor@v0.5.0")
+  system("GO111MODULE=on go mod vendor")
+  system("modvendor -copy='**/*.c **/*.h **/*.proto'")
 end
 
 task :default => [:ci]

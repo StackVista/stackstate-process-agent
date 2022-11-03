@@ -246,6 +246,9 @@ func (c *ConnectionsCheck) formatConnections(
 		}
 		// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
 		relationCache, ok := c.cache.IsNetworkRelationCached(relationID)
+		// put it in the cache for the next run
+		c.cache.PutNetworkRelationCache(relationID, conn)
+
 		if cfg.EnableShortLivedNetworkRelationFilter &&
 			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
 
@@ -307,9 +310,6 @@ func (c *ConnectionsCheck) formatConnections(
 			Natladdr:               natLaddr,
 			Natraddr:               natRaddr,
 		})
-
-		// put it in the cache for the next run
-		c.cache.PutNetworkRelationCache(relationID, conn)
 	}
 	return cxs, stats
 }

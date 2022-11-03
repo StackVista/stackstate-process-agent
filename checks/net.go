@@ -7,6 +7,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/DataDog/sketches-go/ddsketch"
@@ -147,6 +148,8 @@ func makeMetricsLookupMap(conns []common.ConnectionStats) map[common.ConnTuple]c
 	return lookupMap
 }
 
+var logShortLivingNoticeOnce = &sync.Once{}
+
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
 func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, prevCheckTimeDiff time.Duration, prevConnStats map[common.ConnTuple]connectionMetrics) []*model.Connection {
@@ -156,66 +159,82 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 	cxs := make([]*model.Connection, 0, len(conns))
 	for _, conn := range conns {
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
-		if pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid); ok {
-			namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
-			relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
-			if err != nil {
-				log.Warnf("invalid connection description - can't determine ID: %v", err)
-				continue
-			}
-			// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
-			if relationCache, ok := c.cache.IsNetworkRelationCached(relationID); ok {
-				if !isRelationShortLived(relationID, relationCache.FirstObserved, cfg) {
-					var prevSentBytes, prevRecvBytes uint64 = 0, 0
-					prevValues, ok := prevConnStats[conn.GetConnection()]
-					if ok && conn.SendBytes >= prevValues.SendBytes && conn.RecvBytes >= prevValues.RecvBytes {
-						prevSentBytes = prevValues.SendBytes
-						prevRecvBytes = prevValues.RecvBytes
-					}
-
-					var natLaddr, natRaddr *model.Addr
-					if conn.NATLocal != nil {
-						natLaddr = &model.Addr{
-							Ip:   conn.NATLocal.Host,
-							Port: int32(conn.NATLocal.Port),
-						}
-					}
-					if conn.NATRemote != nil {
-						natRaddr = &model.Addr{
-							Ip:   conn.NATRemote.Host,
-							Port: int32(conn.NATRemote.Port),
-						}
-					}
-
-					cxs = append(cxs, &model.Connection{
-						Pid:           int32(conn.Pid),
-						PidCreateTime: pidCreateTime,
-						Family:        formatFamily(conn.Family),
-						Type:          formatType(conn.Type),
-						Laddr: &model.Addr{
-							Ip:   conn.Local,
-							Port: int32(conn.LocalPort),
-						},
-						Raddr: &model.Addr{
-							Ip:   conn.Remote,
-							Port: int32(conn.RemotePort),
-						},
-						BytesSentPerSecond:     float32(calculateNormalizedRate(conn.SendBytes-prevSentBytes, prevCheckTimeDiff)),
-						BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.RecvBytes-prevRecvBytes, prevCheckTimeDiff)),
-						Direction:              calculateDirection(conn.Direction),
-						Namespace:              namespace,
-						ConnectionIdentifier:   relationID,
-						ApplicationProtocol:    conn.ApplicationProtocol,
-						Metrics:                formatMetrics(conn.Metrics, prevCheckTimeDiff),
-						Natladdr:               natLaddr,
-						Natraddr:               natRaddr,
-					})
-				}
-			}
-
-			// put it in the cache for the next run
-			c.cache.PutNetworkRelationCache(relationID, conn)
+		pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid)
+		if !ok {
+			log.Debugf("connection %v is filtered out because process %d is not observed (finished or just started)", conn, conn.Pid)
+			continue
 		}
+		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
+		relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
+		if err != nil {
+			log.Warnf("invalid connection description - can't determine ID: %v", err)
+			continue
+		}
+		// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
+		relationCache, ok := c.cache.IsNetworkRelationCached(relationID)
+		if cfg.EnableShortLivedNetworkRelationFilter &&
+			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
+
+			logShortLivingNoticeOnce.Do(func() {
+				log.Infof("Some of network relations are filtered out as short-living. " +
+					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +
+					"STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml " +
+					"under process_config.filters.short_lived_network_relations.enabled or increase the qualifier seconds using" +
+					"process_config.filters.short_lived_network_relations.qualifier_secs.")
+			})
+			log.Debugf("Filter relation: %s (%v) based on it's short-lived nature; ",
+				relationID, conn, cfg.ShortLivedNetworkRelationQualifierSecs,
+			)
+			continue
+		}
+
+		var prevSentBytes, prevRecvBytes uint64 = 0, 0
+		prevValues, ok := prevConnStats[conn.GetConnection()]
+		if ok && conn.SendBytes >= prevValues.SendBytes && conn.RecvBytes >= prevValues.RecvBytes {
+			prevSentBytes = prevValues.SendBytes
+			prevRecvBytes = prevValues.RecvBytes
+		}
+
+		var natLaddr, natRaddr *model.Addr
+		if conn.NATLocal != nil {
+			natLaddr = &model.Addr{
+				Ip:   conn.NATLocal.Host,
+				Port: int32(conn.NATLocal.Port),
+			}
+		}
+		if conn.NATRemote != nil {
+			natRaddr = &model.Addr{
+				Ip:   conn.NATRemote.Host,
+				Port: int32(conn.NATRemote.Port),
+			}
+		}
+
+		cxs = append(cxs, &model.Connection{
+			Pid:           int32(conn.Pid),
+			PidCreateTime: pidCreateTime,
+			Family:        formatFamily(conn.Family),
+			Type:          formatType(conn.Type),
+			Laddr: &model.Addr{
+				Ip:   conn.Local,
+				Port: int32(conn.LocalPort),
+			},
+			Raddr: &model.Addr{
+				Ip:   conn.Remote,
+				Port: int32(conn.RemotePort),
+			},
+			BytesSentPerSecond:     float32(calculateNormalizedRate(conn.SendBytes-prevSentBytes, prevCheckTimeDiff)),
+			BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.RecvBytes-prevRecvBytes, prevCheckTimeDiff)),
+			Direction:              calculateDirection(conn.Direction),
+			Namespace:              namespace,
+			ConnectionIdentifier:   relationID,
+			ApplicationProtocol:    conn.ApplicationProtocol,
+			Metrics:                formatMetrics(conn.Metrics, prevCheckTimeDiff),
+			Natladdr:               natLaddr,
+			Natraddr:               natRaddr,
+		})
+
+		// put it in the cache for the next run
+		c.cache.PutNetworkRelationCache(relationID, conn)
 	}
 	return cxs
 }
@@ -443,24 +462,11 @@ func isProcessPresent(pidCreateTimes map[uint32]int64, pid uint32) (int64, bool)
 }
 
 // isRelationShortLived checks to see whether a network connection is considered a short-lived network relation
-func isRelationShortLived(relationID string, firstObserved int64, cfg *config.AgentConfig) bool {
-	// short-lived filtering is disabled, return false
-	if !cfg.EnableShortLivedNetworkRelationFilter {
-		return false
-	}
-
+func isRelationShortLived(firstObserved int64, cfg *config.AgentConfig) bool {
 	// firstObserved is before ShortLivedTime. Relation is not short-lived, return false
 	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedNetworkRelationQualifierSecs)) {
 		return false
 	}
 
-	// connection / relation is filtered due to it's short-lived nature, let's log it on trace level
-	log.Debugf("Filter relation: %s based on it's short-lived nature; "+
-		"meaning we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the "+
-		"STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml "+
-		"under process_config.filters.short_lived_network_relations.enabled or increase the qualifier seconds using"+
-		"process_config.filters.short_lived_network_relations.qualifier_secs.",
-		relationID, cfg.ShortLivedNetworkRelationQualifierSecs,
-	)
 	return true
 }

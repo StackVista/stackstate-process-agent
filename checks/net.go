@@ -120,6 +120,31 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, aggregatedInterval)}, nil
 }
 
+type reportedProps struct {
+	nat        bool
+	connFamily model.ConnectionFamily
+	connType   model.ConnectionType
+	direction  model.ConnectionDirection
+	appProto   string
+}
+
+func (rp *reportedProps) Tags() []string {
+	result := []string{
+		"ipver:" + rp.connFamily.String(),
+		"proto:" + rp.connType.String(),
+		"direction:" + rp.direction.String(),
+	}
+	if rp.nat {
+		result = append(result, "nat:true")
+	} else {
+		result = append(result, "nat:false")
+	}
+	if rp.appProto != "" {
+		result = append(result, "app_proto:"+rp.appProto)
+	}
+	return result
+}
+
 func (c *ConnectionsCheck) reportMetrics(
 	hostname string,
 	allConnections []common.ConnectionStats,
@@ -127,7 +152,24 @@ func (c *ConnectionsCheck) reportMetrics(
 	filterStats *FormatStats,
 ) {
 	c.Sender().Gauge("stackstate.process_agent.connnections.total", float64(len(allConnections)), hostname, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connnections.reported", float64(len(reportedConnections)), hostname, []string{})
+
+	reportedBreakdown := map[reportedProps]int{}
+	for _, conn := range reportedConnections {
+		props := reportedProps{
+			nat:        conn.Natladdr != nil || conn.Natraddr != nil,
+			connFamily: conn.Family,
+			connType:   conn.Type,
+			direction:  conn.Direction,
+			appProto:   conn.ApplicationProtocol,
+		}
+		count, _ := reportedBreakdown[props]
+		reportedBreakdown[props] = count + 1
+	}
+	for props, count := range reportedBreakdown {
+		c.Sender().Gauge("stackstate.process_agent.connnections.reported",
+			float64(count), hostname, props.Tags(),
+		)
+	}
 
 	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), hostname, []string{})
 	c.Sender().Gauge("stackstate.process_agent.connnections.invalid", float64(filterStats.Invalid), hostname, []string{})

@@ -11,12 +11,29 @@ def os
     else
       fail 'Unsupported OS'
     end
+end
+
+def shell(cmd)
+  puts "$ #{cmd}"
+  unless system(cmd)
+    fail
   end
+end
 
 desc "Setup dependencies"
 task :deps do
-  system("go install golang.org/x/lint/golint@6edffad5e616")
-  system("go install github.com/awalterschulze/goderive@886b66b111a4")
+  shell("go install golang.org/x/lint/golint@6edffad5e616")
+  shell("go install github.com/awalterschulze/goderive@886b66b111a4")
+end
+
+desc "Run go mod vendor"
+task :vendor do
+  shell("go mod vendor")
+end
+
+desc "Apply branding"
+task :branding do
+  shell("./packaging/apply_branding.sh")
 end
 
 task :default => [:ci]
@@ -46,8 +63,8 @@ end
 
 desc "Run goderive to generate necessary go code (Windows)"
 task :derive_win do
-  system("go install github.com/awalterschulze/goderive@886b66b111a4")
-  system("go generate ./...")
+  shell("go install github.com/awalterschulze/goderive@886b66b111a4")
+  shell("go generate ./...")
 end
 
 desc "Install Datadog Process agent"
@@ -130,20 +147,20 @@ task :protobuf do
 end
 
 desc "Datadog Process Agent CI script (fmt, vet, etc)"
-task :ci => [:derive, :fmt, :vet, :test, :lint, :build]
+task :ci => [:deps, :derive, :vet, :fmt, :test, :lint, :vendor, :branding, :build]
 
 task :err do
-  system("go install github.com/kisielk/errcheck")
+  shell("go install github.com/kisielk/errcheck")
   sh "errcheck github.com/StackVista/stackstate-process-agent"
 end
 
 task 'windows-versioned-artifact' do
   process_agent_version = `bash -c "packaging/version.sh"`.strip!
-  system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
+  shell("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end
 
 task 'windows-tag-or-commit-artifact' do
   process_agent_version = `bash -c "packaging/commit-or-tag.sh"`.strip!
   sh "echo %s" % process_agent_version
-  system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
+  shell("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end

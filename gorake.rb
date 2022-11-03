@@ -19,6 +19,7 @@ def go_build(program, opts={})
     :race => false,
     :add_build_vars => true,
     :static => false,
+    :vendor => true,
   }.merge(opts)
 
   dd = 'main'
@@ -48,6 +49,7 @@ def go_build(program, opts={})
   ldflags = vars.map { |name, value| "-X '#{name}=#{value}'" }
 
   cmd = opts[:cmd]
+  cmd += ' -mod vendor' if opts[:vendor]
   cmd += ' -race' if opts[:race]
   cmd += get_tag_set(opts)
   print "cmd"

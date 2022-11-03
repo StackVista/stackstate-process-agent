@@ -306,6 +306,9 @@ func NewDefaultAgentConfig() *AgentConfig {
 			os.Setenv("HOST_SYS", "/host/sys")
 		}
 	}
+	if ddconfig.IsContainerized() && util.PathExists("/host/sys/fs/cgroup/") {
+		ddconfig.Datadog.SetDefault("container_cgroup_root", "/host/sys/fs/cgroup/")
+	}
 
 	if isRunningInKubernetes() {
 		ac.ContainerBlacklist = defaultKubeBlacklist

@@ -113,14 +113,24 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	c.prevConns = makeMetricsLookupMap(conns)
 
 	// sts send metrics
-	c.Sender().Gauge("stackstate.process_agent.connnections.total", float64(len(conns)), cfg.HostName, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connnections.reported", float64(len(formattedConnections)), cfg.HostName, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), cfg.HostName, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connnections.invalid", float64(filterStats.Invalid), cfg.HostName, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connnections.short_living", float64(filterStats.ShortLiving), cfg.HostName, []string{})
+	c.reportMetrics(cfg.HostName, conns, formattedConnections, filterStats)
 
 	log.Debugf("collected connections in %s, connections found: %v", time.Since(start), formattedConnections)
 	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, aggregatedInterval)}, nil
+}
+
+func (c *ConnectionsCheck) reportMetrics(
+	hostname string,
+	allConnections []common.ConnectionStats,
+	reportedConnections []*model.Connection,
+	filterStats *FormatStats,
+) {
+	c.Sender().Gauge("stackstate.process_agent.connnections.total", float64(len(allConnections)), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connnections.reported", float64(len(reportedConnections)), hostname, []string{})
+
+	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connnections.invalid", float64(filterStats.Invalid), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connnections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
 }
 
 func (c *ConnectionsCheck) getConnections() ([]common.ConnectionStats, error) {

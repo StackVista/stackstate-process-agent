@@ -375,6 +375,8 @@ message Connection {
 	string connectionIdentifier = 52;
 	string applicationProtocol = 53;
 	repeated ConnectionMetric metrics = 54;
+	Addr natladdr = 55; // Translated local address
+	Addr natraddr = 56; // Translated remote address
 }
 
 message Addr {

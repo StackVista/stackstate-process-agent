@@ -1,6 +1,7 @@
 package util
 
 import (
+	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-agent/pkg/collector/check"
 	"github.com/StackVista/stackstate-agent/pkg/metrics"
 	"github.com/StackVista/stackstate-agent/pkg/serializer"
@@ -8,7 +9,7 @@ import (
 )
 
 // LogSender is a singleton instance of the Sender interface logging the data produced.
-var LogSender = &logSender{}
+var LogSender aggregator.Sender = &logSender{}
 
 type logSender struct {
 }

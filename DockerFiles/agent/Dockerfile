@@ -27,7 +27,10 @@ RUN apt-get update \
   # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-6954
   && rm -f /usr/lib/x86_64-linux-gnu/libdb-5.3.so \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-  && mkdir -p /etc/stackstate-agent/ && mkdir -p /var/log/stackstate-agent/  
+  && mkdir -p /etc/stackstate-agent/ && mkdir -p /var/log/stackstate-agent/  \
+
+# useful tools for network debugging
+RUN apt-get install -y iproute2 conntrack
 
 # Prepare for running without root
 # - Create a stackstate-agent:root user and give it permissions on relevant folders

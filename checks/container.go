@@ -133,7 +133,7 @@ func fmtContainers(
 
 		ifStats := ctr.Network.SumInterfaces()
 		cpus := runtime.NumCPU()
-		sys2, sys1 := ctr.CPU.SystemUsage, lastCtr.CPU.SystemUsage
+		sys2, sys1 := float64(ctr.CPU.SystemUsage), float64(lastCtr.CPU.SystemUsage)
 
 		// Retrieves metadata tags
 		tags, err := tagger.Tag(ctr.EntityID, collectors.HighCardinality)
@@ -181,9 +181,9 @@ func fmtContainers(
 				makeMetric("netSentPs", float64(calculateRate(ifStats.PacketsSent, lastCtr.NetworkSum.PacketsSent, lastRun))),
 				makeMetric("netRcvdBps", float64(calculateRate(ifStats.BytesRcvd, lastCtr.NetworkSum.BytesRcvd, lastRun))),
 				makeMetric("netSentBps", float64(calculateRate(ifStats.BytesSent, lastCtr.NetworkSum.BytesSent, lastRun))),
-				makeMetric("userPct", float64(calculateCtrPct(uint64(ctr.CPU.User), uint64(lastCtr.CPU.User), sys2, sys1, cpus, lastRun))),
-				makeMetric("systemPct", float64(calculateCtrPct(uint64(ctr.CPU.System), uint64(lastCtr.CPU.System), sys2, sys1, cpus, lastRun))),
-				makeMetric("totalPct", float64(calculateCtrPct(uint64(ctr.CPU.User+ctr.CPU.System), uint64(lastCtr.CPU.User+lastCtr.CPU.System), sys2, sys1, cpus, lastRun))),
+				makeMetric("userPct", calculateCtrPct(ctr.CPU.User, lastCtr.CPU.User, sys2, sys1, cpus, lastRun)),
+				makeMetric("systemPct", calculateCtrPct(ctr.CPU.System, lastCtr.CPU.System, sys2, sys1, cpus, lastRun)),
+				makeMetric("totalPct", calculateCtrPct(ctr.CPU.User+ctr.CPU.System, lastCtr.CPU.User+lastCtr.CPU.System, sys2, sys1, cpus, lastRun)),
 				makeMetric("memRss", float64(ctr.Memory.RSS)),
 				makeMetric("memCache", float64(ctr.Memory.Cache)),
 			)
@@ -195,9 +195,9 @@ func fmtContainers(
 			container.NetSentPs = calculateRate(ifStats.PacketsSent, lastCtr.NetworkSum.PacketsSent, lastRun)
 			container.NetRcvdBps = calculateRate(ifStats.BytesRcvd, lastCtr.NetworkSum.BytesRcvd, lastRun)
 			container.NetSentBps = calculateRate(ifStats.BytesSent, lastCtr.NetworkSum.BytesSent, lastRun)
-			container.UserPct = calculateCtrPct(uint64(ctr.CPU.User), uint64(lastCtr.CPU.User), sys2, sys1, cpus, lastRun)
-			container.SystemPct = calculateCtrPct(uint64(ctr.CPU.System), uint64(lastCtr.CPU.System), sys2, sys1, cpus, lastRun)
-			container.TotalPct = calculateCtrPct(uint64(ctr.CPU.User+ctr.CPU.System), uint64(lastCtr.CPU.User+lastCtr.CPU.System), sys2, sys1, cpus, lastRun)
+			container.UserPct = float32(calculateCtrPct(ctr.CPU.User, lastCtr.CPU.User, sys2, sys1, cpus, lastRun))
+			container.SystemPct = float32(calculateCtrPct(ctr.CPU.System, lastCtr.CPU.System, sys2, sys1, cpus, lastRun))
+			container.TotalPct = float32(calculateCtrPct(ctr.CPU.User+ctr.CPU.System, lastCtr.CPU.User+lastCtr.CPU.System, sys2, sys1, cpus, lastRun))
 			container.MemRss = ctr.Memory.RSS
 			container.MemCache = ctr.Memory.Cache
 		}
@@ -208,7 +208,7 @@ func fmtContainers(
 	return containers, multiMetrics
 }
 
-func calculateCtrPct(cur, prev, sys2, sys1 uint64, numCPU int, before time.Time) float32 {
+func calculateCtrPct(cur, prev, sys2, sys1 float64, numCPU int, before time.Time) float64 {
 	now := time.Now()
 	diff := now.Unix() - before.Unix()
 	if before.IsZero() || diff <= 0 {
@@ -218,11 +218,11 @@ func calculateCtrPct(cur, prev, sys2, sys1 uint64, numCPU int, before time.Time)
 	// If we have system usage values then we need to calculate against those.
 	// XXX: Right now this only applies to ECS collection
 	if sys1 > 0 && sys2 > 0 {
-		cpuDelta := float32(cur - prev)
-		sysDelta := float32(sys2 - sys1)
-		return (cpuDelta / sysDelta) * float32(numCPU) * 100
+		cpuDelta := cur - prev
+		sysDelta := sys2 - sys1
+		return (cpuDelta / sysDelta) * float64(numCPU) * 100
 	}
-	return float32(cur-prev) / float32(diff)
+	return (cur - prev) / float64(diff)
 }
 
 func fillNilContainer(ctr *containers.Container) *containers.Container {

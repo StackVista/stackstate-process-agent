@@ -5,6 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
+	"github.com/StackVista/stackstate-agent/pkg/network"
+	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
+	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
+
+	//"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	"strconv"
 	"strings"
 	"time"
@@ -14,9 +19,8 @@ import (
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
-	"github.com/StackVista/stackstate-process-agent/net"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
+	//"github.com/StackVista/tcptracer-bpf/pkg/tracer"
+	//"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	log "github.com/cihub/seelog"
 )
 
@@ -32,11 +36,10 @@ var (
 type ConnectionsCheck struct {
 	// Local network tracer
 	useLocalTracer bool
-	localTracer    tracer.Tracer
+	localTracer    *tracer.Tracer
 	localTracerErr error
 
 	prevCheckTime time.Time
-	prevConns     map[common.ConnTuple]connectionMetrics
 
 	buf *bytes.Buffer // Internal buffer
 
@@ -92,6 +95,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		}
 		return nil, err
 	}
+	conns.HTTP
 
 	if c.prevCheckTime.IsZero() { // End check early if this is our first run.
 		// fill in the relation cache
@@ -103,53 +107,40 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 			c.cache.PutNetworkRelationCache(relationID, conn)
 		}
 		c.prevCheckTime = currentTime
-		c.prevConns = makeMetricsLookupMap(conns)
 		return nil, nil
 	}
 
 	aggregatedInterval := currentTime.Sub(c.prevCheckTime)
-	formattedConnections := c.formatConnections(cfg, conns, aggregatedInterval, c.prevConns)
+	formattedConnections := c.formatConnections(cfg, conns, aggregatedInterval)
 	c.prevCheckTime = currentTime
-	c.prevConns = makeMetricsLookupMap(conns)
 
 	log.Debugf("collected connections in %s, connections found: %v", time.Since(start), formattedConnections)
 	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, aggregatedInterval)}, nil
 }
 
-func (c *ConnectionsCheck) getConnections() ([]common.ConnectionStats, error) {
+func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 	if c.useLocalTracer { // If local tracer is set up, use that
 		if c.localTracer == nil {
 			return nil, fmt.Errorf("using local network tracer, but no tracer was initialized")
 		}
-		cs, err := c.localTracer.GetConnections()
-		return cs.Conns, err
+		cs, err := c.localTracer.GetActiveConnections("process-agent")
+		return cs, err
 	}
 
-	tu, err := net.GetRemoteNetworkTracerUtil()
-	if err != nil {
-		if net.ShouldLogTracerUtilError() {
-			return nil, err
-		}
-		return nil, ErrTracerStillNotInitialized
-	}
+	//tu, err := net.GetRemoteNetworkTracerUtil()
+	//if err != nil {
+	//	if net.ShouldLogTracerUtilError() {
+	//		return nil, err
+	//	}
+	//	return nil, ErrTracerStillNotInitialized
+	//}
 
-	return tu.GetConnections()
-}
-
-func makeMetricsLookupMap(conns []common.ConnectionStats) map[common.ConnTuple]connectionMetrics {
-	lookupMap := make(map[common.ConnTuple]connectionMetrics, len(conns))
-	for _, conn := range conns {
-		lookupMap[conn.GetConnection()] = connectionMetrics{
-			SendBytes: conn.SendBytes,
-			RecvBytes: conn.RecvBytes,
-		}
-	}
-	return lookupMap
+	return nil, fmt.Errorf("remote ConnectionTracker is not supported")
 }
 
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
-func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, prevCheckTimeDiff time.Duration, prevConnStats map[common.ConnTuple]connectionMetrics) []*model.Connection {
+func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []network.ConnectionStats, prevCheckTimeDiff time.Duration) []*model.Connection {
 	// Process create-times required to construct unique process hash keys on the backend
 	createTimeForPID := Process.createTimesForPIDs(connectionPIDs(conns))
 
@@ -166,12 +157,6 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 			// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
 			if relationCache, ok := c.cache.IsNetworkRelationCached(relationID); ok {
 				if !isRelationShortLived(relationID, relationCache.FirstObserved, cfg) {
-					var prevSentBytes, prevRecvBytes uint64 = 0, 0
-					prevValues, ok := prevConnStats[conn.GetConnection()]
-					if ok && conn.SendBytes >= prevValues.SendBytes && conn.RecvBytes >= prevValues.RecvBytes {
-						prevSentBytes = prevValues.SendBytes
-						prevRecvBytes = prevValues.RecvBytes
-					}
 
 					cxs = append(cxs, &model.Connection{
 						Pid:           int32(conn.Pid),
@@ -186,8 +171,8 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []co
 							Ip:   conn.Remote,
 							Port: int32(conn.RemotePort),
 						},
-						BytesSentPerSecond:     float32(calculateNormalizedRate(conn.SendBytes-prevSentBytes, prevCheckTimeDiff)),
-						BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.RecvBytes-prevRecvBytes, prevCheckTimeDiff)),
+						BytesSentPerSecond:     float32(calculateNormalizedRate(conn.LastSentBytes, prevCheckTimeDiff)),
+						BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.LastRecvBytes, prevCheckTimeDiff)),
 						Direction:              calculateDirection(conn.Direction),
 						Namespace:              namespace,
 						ConnectionIdentifier:   relationID,

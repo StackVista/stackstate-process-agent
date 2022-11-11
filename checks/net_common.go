@@ -2,10 +2,12 @@ package checks
 
 import (
 	"fmt"
+	"github.com/StackVista/stackstate-agent/pkg/network"
+	tracer "github.com/StackVista/stackstate-agent/pkg/network/tracer"
 	"github.com/StackVista/stackstate-process-agent/model"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
-	tracerConfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
+
+	tracerConfig "github.com/StackVista/stackstate-agent/pkg/network/config"
+	//tracerConfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 	log "github.com/cihub/seelog"
 	"net"
 	"strconv"
@@ -57,8 +59,8 @@ func endpointKeyNoPort(e *endpointID) string {
 }
 
 // CreateNetworkRelationIdentifier returns an identification for the relation this connection may contribute to
-func CreateNetworkRelationIdentifier(namespace string, conn common.ConnectionStats) (string, error) {
-	isV6 := conn.Family == common.AF_INET6
+func CreateNetworkRelationIdentifier(namespace string, conn network.ConnectionStats) (string, error) {
+	isV6 := conn.Family == network.AFINET6
 	localEndpoint, err := makeEndpointID(namespace, conn.Local, isV6, int32(conn.LocalPort))
 	if err != nil {
 		return "", err
@@ -128,7 +130,7 @@ func (ns namespace) toString() string {
 	return strings.Join(fragments, ":")
 }
 
-func makeNamespace(clusterName string, hostname string, connection common.ConnectionStats) namespace {
+func makeNamespace(clusterName string, hostname string, connection network.ConnectionStats) namespace {
 	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
 	var ns = namespace{"", "", ""}
 	if clusterName != "" {
@@ -141,19 +143,19 @@ func makeNamespace(clusterName string, hostname string, connection common.Connec
 	// https://github.com/weaveworks/scope/blob/7163f42170d72702fd55d2324d203c5b7be5c5cc/probe/endpoint/ebpf.go#L34
 	// We disregard local ip addresses for now, those might be interesting when doing docker setups,
 	// which are not the highest priority atm
-	if isLoopback(connection.Local) && isLoopback(connection.Remote) {
+	if connection.Source.IsLoopback() && connection.Dest.IsLoopback() {
 		// For sure this is scoped to the host
 		ns.HostName = hostname
 		// Maybe even to a namespace on the host in case of k8s/docker containers
-		if connection.NetworkNamespace != "" {
-			ns.NetworkNamespace = connection.NetworkNamespace
+		if connection.NetNS != 0 {
+			ns.NetworkNamespace = strconv.Itoa(int(connection.NetNS))
 		}
 	}
 
 	return ns
 }
 
-func formatNamespace(clusterName string, hostname string, connection common.ConnectionStats) string {
+func formatNamespace(clusterName string, hostname string, connection network.ConnectionStats) string {
 	return makeNamespace(clusterName, hostname, connection).toString()
 }
 
@@ -165,33 +167,33 @@ func isLoopback(ip string) bool {
 	return ipAddress.IsLoopback()
 }
 
-func formatFamily(f common.ConnectionFamily) model.ConnectionFamily {
+func formatFamily(f network.ConnectionFamily) model.ConnectionFamily {
 	switch f {
-	case common.AF_INET:
+	case network.AFINET:
 		return model.ConnectionFamily_v4
-	case common.AF_INET6:
+	case network.AFINET6:
 		return model.ConnectionFamily_v6
 	default:
 		return -1
 	}
 }
 
-func formatType(f common.ConnectionType) model.ConnectionType {
+func formatType(f network.ConnectionType) model.ConnectionType {
 	switch f {
-	case common.TCP:
+	case network.TCP:
 		return model.ConnectionType_tcp
-	case common.UDP:
+	case network.UDP:
 		return model.ConnectionType_udp
 	default:
 		return -1
 	}
 }
 
-func calculateDirection(d common.Direction) model.ConnectionDirection {
+func calculateDirection(d network.ConnectionDirection) model.ConnectionDirection {
 	switch d {
-	case common.OUTGOING:
+	case network.OUTGOING:
 		return model.ConnectionDirection_outgoing
-	case common.INCOMING:
+	case network.INCOMING:
 		return model.ConnectionDirection_incoming
 	default:
 		return model.ConnectionDirection_none

@@ -5,6 +5,7 @@ package checks
 
 import (
 	"bytes"
+	tracer2 "github.com/StackVista/stackstate-agent/pkg/network/tracer"
 	"os"
 
 	"github.com/StackVista/stackstate-process-agent/config"
@@ -42,7 +43,7 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 		conf.HttpMetricConfig = *cfg.NetworkTracer.HTTPMetrics
 		conf.EnableProtocolInspection = cfg.NetworkTracer.EnableProtocolInspection
 
-		t, err := retryTracerInit(cfg.NetworkTracerInitRetryDuration, cfg.NetworkTracerInitRetryAmount, conf, tracer.NewTracer)
+		t, err := retryTracerInit(cfg.NetworkTracerInitRetryDuration, cfg.NetworkTracerInitRetryAmount, conf, tracer2.NewTracer)
 		if err != nil {
 			c.localTracerErr = log.Errorf("failed to create network tracer: %s.  Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", err)
 			return

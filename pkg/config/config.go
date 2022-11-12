@@ -10,7 +10,11 @@ import (
 var Datadog ddconfig.Config
 
 func init() {
-	// Configure Datadog global configuration
+	// Set the environment prefix to STS. This is used for any code that is "inherited" from the main agent where no
+	// branding is applied. eg, The forwarder uses the config in the main agent repo where no branding has been applied.
+	ddconfig.Datadog.SetEnvPrefix("STS")
+
+	// Configure Datadog global configuration. This is used for the config that is used in the process-agent.
 	Datadog = ddconfig.NewConfig("stackstate", "STS", strings.NewReplacer(".", "_"))
 	// Configuration defaults
 	ddconfig.InitConfig(Datadog)

@@ -8,6 +8,8 @@ import (
 
 // Datadog is the global configuration object
 var Datadog ddconfig.Config
+
+// MainAgentConfig is the global configuration object for main agent internals
 var MainAgentConfig ddconfig.Config
 
 func init() {

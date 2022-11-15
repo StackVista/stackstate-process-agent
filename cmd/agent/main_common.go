@@ -110,7 +110,7 @@ func runAgent(exit chan bool) {
 		log.Criticalf("Error reading stackstate.yaml: %s", err)
 		os.Exit(1)
 	} else if yamlConf != nil {
-		log.Infof("Setting up agent config for config path: %s", opts.configPath)
+		log.Debugf("Setting up agent config for config path: %s", opts.configPath)
 		config.SetupDDAgentConfig(opts.configPath)
 	}
 

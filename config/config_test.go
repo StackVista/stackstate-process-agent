@@ -1397,13 +1397,6 @@ func TestNetworkTracerInitRetry_FromYaml(t *testing.T) {
 	assert.Equal(t, 50*time.Second, agentConfig.NetworkTracerInitRetryDuration)
 }
 
-func TestStsSkipSllValidation(t *testing.T) {
-	_ = os.Setenv("STS_SKIP_SSL_VALIDATION", "true")
-	_, err := NewAgentConfig(nil, &YamlAgentConfig{}, nil)
-	assert.NoError(t, err)
-	assert.Equal(t, "true", ddconfig.Datadog.GetString("skip_ssl_validation"))
-}
-
 func TestCheckIntervalCodeDefaults(t *testing.T) {
 	agentConfig, err := NewAgentConfig(nil, nil, nil)
 	assert.NoError(t, err)
@@ -1505,6 +1498,8 @@ func TestSkipSSLValidation_FromEnv(t *testing.T) {
 	assert.Equal(t, true, skipSSLConfig)
 	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
 	assert.Equal(t, true, skipSSLAgentConfig)
+
+	os.Unsetenv("STS_SKIP_SSL_VALIDATION")
 }
 
 func TestSkipSSLValidation_FromEnvOverridesYaml(t *testing.T) {
@@ -1523,4 +1518,6 @@ func TestSkipSSLValidation_FromEnvOverridesYaml(t *testing.T) {
 	assert.Equal(t, true, skipSSLConfig)
 	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
 	assert.Equal(t, true, skipSSLAgentConfig)
+
+	os.Unsetenv("STS_SKIP_SSL_VALIDATION")
 }

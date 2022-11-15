@@ -77,6 +77,12 @@ services:
     restart: always
     mem_limit: 1G
 
+  simulator:
+    image: "stackstate/simulator:latest"
+    ports:
+      - 7078:7078
+    entrypoint: record -p 7078 -t tpl.json
+
   stackstate-process-agent:
     image: stackstate/stackstate-process-agent-test:${CURRENT_BRANCH:-master}
     network_mode: "host"
@@ -88,9 +94,11 @@ services:
       - "/sys/fs/cgroup/:/host/sys/fs/cgroup:ro"
       - "/etc/passwd:/etc/passwd:ro"
       - "/sys/kernel/debug:/sys/kernel/debug"
+#      - "./stackstate-docker-dev.yaml:/etc/stackstate-agent/stackstate-docker.yaml/:ro"
     environment:
       STS_API_KEY: "API_KEY"
       STS_PROCESS_AGENT_URL: "http://localhost:7077/stsAgent"
+      STS_SKIP_SSL_VALIDATION: "true"
       STS_PROCESS_AGENT_ENABLED: "true"
       STS_PROCESS_BLACKLIST_PATTERNS: "^s6-,^docker-,^/sbin/,^/usr/sbin,^/pause,^/usr/bin/dbus-daemon,^-bash,^su$$,^/bin/bash,/lib/systemd/,agent"
       HOST_PROC: "/host/proc"

@@ -1467,3 +1467,60 @@ func TestCheckIntervalCodeDefaults_FromEnvOverridesYaml(t *testing.T) {
 	assert.Equal(t, time.Duration(20)*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(t, time.Duration(20)*time.Second, agentConfig.CheckIntervals["connections"])
 }
+
+func TestSkipSSLValidation_Default(t *testing.T) {
+	var ddy YamlAgentConfig
+	_, err := NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(t, err)
+
+	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
+	assert.Equal(t, false, skipSSLConfig)
+	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
+	assert.Equal(t, false, skipSSLAgentConfig)
+}
+
+func TestSkipSSLValidation_FromYaml(t *testing.T) {
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"skip_ssl_validation: true",
+	}, "\n")), &ddy)
+	assert.NoError(t, err)
+
+	_, err = NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(t, err)
+
+	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
+	assert.Equal(t, true, skipSSLConfig)
+	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
+	assert.Equal(t, true, skipSSLAgentConfig)
+}
+
+func TestSkipSSLValidation_FromEnv(t *testing.T) {
+	os.Setenv("STS_SKIP_SSL_VALIDATION", "true")
+
+	_, err := NewAgentConfig(nil, nil, nil)
+	assert.NoError(t, err)
+
+	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
+	assert.Equal(t, true, skipSSLConfig)
+	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
+	assert.Equal(t, true, skipSSLAgentConfig)
+}
+
+func TestSkipSSLValidation_FromEnvOverridesYaml(t *testing.T) {
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"skip_ssl_validation: false",
+	}, "\n")), &ddy)
+	assert.NoError(t, err)
+
+	os.Setenv("STS_SKIP_SSL_VALIDATION", "true")
+
+	_, err = NewAgentConfig(nil, &ddy, nil)
+	assert.NoError(t, err)
+
+	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
+	assert.Equal(t, true, skipSSLConfig)
+	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
+	assert.Equal(t, true, skipSSLAgentConfig)
+}

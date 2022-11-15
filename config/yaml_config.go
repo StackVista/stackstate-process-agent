@@ -390,9 +390,11 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 // This is required for configuration to be available for container listeners.
 func SetupDDAgentConfig(configPath string) error {
 	ddconfig.Datadog.AddConfigPath(configPath)
+	ddconfig.MainAgentConfig.AddConfigPath(configPath)
 	// If they set a config file directly, let's try to honor that
 	if strings.HasSuffix(configPath, ".yaml") {
 		ddconfig.Datadog.SetConfigFile(configPath)
+		ddconfig.MainAgentConfig.SetConfigFile(configPath)
 	}
 
 	// load the configuration

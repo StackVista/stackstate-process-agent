@@ -335,6 +335,7 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	if yc.SkipSSLValidation != "" {
 		ddconfig.Datadog.Set("skip_ssl_validation", yc.SkipSSLValidation)
 		ddconfig.MainAgentConfig.Set("skip_ssl_validation", yc.SkipSSLValidation)
+		log.Infof("Setting skip_ssl_validation to: %s", yc.SkipSSLValidation)
 	}
 
 	// sts begin

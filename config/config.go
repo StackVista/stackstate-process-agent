@@ -803,7 +803,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	}
 
 	// STS
-	log.Infof(": %v", ddconfig.Datadog.GetString("skip_ssl_validation"))
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
 		ddconfig.Datadog.Set("skip_ssl_validation", v)
 		ddconfig.MainAgentConfig.Set("skip_ssl_validation", v)

@@ -1468,8 +1468,6 @@ func TestSkipSSLValidation_Default(t *testing.T) {
 
 	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
 	assert.Equal(t, false, skipSSLConfig)
-	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
-	assert.Equal(t, false, skipSSLAgentConfig)
 }
 
 func TestSkipSSLValidation_FromYaml(t *testing.T) {
@@ -1484,8 +1482,6 @@ func TestSkipSSLValidation_FromYaml(t *testing.T) {
 
 	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
 	assert.Equal(t, true, skipSSLConfig)
-	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
-	assert.Equal(t, true, skipSSLAgentConfig)
 }
 
 func TestSkipSSLValidation_FromEnv(t *testing.T) {
@@ -1496,8 +1492,6 @@ func TestSkipSSLValidation_FromEnv(t *testing.T) {
 
 	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
 	assert.Equal(t, true, skipSSLConfig)
-	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
-	assert.Equal(t, true, skipSSLAgentConfig)
 
 	os.Unsetenv("STS_SKIP_SSL_VALIDATION")
 }
@@ -1516,8 +1510,6 @@ func TestSkipSSLValidation_FromEnvOverridesYaml(t *testing.T) {
 
 	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
 	assert.Equal(t, true, skipSSLConfig)
-	skipSSLAgentConfig := ddconfig.MainAgentConfig.Get("skip_ssl_validation")
-	assert.Equal(t, true, skipSSLAgentConfig)
 
 	os.Unsetenv("STS_SKIP_SSL_VALIDATION")
 }

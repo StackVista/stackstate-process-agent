@@ -334,7 +334,6 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	// [STS] set the skip_ssl_validation for the process-agent + main-agent config
 	if yc.SkipSSLValidation != "" {
 		ddconfig.Datadog.Set("skip_ssl_validation", yc.SkipSSLValidation)
-		ddconfig.MainAgentConfig.Set("skip_ssl_validation", yc.SkipSSLValidation)
 		log.Infof("Setting skip_ssl_validation to: %s", yc.SkipSSLValidation)
 	}
 
@@ -395,11 +394,9 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 // This is required for configuration to be available for container listeners.
 func SetupDDAgentConfig(configPath string) error {
 	ddconfig.Datadog.AddConfigPath(configPath)
-	ddconfig.MainAgentConfig.AddConfigPath(configPath)
 	// If they set a config file directly, let's try to honor that
 	if strings.HasSuffix(configPath, ".yaml") {
 		ddconfig.Datadog.SetConfigFile(configPath)
-		ddconfig.MainAgentConfig.SetConfigFile(configPath)
 	}
 
 	// load the configuration

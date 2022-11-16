@@ -3,24 +3,16 @@ package config
 import (
 	ddconfig "github.com/StackVista/stackstate-agent/pkg/config"
 	"os"
-	"strings"
 )
 
 // Datadog is the global configuration object
 var Datadog ddconfig.Config
 
-// MainAgentConfig is the global configuration object for main agent internals
-var MainAgentConfig ddconfig.Config
-
 func init() {
 	// Set the environment prefix to STS. This is used for any code that is "inherited" from the main agent where no
 	// branding is applied. eg, The forwarder uses the config in the main agent repo where no branding has been applied.
-	MainAgentConfig = ddconfig.Datadog
-	MainAgentConfig.SetEnvPrefix("STS")
-
-	// Configure Datadog global configuration. This is used for the config that is used in the process-agent.
-	Datadog = ddconfig.NewConfig("stackstate", "STS", strings.NewReplacer(".", "_"))
-	// Configuration defaults
+	Datadog = ddconfig.Datadog
+	Datadog.SetEnvPrefix("STS")
 	ddconfig.InitConfig(Datadog)
 }
 
@@ -36,7 +28,7 @@ func GetMainEndpoint(prefix string, ddURLKey string) string {
 
 // Load reads configs files and initializes the config module
 func Load() (*ddconfig.Warnings, error) {
-	return ddconfig.LoadStackstate(Datadog)
+	return ddconfig.Load()
 }
 
 // GetMaxCapacity returns the maximum amount of elements per batch for the transactionbatcher

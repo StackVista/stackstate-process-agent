@@ -18,9 +18,10 @@ import (
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration
 // available in Agent versions >= 6
 type YamlAgentConfig struct {
-	APIKey string `yaml:"api_key"`
-	Site   string `yaml:"site"`
-	StsURL string `yaml:"sts_url"`
+	APIKey            string `yaml:"api_key"`
+	Site              string `yaml:"site"`
+	StsURL            string `yaml:"sts_url"`
+	SkipSSLValidation string `yaml:"skip_ssl_validation"`
 	// Whether or not the process-agent should output logs to console
 	LogToConsole bool `yaml:"log_to_console"`
 	// Incremental publishing: send only changes to server, instead of snapshots
@@ -330,8 +331,11 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		}
 	}
 
-	_ = ddconfig.Datadog.BindEnv("skip_ssl_validation")
-	log.Infof("STS_SKIP_SSL_VALIDATION: %v", ddconfig.Datadog.GetString("skip_ssl_validation"))
+	// [STS] set the skip_ssl_validation for the process-agent + main-agent config
+	if yc.SkipSSLValidation != "" {
+		ddconfig.Datadog.Set("skip_ssl_validation", yc.SkipSSLValidation)
+		log.Infof("Setting skip_ssl_validation to: %s", yc.SkipSSLValidation)
+	}
 
 	// sts begin
 	// Used to override container source auto-detection

@@ -94,9 +94,9 @@ func (ls *logSender) GetSenderStats() check.SenderStats {
 }
 
 // MonotonicCountWithFlushFirstValue returns void
-func (m *logSender) MonotonicCountWithFlushFirstValue(metric string, value float64, hostname string, tags []string, flushFirstValue bool) {
+func (ls *logSender) MonotonicCountWithFlushFirstValue(metric string, value float64, hostname string, tags []string, flushFirstValue bool) {
 }
 
 // OrchestratorMetadata returns void
-func (m *logSender) OrchestratorMetadata(msgs []serializer.ProcessMessageBody, clusterID string, nodeType int) {
+func (ls *logSender) OrchestratorMetadata(msgs []serializer.ProcessMessageBody, clusterID string, nodeType int) {
 }

@@ -292,7 +292,7 @@ func replaceLogger(cfg *LoggerConfig) error {
 
 	// If the main agent has a logger, replace it with ours and set new log level. If not, then set it up.
 	if ddlog.ChangeLogLevel(logger, cfg.LogLevel) != nil {
-		ddlog.SetupDatadogLogger(logger, cfg.LogLevel)
+		ddlog.SetupLogger(logger, cfg.LogLevel)
 	}
 
 	return log.ReplaceLogger(logger)

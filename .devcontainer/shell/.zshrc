@@ -4,10 +4,22 @@ POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
 ZSH_THEME="powerlevel10k/powerlevel10k"
 ENABLE_CORRECTION="false"
 COMPLETION_WAITING_DOTS="true"
-plugins=(vscode git colorize docker docker-compose)
+plugins=(
+  vscode
+  git
+  colorize
+  docker
+  docker-compose
+  zsh-autosuggestions
+)
 source $ZSH/oh-my-zsh.sh
 source ~/.p10k.zsh
 # TODO Ascii art
+
+antigen bundle zsh-users/zsh-autosuggestions
+
+export HISTFILESIZE=10000
+export HISTSIZE=10000
 
 # SSH key check
 test -f ~/.ssh/id_rsa

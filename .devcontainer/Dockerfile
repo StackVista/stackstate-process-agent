@@ -76,6 +76,12 @@ RUN git clone --single-branch --depth 1 https://github.com/robbyrussell/oh-my-zs
     cp -r /home/${USERNAME}/.oh-my-zsh /root/.oh-my-zsh && \
     chown -R root:root /root/.oh-my-zsh
 
+ENV ZSH=/home/${USERNAME}/.oh-my-zsh
+
+RUN git clone https://github.com/zsh-users/zsh-autosuggestions.git $ZSH/plugins/zsh-autosuggestions
+
+RUN git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $ZSH/plugins/zsh-syntax-highlighting
+
 # Docker
 COPY --from=docker-cli --chown=${USER_UID}:${USER_GID} /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=docker-compose --chown=${USER_UID}:${USER_GID} /usr/local/bin/docker-compose /usr/local/bin/docker-compose
@@ -119,24 +125,19 @@ RUN mkdir -p ${GOPATH}/src/github.com && \
 USER ${USERNAME}
 
 COPY --from=golangci-lint /usr/bin/golangci-lint ${GOPATH}/bin
-RUN go get -v golang.org/x/tools/gopls@${GOPLS_VERSION} 2>&1
-RUN go get -v \
-    # Base Go tools needed for VS code Go extension
-    golang.org/x/tools/cmd/guru \
-    golang.org/x/tools/cmd/gorename \
-    github.com/go-delve/delve/cmd/dlv@${DELVE_VERSION} \
-    github.com/uudashr/gopkgs/v2/cmd/gopkgs@latest \
-    github.com/ramya-rao-a/go-outline \
-    # Extra tools integrating with VS code
-    github.com/fatih/gomodifytags@${GOMODIFYTAGS_VERSION} \
-    github.com/haya14busa/goplay/cmd/goplay@${GOPLAY_VERSION} \
-    github.com/cweill/gotests/...@${GOTESTS_VERSION} \
-    github.com/davidrjenni/reftools/cmd/fillstruct \
-    # Terminal tools
-    github.com/golang/mock/gomock@${MOCK_VERSION} \
-    github.com/golang/mock/mockgen@${MOCK_VERSION} \
-    github.com/vektra/mockery/v2/...@${MOCKERY_VERSION} \
-    2>&1
+RUN go install -v golang.org/x/tools/gopls@${GOPLS_VERSION} 2>&1
+# Base Go tools needed for VS code Go extension
+RUN go install golang.org/x/tools/cmd/guru@latest
+RUN go install golang.org/x/tools/cmd/gorename@latest
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+RUN go install github.com/uudashr/gopkgs/v2/cmd/gopkgs@latest
+RUN go install github.com/ramya-rao-a/go-outline@latest
+# Extra tools integrating with VS code
+RUN go install github.com/fatih/gomodifytags@latest
+RUN go install github.com/haya14busa/goplay/cmd/goplay@latest
+RUN go install github.com/davidrjenni/reftools/cmd/fillstruct@latest
+# Terminal tools
+RUN go install github.com/golang/mock/mockgen@latest
 
 USER root
 
@@ -145,33 +146,6 @@ USER root
 ARG KUBECTL_VERSION=v1.19.4
 RUN wget -qO /usr/local/bin/kubectl "https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" && \
     chmod 755 /usr/local/bin/kubectl
-
-# Stern
-ARG STERN_VERSION=1.11.0
-RUN wget -qO /usr/local/bin/stern https://github.com/wercker/stern/releases/download/${STERN_VERSION}/stern_$(uname -s)_amd64 && \
-    chown ${USER_UID}:${USER_GID} /usr/local/bin/stern && \
-    chmod 755 /usr/local/bin/stern
-
-# Kubectx and Kubens
-ARG KUBECTX_VERSION=v0.9.3
-RUN wget -qO- "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubectx_${KUBECTX_VERSION}_$(uname -s)_$(uname -m).tar.gz" | \
-    tar -xzC /usr/local/bin kubectx && \
-    wget -qO- "https://github.com/ahmetb/kubectx/releases/download/${KUBECTX_VERSION}/kubens_${KUBECTX_VERSION}_$(uname -s)_$(uname -m).tar.gz" | \
-    tar -xzC /usr/local/bin kubens && \
-    chmod 755 /usr/local/bin/kube*
-
-# Helm
-ARG HELM3_VERSION=v3.5.2
-RUN wget -qO- "https://get.helm.sh/helm-${HELM3_VERSION}-linux-amd64.tar.gz" | \
-    tar -xzC /usr/local/bin --strip-components=1 linux-amd64/helm && \
-    chmod 755 /usr/local/bin/helm*
-
-# AWS CLI
-RUN wget -qO awscli2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" && \
-    unzip awscli2.zip && \
-    ./aws/install && \
-    rm awscli2.zip
-
 
 # Revert configurations that was set at top layer (for avoiding build warnings and errors).
 ENV DEBIAN_FRONTEND=dialog

@@ -139,6 +139,8 @@ RUN go install github.com/davidrjenni/reftools/cmd/fillstruct@latest
 # Terminal tools
 RUN go install github.com/golang/mock/mockgen@latest
 
+RUN git config --global gpg.program /usr/bin/gpg
+
 USER root
 
 # EXTRA TOOLS

@@ -39,3 +39,10 @@ func GetMaxCapacity() int {
 
 	return ddconfig.DefaultBatcherBufferSize
 }
+
+// DetectFeatures runs the feature detection.
+// We guarantee that Datadog configuration is entirely loaded (env + YAML)
+// before this function is called
+func DetectFeatures() {
+	ddconfig.DetectFeatures()
+}

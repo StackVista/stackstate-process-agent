@@ -28,6 +28,7 @@
     "workspaceFolder": "/go/src/github.com/StackVista/stackstate-process-agent",
     "postCreateCommand": "./.devcontainer/postCreateCommand.sh",
     "settings": {
+        "editor.tabSize": 2,
         "go.buildTags": "linux,linux_bpf",
         "go.testFlags": [
             "-v"

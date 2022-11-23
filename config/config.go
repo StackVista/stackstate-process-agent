@@ -199,6 +199,9 @@ func NewDefaultAgentConfig() *AgentConfig {
 		panic(err)
 	}
 
+	// TODO: not sure this is correct. Process agent config changed a lot.
+	ddconfig.DetectFeatures()
+
 	// Note: This only considers container sources that are already setup. It's possible that container sources may
 	//       need a few minutes to be ready.
 	_, err = util.GetContainers()

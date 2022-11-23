@@ -3,6 +3,7 @@
     "dockerFile": "Dockerfile",
     "extensions": [
         "golang.go",
+        "k--kato.intellij-idea-keybindings", // Intellij IDEA key bindings
         "ms-python.python",
         "ms-azuretools.vscode-docker",
         "eamodio.gitlens",

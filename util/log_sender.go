@@ -1,7 +1,9 @@
 package util
 
 import (
+	"github.com/StackVista/stackstate-agent/pkg/collector/check"
 	"github.com/StackVista/stackstate-agent/pkg/metrics"
+	"github.com/StackVista/stackstate-agent/pkg/serializer"
 	log "github.com/cihub/seelog"
 )
 
@@ -57,8 +59,8 @@ func (ls *logSender) ServiceCheck(checkName string, status metrics.ServiceCheckS
 }
 
 // HistogramBucket logs histogram bucket data
-func (ls *logSender) HistogramBucket(metric string, value int64, lowerBound, upperBound float64, monotonic bool, hostname string, tags []string) {
-	log.Debugf("Received HistogramBucket: [%s, %d, %f, %f, %b, %s, %v]", metric, value, lowerBound, upperBound, monotonic, hostname, tags)
+func (ls *logSender) HistogramBucket(metric string, value int64, lowerBound, upperBound float64, monotonic bool, hostname string, tags []string, flushFirstValue bool) {
+	log.Debugf("Received HistogramBucket: [%s, %d, %f, %f, %b, %s, %v, %t]", metric, value, lowerBound, upperBound, monotonic, hostname, tags, flushFirstValue)
 }
 
 // Event logs event data
@@ -82,3 +84,19 @@ func (ls *logSender) SetCheckService(service string) {}
 
 // FinalizeCheckServiceTag returns void
 func (ls *logSender) FinalizeCheckServiceTag() {}
+
+// EventPlatformEvent returns void
+func (ls *logSender) EventPlatformEvent(rawEvent string, eventType string) {}
+
+// GetSenderStats returns new SenderStats
+func (ls *logSender) GetSenderStats() check.SenderStats {
+	return check.NewSenderStats()
+}
+
+// MonotonicCountWithFlushFirstValue returns void
+func (ls *logSender) MonotonicCountWithFlushFirstValue(metric string, value float64, hostname string, tags []string, flushFirstValue bool) {
+}
+
+// OrchestratorMetadata returns void
+func (ls *logSender) OrchestratorMetadata(msgs []serializer.ProcessMessageBody, clusterID string, nodeType int) {
+}

@@ -181,9 +181,9 @@ func fmtContainers(
 				makeMetric("netSentPs", float64(calculateRate(ifStats.PacketsSent, lastCtr.NetworkSum.PacketsSent, lastRun))),
 				makeMetric("netRcvdBps", float64(calculateRate(ifStats.BytesRcvd, lastCtr.NetworkSum.BytesRcvd, lastRun))),
 				makeMetric("netSentBps", float64(calculateRate(ifStats.BytesSent, lastCtr.NetworkSum.BytesSent, lastRun))),
-				makeMetric("userPct", float64(calculateCtrPct(ctr.CPU.User, lastCtr.CPU.User, sys2, sys1, cpus, lastRun))),
-				makeMetric("systemPct", float64(calculateCtrPct(ctr.CPU.System, lastCtr.CPU.System, sys2, sys1, cpus, lastRun))),
-				makeMetric("totalPct", float64(calculateCtrPct(ctr.CPU.User+ctr.CPU.System, lastCtr.CPU.User+lastCtr.CPU.System, sys2, sys1, cpus, lastRun))),
+				makeMetric("userPct", float64(calculateCtrPct(uint64(ctr.CPU.User), uint64(lastCtr.CPU.User), sys2, sys1, cpus, lastRun))),
+				makeMetric("systemPct", float64(calculateCtrPct(uint64(ctr.CPU.System), uint64(lastCtr.CPU.System), sys2, sys1, cpus, lastRun))),
+				makeMetric("totalPct", float64(calculateCtrPct(uint64(ctr.CPU.User+ctr.CPU.System), uint64(lastCtr.CPU.User+lastCtr.CPU.System), sys2, sys1, cpus, lastRun))),
 				makeMetric("memRss", float64(ctr.Memory.RSS)),
 				makeMetric("memCache", float64(ctr.Memory.Cache)),
 			)
@@ -195,9 +195,9 @@ func fmtContainers(
 			container.NetSentPs = calculateRate(ifStats.PacketsSent, lastCtr.NetworkSum.PacketsSent, lastRun)
 			container.NetRcvdBps = calculateRate(ifStats.BytesRcvd, lastCtr.NetworkSum.BytesRcvd, lastRun)
 			container.NetSentBps = calculateRate(ifStats.BytesSent, lastCtr.NetworkSum.BytesSent, lastRun)
-			container.UserPct = calculateCtrPct(ctr.CPU.User, lastCtr.CPU.User, sys2, sys1, cpus, lastRun)
-			container.SystemPct = calculateCtrPct(ctr.CPU.System, lastCtr.CPU.System, sys2, sys1, cpus, lastRun)
-			container.TotalPct = calculateCtrPct(ctr.CPU.User+ctr.CPU.System, lastCtr.CPU.User+lastCtr.CPU.System, sys2, sys1, cpus, lastRun)
+			container.UserPct = calculateCtrPct(uint64(ctr.CPU.User), uint64(lastCtr.CPU.User), sys2, sys1, cpus, lastRun)
+			container.SystemPct = calculateCtrPct(uint64(ctr.CPU.System), uint64(lastCtr.CPU.System), sys2, sys1, cpus, lastRun)
+			container.TotalPct = calculateCtrPct(uint64(ctr.CPU.User+ctr.CPU.System), uint64(lastCtr.CPU.User+lastCtr.CPU.System), sys2, sys1, cpus, lastRun)
 			container.MemRss = ctr.Memory.RSS
 			container.MemCache = ctr.Memory.Cache
 		}

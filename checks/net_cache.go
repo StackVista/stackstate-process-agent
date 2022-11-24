@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	"github.com/patrickmn/go-cache"
 	"time"
 )
@@ -39,7 +38,7 @@ func (nrc *NetworkRelationCache) IsNetworkRelationCached(relationID string) (*Ne
 }
 
 // PutNetworkRelationCache inserts / updates the NetworkRelationCacheItem for relationID
-func (nrc *NetworkRelationCache) PutNetworkRelationCache(relationID string, connStats common.ConnectionStats) *NetworkRelationCacheItem {
+func (nrc *NetworkRelationCache) PutNetworkRelationCache(relationID string) *NetworkRelationCacheItem {
 	var cachedRelation *NetworkRelationCacheItem
 	nowUnix := time.Now().Unix()
 

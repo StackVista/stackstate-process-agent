@@ -1,14 +1,37 @@
 package util
 
 import (
+	"github.com/StackVista/stackstate-agent/pkg/aggregator"
+	"github.com/StackVista/stackstate-agent/pkg/collector/check"
 	"github.com/StackVista/stackstate-agent/pkg/metrics"
+	"github.com/StackVista/stackstate-agent/pkg/serializer"
 	log "github.com/cihub/seelog"
 )
 
 // LogSender is a singleton instance of the Sender interface logging the data produced.
-var LogSender = &logSender{}
+var LogSender aggregator.Sender = &logSender{}
 
 type logSender struct {
+}
+
+func (ls *logSender) MonotonicCountWithFlushFirstValue(metric string, value float64, hostname string, tags []string, flushFirstValue bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ls *logSender) EventPlatformEvent(rawEvent string, eventType string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ls *logSender) GetSenderStats() check.SenderStats {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ls *logSender) OrchestratorMetadata(msgs []serializer.ProcessMessageBody, clusterID string, nodeType int) {
+	//TODO implement me
+	panic("implement me")
 }
 
 // Commit logs received commit
@@ -57,7 +80,7 @@ func (ls *logSender) ServiceCheck(checkName string, status metrics.ServiceCheckS
 }
 
 // HistogramBucket logs histogram bucket data
-func (ls *logSender) HistogramBucket(metric string, value int64, lowerBound, upperBound float64, monotonic bool, hostname string, tags []string) {
+func (ls *logSender) HistogramBucket(metric string, value int64, lowerBound, upperBound float64, monotonic bool, hostname string, tags []string, flushFirstValue bool) {
 	log.Debugf("Received HistogramBucket: [%s, %d, %f, %f, %b, %s, %v]", metric, value, lowerBound, upperBound, monotonic, hostname, tags)
 }
 

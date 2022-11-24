@@ -29,3 +29,4 @@ derived.gen.go
 
 #MAC OS
 .DS_STORE
+/clangbuild/

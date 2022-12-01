@@ -54,6 +54,9 @@ build_windows:
       - ./process-agent.exe
   tags:
     - windows_agent7_go1.17
+  rules:
+    - when: manual
+      allow_failure: true
   retry:
     max: 2
     when:
@@ -70,6 +73,9 @@ pre_release_windows:
     - aws.exe s3 cp . s3://stackstate-process-agent-2-test/$CI_COMMIT_REF_NAME --recursive --exclude "*" --include "*.exe" --acl public-read
   tags:
     - windows_agent7_go1.17
+  rules:
+    - when: manual
+      allow_failure: true
   retry:
     max: 2
     when:

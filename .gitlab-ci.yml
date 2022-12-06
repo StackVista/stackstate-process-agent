@@ -1,5 +1,4 @@
 stages:
-  - runner_build
   - build
   - pre_release
   - release
@@ -20,7 +19,7 @@ variables:
 build_linux:
   image: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-20221024
   stage: build
-
+  needs: []
   script:
     - printenv
     - export PROCESS_AGENT_VERSION=$(packaging/version.sh)
@@ -43,11 +42,13 @@ build_linux:
 # Gitlab dedicated runner in a Windows VM
 build_windows:
   stage: build
-  allow_failure: false
+  when: manual
+  needs: []
   script:
     - rake deps windres=true --trace
     - bash -c "./packaging/apply_branding.sh"
     - .gitlab-scripts/windows_build.cmd
+  allow_failure: false
   artifacts:
     expire_in: 2 weeks
     paths:
@@ -96,37 +97,32 @@ pre_release_linux:
     - ls -la $CI_PROJECT_DIR/packaging
     - cd $CI_PROJECT_DIR/packaging && ./publish_staging_package.sh
 
-pre_release_image:
-  stage: pre_release
+.docker_build:
   image: artifactory.tooling.stackstate.io/docker-virtual/docker:18.06.0
-  needs:
-    - build_linux
+  services:
+    - name: artifactory.tooling.stackstate.io/docker-virtual/docker:18.09-dind
+      alias: docker
   variables:
     DOCKER_DRIVER: overlay
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
-  services:
-    - name: artifactory.tooling.stackstate.io/docker-virtual/docker:18.09-dind
-      alias: docker
+  before_script:
+    - docker login -u "${docker_user}" -p "${docker_password}" "${DOCKER_REGISTRY}"
+    - docker login -u "${quay_user}" -p "${quay_password}" "${QUAY_REGISTRY}"
+
+pre_release_image:
+  stage: pre_release
+  needs:
+    - build_linux
   script:
     - cd $CI_PROJECT_DIR
     - ./packaging/publish_image.sh $CI_COMMIT_REF_NAME $STS_DOCKER_TEST_REPO $CI_PROJECT_DIR/process-agent $CI_COMMIT_SHORT_SHA
 
 release_image:
+  extends: [ .docker_build ]
   stage: release
-  image: artifactory.tooling.stackstate.io/docker-virtual/docker:18.06.0
   needs:
     - build_linux
-  variables:
-    DOCKER_DRIVER: overlay
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  services:
-    - name: artifactory.tooling.stackstate.io/docker-virtual/docker:18.09-dind
-      alias: docker
-  before_script:
-    - docker login -u "${docker_user}" -p "${docker_password}" "${DOCKER_REGISTRY}"
-    - docker login -u "${quay_user}" -p "${quay_password}" "${QUAY_REGISTRY}"
   script:
     - cd $CI_PROJECT_DIR
     - export PUSH_LATEST=true
@@ -136,12 +132,24 @@ release_image:
     - tags
     - trigger
 
+build_builder_x64:
+  extends: [ .docker_build ]
+  stage: build
+  rules:
+    - when: manual
+      allow_failure: true
+  script:
+    - cd .cd-builders/builder-x64; pwd
+    - export RUNTIMETAG="$(date +%Y%m%d)-${CI_COMMIT_SHA:0:7}"; echo ${RUNTIMETAG}
+    - docker build -t stackstate/stackstate-process-agent-builder:llvmclang11-x64-${RUNTIMETAG} .
+    - docker push stackstate/stackstate-process-agent-builder:llvmclang11-x64-${RUNTIMETAG}
+  timeout: 3 hours
+  tags:
+    - sts-k8s-xl-runner
+
 build_runner_centos7:
-  stage: runner_build
-  image: artifactory.tooling.stackstate.io/docker-virtual/docker:18.06.0
-  services:
-    - name: artifactory.tooling.stackstate.io/docker-virtual/docker:18.09-dind
-      alias: docker
+  extends: [ .docker_build ]
+  stage: build
   retry:
     max: 2
     when:
@@ -149,15 +157,9 @@ build_runner_centos7:
   rules:
     - when: manual
       allow_failure: true
-  variables:
-    DOCKER_DRIVER: overlay
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
   script:
     - cd $RUNNER7_DIR
     - pwd
     - export RUNTIMETAG=$(date +%Y%m%d)
-    - docker login -u "${docker_user}" -p "${docker_password}" "${DOCKER_REGISTRY}"
-    - docker login -u "${quay_user}" -p "${quay_password}" "${QUAY_REGISTRY}"
     - docker build -t stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-${RUNTIMETAG} .
     - docker push stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-${RUNTIMETAG}

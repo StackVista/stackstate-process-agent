@@ -32,4 +32,4 @@ derived.gen.go
 /clangbuild/
 
 # Go modules CI cache
-.go/
+/.go/

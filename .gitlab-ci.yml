@@ -1,7 +1,7 @@
 stages:
   - build
-  - pre_release
-  - release
+  - test
+  - publish
 
 variables:
   SRC_PATH: /src/github.com/StackVista/stackstate-process-agent
@@ -15,48 +15,55 @@ variables:
   DOCKER_REGISTRY: docker.io
   RUNNER7_DIR: $CI_PROJECT_DIR/.cd-builders/runner-gitlab-centos7
   VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-builder:llvmclang11-x64-20221207-c3bf4ae
+  LINUX_BUILDER: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-runner-gitlab:llvmclang11-x64-20221207-7c6f401
   GOPATH: "$CI_PROJECT_DIR/.go"
 
-cache:
-  - key:
-      files:
-        - go.mod
-        - go.sum
-    paths:
-      - .go/
+.go_cache:
+  cache:
+    - key:
+        files:
+          - go.mod
+          - go.sum
+      paths:
+        - .go/
+
+.linux_builder:
+  image: ${LINUX_BUILDER}
+  before_script:
+    - eval "$(gimme)"
+    - export PATH="${GOPATH}/bin:${PATH}"
 
 
 dependencies:
-  image: ${LINUX_BUILDER}
+  extends: [ .linux_builder, .go_cache ]
   stage: build
   needs: []
   script:
     - mkdir -p .go
     - go mod download
 
-build_protobuf:
-  image: ${LINUX_BUILDER}
-  stage: build
+test_protobuf_updated:
+  extends: [ .linux_builder, .go_cache ]
+  stage: test
   needs: [ dependencies ]
   script:
+    - (cd $(go list -f '{{ .Dir }}' -m github.com/gogo/protobuf); make install)
     - rake protobuf
+    - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
 
 build_ebpf:
-  image: ${LINUX_BUILDER}
+  extends: [ .linux_builder, .go_cache ]
   stage: build
   needs: [ dependencies ]
   script:
-    - cd $(go list -f '{{ .Dir }}' -m github.com/StackVista/stackstate-agent)
-    - cat go.mod | grep 'github.com/StackVista/stackstate-agent/pkg' | grep '=>' | awk '{print $1}' | xargs -I{} go mod edit -dropreplace={}
-    - inv -e system-probe.object-files
-    - cp ./pkg/ebpf/bytecode/build ${CI_PROJECT_DIR}/ebpf-object-files
+    - mkdir "${CI_PROJECT_DIR}/ebpf-object-files"
+    - ./build-ebpf.sh "${CI_PROJECT_DIR}/ebpf-object-files"
   artifacts:
     paths:
       - ebpf-object-files/*
 
 build_linux:
-  image: ${LINUX_BUILDER}
+  extends: [ .linux_builder, .go_cache ]
   stage: build
   needs: [ dependencies ]
   script:
@@ -64,17 +71,26 @@ build_linux:
     - export EBPF=${EBPF:-true}
     - printenv
     - (cd packaging; ./apply_branding.sh)
-    - rake ci
-    - (cd packaging; ./build_staging_package.sh)
+    - rake build
   artifacts:
     paths:
       - $CI_PROJECT_DIR/process-agent
-      - $CI_PROJECT_DIR/packaging/debian/*.deb
     expire_in: 2 week
   retry:
     max: 2
     when:
       - always
+
+build_linux_packages:
+  image: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-20221024
+  stage: build
+  needs: [ build_linux ]
+  script:
+    - (cd packaging; ./build_staging_package.sh)
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/packaging/debian/*.deb
+    expire_in: 2 week
 
 # Gitlab dedicated runner in a Windows VM
 build_windows:
@@ -103,7 +119,7 @@ build_windows:
       - script_failure
 
 pre_release_windows:
-  stage: pre_release
+  stage: publish
   needs:
     - build_windows
   script:
@@ -121,11 +137,11 @@ pre_release_windows:
       - stuck_or_timeout_failure
       - script_failure
 
-pre_release_linux:
-  stage: pre_release
+publish_linux_deb_rpm:
+  stage: publish
   image: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-20221024
   needs:
-    - build_linux
+    - build_linux_packages
   before_script:
     - export PROCESS_AGENT_VERSION=$(eval $VERSION_LOGIC)
   script:
@@ -147,23 +163,30 @@ pre_release_linux:
     - docker login -u "${docker_user}" -p "${docker_password}" "${DOCKER_REGISTRY}"
     - docker login -u "${quay_user}" -p "${quay_password}" "${QUAY_REGISTRY}"
 
-pre_release_image:
-  stage: pre_release
-  needs:
-    - build_linux
-  script:
-    - cd $CI_PROJECT_DIR
-    - ./packaging/publish_image.sh $CI_COMMIT_REF_NAME $STS_DOCKER_TEST_REPO $CI_PROJECT_DIR/process-agent $CI_COMMIT_SHORT_SHA
-
-release_image:
+.publish_linux_docker:
   extends: [ .docker_build ]
-  stage: release
+  stage: publish
   needs:
     - build_linux
+    - build_ebpf
   script:
-    - cd $CI_PROJECT_DIR
-    - export PUSH_LATEST=true
-    - ./packaging/publish_image.sh $CI_COMMIT_REF_NAME $STS_DOCKER_RELEASE_REPO $CI_PROJECT_DIR/process-agent latest
+    - export BUILD_TAG="${REPO}:${TAG}"
+    - docker build -t "${BUILD_TAG}" .
+    - ./packaging/publish_image.sh $BUILD_TAG $REPO $TAG $EXTRA_TAG
+
+publish_linux_docker:
+  extends: [ .publish_linux_docker ]
+  variables:
+    REPO: $STS_DOCKER_TEST_REPO
+    TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+    EXTRA_TAG: $CI_COMMIT_REF_NAME
+
+publish_linux_docker_release:
+  extends: [ .publish_linux_docker ]
+  variables:
+    REPO: $STS_DOCKER_RELEASE_REPO
+    TAG: $CI_COMMIT_REF_NAME
+    EXTRA_TAG: latest
   when: manual
   only:
     - tags
@@ -178,8 +201,8 @@ build_builder_x64:
   script:
     - cd .cd-builders/builder-x64; pwd
     - export RUNTIMETAG="$(date +%Y%m%d)-${CI_COMMIT_SHA:0:7}"; echo ${RUNTIMETAG}
-    - docker build -t stackstate/stackstate-process-agent-builder:llvmclang11-x64-${RUNTIMETAG} .
-    - docker push stackstate/stackstate-process-agent-builder:llvmclang11-x64-${RUNTIMETAG}
+    - docker build -t stackstate/stackstate-process-agent-runner-gitlab:llvmclang11-x64-${RUNTIMETAG} .
+    - docker push stackstate/stackstate-process-agent-runner-gitlab:llvmclang11-x64-${RUNTIMETAG}
   timeout: 3 hours
   tags:
     - sts-k8s-xl-runner

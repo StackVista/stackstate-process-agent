@@ -30,6 +30,8 @@ def go_build(program, opts={})
     date = `date +%FT%T%z`.strip
   end
 
+  env = {}
+
   goversion = `go version`.strip
   agentversion = ENV["AGENT_VERSION"] || ENV["PROCESS_AGENT_VERSION"] || "0.99.0"
 
@@ -50,7 +52,6 @@ def go_build(program, opts={})
   cmd = opts[:cmd]
   cmd += ' -race' if opts[:race]
   cmd += get_tag_set(opts)
-  print "cmd"
 
   # NOTE: We currently have issues running eBPF components in statically linked binaries, so in the meantime,
   #       if eBPF is enabled, the binary will be dynamically linked, and will not work in environments without glibc.
@@ -60,7 +61,7 @@ def go_build(program, opts={})
     unless opts[:bpf]
       # Statically linked builds use musl-gcc for full support
       # of alpine and other machines with different gcc versions.
-      ENV['CC'] = '/usr/local/musl/bin/musl-gcc'
+      env['CC'] = '/usr/local/musl/bin/musl-gcc'
     end
   end
 
@@ -79,13 +80,24 @@ def go_build(program, opts={})
   if ENV['STACKSTATE_EMBEDDED_PATH']
     embedder_dir = ENV['STACKSTATE_EMBEDDED_PATH']
 
-    ENV['CPATH'] = "#{embedder_dir}/include"
-    ENV['CGO_LDFLAGS_ALLOW'] = '-Wl,--wrap=.*'
-    ENV['DYLD_LIBRARY_PATH'] = "#{embedder_dir}/lib"
-    ENV['LD_LIBRARY_PATH'] = "#{embedder_dir}/lib"
-    ENV['CGO_LDFLAGS'] = "-L#{embedder_dir}/lib"
-    ENV['CGO_CFLAGS'] = " -Werror -Wno-deprecated-declarations -I#{embedder_dir}/include -I#{embedder_dir}/common"
+    env['CPATH'] = "#{embedder_dir}/include"
+    env['CGO_LDFLAGS_ALLOW'] = '-Wl,--wrap=.*'
+    env['DYLD_LIBRARY_PATH'] = "#{embedder_dir}/lib"
+    env['LD_LIBRARY_PATH'] = "#{embedder_dir}/lib"
+    env['CGO_LDFLAGS'] = "-L#{embedder_dir}/lib"
+    env['CGO_CFLAGS'] = " -Werror -Wno-deprecated-declarations -I#{embedder_dir}/include -I#{embedder_dir}/common"
     ldflags << "-r #{embedder_dir}/lib"
+  end
+
+  # print env
+  if env.length == 0
+    puts "no additional environment variables set"
+  else
+    puts "additional environment variables"
+    env.each do |key, value|
+      puts "#{key}=#{value}"
+      ENV[key] = value
+    end
   end
 
   # Building the binary

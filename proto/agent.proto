@@ -1,11 +1,10 @@
 syntax = "proto3";
 
-option go_package = "github.com/StackVista/stackstate-process-agent/model";
+package stackstate.process_agent;
+option go_package = "model";
 
-package datadog.process_agent;
-
-import "github.com/StackVista/stackstate-process-agent/proto/agent_payload.proto";
-import "github.com/DataDog/sketches-go/ddsketch/pb/ddsketch.proto";
+import "agent_payload.proto";
+import "ddsketch/pb/ddsketch.proto";
 
 //
 // Message Types
@@ -32,8 +31,8 @@ message CollectorProc {
 	int32 groupSize = 7;
 
 	// Optional metadata fields
-	datadog.agentpayload.KubeMetadataPayload kubernetes = 8; // DEPRECATED - left in place to support previous versions
-	datadog.agentpayload.ECSMetadataPayload ecs = 9; // DEPRECATED - left in place to support previous versions
+	stackstate.agentpayload.KubeMetadataPayload kubernetes = 8; // DEPRECATED - left in place to support previous versions
+	stackstate.agentpayload.ECSMetadataPayload ecs = 9; // DEPRECATED - left in place to support previous versions
 
 	repeated Container containers = 10;
 }
@@ -87,8 +86,8 @@ message CollectorContainer {
 	int32 groupSize = 5;
 
 	// Optional metadata fields
-	datadog.agentpayload.KubeMetadataPayload kubernetes = 6; // DEPRECATED - left in place to support previous versions
-	datadog.agentpayload.ECSMetadataPayload ecs = 7; // DEPRECATED - left in place to support previous versions
+	stackstate.agentpayload.KubeMetadataPayload kubernetes = 6; // DEPRECATED - left in place to support previous versions
+	stackstate.agentpayload.ECSMetadataPayload ecs = 7; // DEPRECATED - left in place to support previous versions
 
 	// Post-resolved fields
 	Host host = 8;

@@ -57,11 +57,7 @@ def go_build(program, opts={})
   if opts[:static]
     ldflags << '-linkmode external'
     ldflags << '-extldflags \'-static\''
-    if opts[:bpf]
-      # eBPF will require kernel headers
-      # TODO: Further debug this and get eBPF working with musl-based statically linked binaries.
-      ENV['CGO_CFLAGS'] = '-I/kernel-headers/include/'
-    else
+    unless opts[:bpf]
       # Statically linked builds use musl-gcc for full support
       # of alpine and other machines with different gcc versions.
       ENV['CC'] = '/usr/local/musl/bin/musl-gcc'
@@ -78,6 +74,18 @@ def go_build(program, opts={})
     rescmd = "windres --define MAJ_VER=#{winversion[0]} --define MIN_VER=#{winversion[1]} --define PATCH_VER=#{winversion[2]} "
     rescmd += "-i #{resdir}/process-agent.rc --target=pe-x86-64 -O coff -o cmd/agent/rsrc.syso"
     sh rescmd
+  end
+
+  if ENV['STACKSTATE_EMBEDDED_PATH']
+    embedder_dir = ENV['STACKSTATE_EMBEDDED_PATH']
+
+    ENV['CPATH'] = "#{embedder_dir}/include"
+    ENV['CGO_LDFLAGS_ALLOW'] = '-Wl,--wrap=.*'
+    ENV['DYLD_LIBRARY_PATH'] = "#{embedder_dir}/lib"
+    ENV['LD_LIBRARY_PATH'] = "#{embedder_dir}/lib"
+    ENV['CGO_LDFLAGS'] = "-L#{embedder_dir}/lib"
+    ENV['CGO_CFLAGS'] = " -Werror -Wno-deprecated-declarations -I#{embedder_dir}/include -I#{embedder_dir}/common"
+    ldflags << "-r #{embedder_dir}/lib"
   end
 
   # Building the binary
@@ -137,4 +145,8 @@ def go_fmt(path)
     end
     fail
   end
+end
+
+def get_go_module_path(path)
+  `go list -f '{{ .Dir }}' -m #{path}`.strip
 end

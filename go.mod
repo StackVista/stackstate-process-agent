@@ -11,7 +11,7 @@ replace (
 // Internal deps fix version
 replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
-	github.com/DataDog/sketches-go v1.2.1 => github.com/StackVista/sketches-go v1.1.1
+	github.com/DataDog/sketches-go v1.2.1 => github.com/StackVista/sketches-go v1.2.0-pre
 	github.com/cihub/seelog => github.com/cihub/seelog v0.0.0-20151216151435-d2c6e5aa9fbf // v2.6
 	github.com/docker/distribution => github.com/docker/distribution v2.7.1-0.20190104202606-0ac367fd6bee+incompatible
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
@@ -29,7 +29,7 @@ require (
 	github.com/DataDog/sketches-go v1.2.1
 	github.com/DataDog/zstd v1.4.8
 	github.com/StackExchange/wmi v1.2.1
-	github.com/StackVista/stackstate-agent v0.0.0-20221206105358-ea4aa0a762eb
+	github.com/StackVista/stackstate-agent v0.0.0-20221207151157-edf3a6c98ef8
 	github.com/StackVista/stackstate-agent/pkg/util/log v0.19.0-rc.4
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible

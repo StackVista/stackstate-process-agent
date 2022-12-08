@@ -101,7 +101,6 @@ build_windows:
     - rake deps windres=true --trace
     - bash -c "./packaging/apply_branding.sh"
     - .gitlab-scripts/windows_build.cmd
-  allow_failure: false
   artifacts:
     expire_in: 2 weeks
     paths:

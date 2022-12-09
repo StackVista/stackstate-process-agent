@@ -108,7 +108,10 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 
 	c.reportMetrics(cfg.HostName, conns, formattedConnections, stats)
 
-	log.Debugf("collected connections in %s, connections found: %v", time.Since(start), formattedConnections)
+	log.Debugf("collected %d connections in %s", len(formattedConnections), time.Since(start))
+	for _, conn := range formattedConnections {
+		log.Debugf("%v", conn)
+	}
 	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, aggregatedInterval)}, nil
 }
 

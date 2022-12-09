@@ -175,12 +175,16 @@ func fmtContainers(
 		log.Infof("### ctr.ID = ", ctr.ID)
 		log.Infof("### ctr.Name = ", ctr.Name)
 		log.Infof("### ctr.IO.ReadBytes = ", ctr.IO.ReadBytes)
+		log.Infof("### lastCtr.IO.ReadBytes = ", lastCtr.IO.ReadBytes)
 		//log.Infof("### ctr.IO.ReadOperations = ", ctr.IO.ReadOperations)
 		log.Infof("### ctr.IO.WriteBytes = ", ctr.IO.WriteBytes)
+		log.Infof("### lastCtr.IO.WriteBytes = ", lastCtr.IO.WriteBytes)
 		//log.Infof("### ctr.IO.WriteOperations = ", ctr.IO.WriteOperations)
 		log.Infof("### ctr.IO.DeviceReadBytes = ", ctr.IO.DeviceReadBytes)
+		log.Infof("### lastCtr.IO.DeviceReadBytes = ", lastCtr.IO.DeviceReadBytes)
 		//log.Infof("### ctr.IO.DeviceReadOperations = ", ctr.IO.DeviceReadOperations)
 		log.Infof("### ctr.IO.DeviceWriteBytes = ", ctr.IO.DeviceWriteBytes)
+		log.Infof("### lastCtr.IO.DeviceWriteBytes = ", lastCtr.IO.DeviceWriteBytes)
 		//log.Infof("### ctr.IO.DeviceWriteOperations = ", ctr.IO.DeviceWriteOperations)
 
 		if multiMetricsEnabled {

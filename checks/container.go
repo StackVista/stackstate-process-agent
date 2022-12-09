@@ -173,6 +173,7 @@ func fmtContainers(
 		)
 		log.Infof("### debug io metrics") // TODO: Remove debug lines
 		log.Infof("### ctr.ID = ", ctr.ID)
+		log.Infof("### ctr.Name = ", ctr.Name)
 		log.Infof("### ctr.IO.ReadBytes = ", ctr.IO.ReadBytes)
 		log.Infof("### ctr.IO.ReadOperations = ", ctr.IO.ReadOperations)
 		log.Infof("### ctr.IO.WriteBytes = ", ctr.IO.WriteBytes)

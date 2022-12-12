@@ -8,7 +8,9 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-agent/pkg/network"
 	"github.com/StackVista/stackstate-agent/pkg/network/encoding"
+	"github.com/StackVista/stackstate-agent/pkg/network/http"
 	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
+	"github.com/StackVista/stackstate-agent/pkg/process/util"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	"sync"
 
@@ -97,13 +99,14 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	}
 
 	modelConnections := encoding.ModelConnections(conns)
+	httpIndex := encoding.FormatHTTPStats(conns.HTTP)
 
 	var aggregatedInterval time.Duration
 	if !c.prevCheckTime.IsZero() {
 		aggregatedInterval = currentTime.Sub(c.prevCheckTime)
 	}
 
-	formattedConnections, stats := c.formatConnections(cfg, modelConnections, aggregatedInterval)
+	formattedConnections, stats := c.formatConnections(cfg, modelConnections, aggregatedInterval, httpIndex)
 	c.prevCheckTime = currentTime
 
 	c.reportMetrics(cfg.HostName, conns, formattedConnections, stats)
@@ -146,7 +149,12 @@ var logShortLivingNoticeOnce = &sync.Once{}
 
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
-func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns *process.Connections, prevCheckTimeDiff time.Duration) ([]*model.Connection, *FormatStats) {
+func (c *ConnectionsCheck) formatConnections(
+	cfg *config.AgentConfig,
+	conns *process.Connections,
+	prevCheckTimeDiff time.Duration,
+	httpAggregations map[http.Key]*process.HTTPAggregations,
+) ([]*model.Connection, *FormatStats) {
 	stats := &FormatStats{}
 	// Process create-times required to construct unique process hash keys on the backend
 	// attention! There is a conns.Conns[0].PidCreateTime, it is always zero, so we do have to look up the actual value
@@ -203,6 +211,12 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns *pro
 			}
 		}
 
+		appProto := ""
+		_, ok = httpAggregations[httpKeyFromConn(conn)]
+		if ok {
+			appProto = "http"
+		}
+
 		cxs = append(cxs, &model.Connection{
 			Pid:           conn.Pid,
 			PidCreateTime: pidCreateTime,
@@ -223,7 +237,7 @@ func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns *pro
 			Direction:              calculateDirection(conn.Direction),
 			Namespace:              namespace,
 			ConnectionIdentifier:   relationID,
-			ApplicationProtocol:    "",                          // TODO
+			ApplicationProtocol:    appProto,                    // TODO
 			Metrics:                []*model.ConnectionMetric{}, // TODO
 		})
 
@@ -515,4 +529,46 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), hostname, []string{})
 	c.Sender().Gauge("stackstate.process_agent.connnections.invalid", float64(filterStats.Invalid), hostname, []string{})
 	c.Sender().Gauge("stackstate.process_agent.connnections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
+}
+
+// TODO reuse from main agent
+// Build the key for the http map based on whether the local or remote side is http.
+func httpKeyFromConn(c *process.Connection) http.Key {
+	// Retrieve translated addresses
+	laddr, lport := GetNATLocalAddress(c)
+	raddr, rport := GetNATRemoteAddress(c)
+
+	// HTTP data is always indexed as (client, server), so we flip
+	// the lookup key if necessary using the port range heuristic
+	if network.IsEphemeralPort(int(lport)) {
+		return http.NewKey(laddr, raddr, lport, rport, "", http.MethodUnknown)
+	}
+
+	return http.NewKey(raddr, laddr, rport, lport, "", http.MethodUnknown)
+}
+
+// GetNATLocalAddress returns the translated (local ip, local port) pair
+func GetNATLocalAddress(c *process.Connection) (util.Address, uint16) {
+	localIP := util.AddressFromString(c.Laddr.Ip)
+	localPort := c.Laddr.Port
+
+	if c.IpTranslation != nil && c.IpTranslation.ReplDstIP != "" {
+		// Fields are flipped
+		localIP = util.AddressFromString(c.IpTranslation.ReplDstIP)
+		localPort = c.IpTranslation.ReplDstPort
+	}
+	return localIP, uint16(localPort)
+}
+
+// GetNATRemoteAddress returns the translated (remote ip, remote port) pair
+func GetNATRemoteAddress(c *process.Connection) (util.Address, uint16) {
+	remoteIP := util.AddressFromString(c.Raddr.Ip)
+	remotePort := c.Raddr.Port
+
+	if c.IpTranslation != nil && c.IpTranslation.ReplDstIP != "" {
+		// Fields are flipped
+		remoteIP = util.AddressFromString(c.IpTranslation.ReplSrcIP)
+		remotePort = c.IpTranslation.ReplSrcPort
+	}
+	return remoteIP, uint16(remotePort)
 }

@@ -14,6 +14,7 @@ import (
 // ProcessCommon is the common process type used for sorting / process inclusions
 type ProcessCommon struct {
 	Pid           int32
+	CreateTime    int64
 	Identifier    string
 	FirstObserved int64
 	Command       *model.Command
@@ -26,7 +27,11 @@ type ProcessCommon struct {
 // returns a function to filter short-lived and blacklisted processes based on the configuration provided
 func keepProcess(cfg *config.AgentConfig) func(*ProcessCommon) bool {
 	return func(process *ProcessCommon) bool {
-		return !isProcessShortLived(process.Identifier, process.FirstObserved, cfg) && !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
+		createTime := process.CreateTime
+		if createTime == 0 {
+			createTime = process.FirstObserved
+		}
+		return !isProcessShortLived(process.Identifier, createTime, cfg) && !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
 	}
 }
 
@@ -346,14 +351,14 @@ func replicateKubernetesLabelsToProcess(process *model.Process, container *model
 	return process
 }
 
-func isProcessShortLived(processID string, firstObserved int64, cfg *config.AgentConfig) bool {
+func isProcessShortLived(processID string, createdTime int64, cfg *config.AgentConfig) bool {
 	// short-lived filtering is disabled, return false
 	if !cfg.EnableShortLivedProcessFilter {
 		return false
 	}
 
-	// firstObserved is before ShortLivedTime. Process is not short-lived, return false
-	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedProcessQualifierSecs)) {
+	// createdTime is before ShortLivedTime. Process is not short-lived, return false
+	if time.Unix(createdTime, 0).Before(time.Now().Add(-cfg.ShortLivedProcessQualifierSecs)) {
 		return false
 	}
 

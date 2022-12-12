@@ -379,6 +379,7 @@ func (p *ProcessCheck) fmtProcesses(
 			ioStat := formatIO(fp, processCache.ProcessMetrics.IOStat, lastRun)
 			commonProcesses = append(commonProcesses, &ProcessCommon{
 				Pid:           fp.Pid,
+				CreateTime:    fp.CreateTime,
 				Identifier:    createProcessID(fp.Pid, fp.CreateTime),
 				FirstObserved: processCache.FirstObserved,
 				Command:       command,

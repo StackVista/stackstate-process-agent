@@ -8,15 +8,16 @@ import (
 	log "github.com/cihub/seelog"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
 // ProcessCommon is the common process type used for sorting / process inclusions
 type ProcessCommon struct {
 	Pid           int32
-	CreateTime    int64
+	CreateTime    time.Time
 	Identifier    string
-	FirstObserved int64
+	FirstObserved time.Time
 	Command       *model.Command
 	Memory        *model.MemoryStat
 	CPU           *model.CPUStat
@@ -27,11 +28,7 @@ type ProcessCommon struct {
 // returns a function to filter short-lived and blacklisted processes based on the configuration provided
 func keepProcess(cfg *config.AgentConfig) func(*ProcessCommon) bool {
 	return func(process *ProcessCommon) bool {
-		createTime := process.CreateTime
-		if createTime == 0 {
-			createTime = process.FirstObserved
-		}
-		return !isProcessShortLived(process.Identifier, createTime, cfg) && !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
+		return !isProcessShortLived(process, cfg) && !isProcessBlacklisted(cfg, process.Command.Args, process.Command.Exe)
 	}
 }
 
@@ -351,24 +348,35 @@ func replicateKubernetesLabelsToProcess(process *model.Process, container *model
 	return process
 }
 
-func isProcessShortLived(processID string, createdTime int64, cfg *config.AgentConfig) bool {
+var logShortLivingProcessNoticeOnce = &sync.Once{}
+
+func isProcessShortLived(process *ProcessCommon, cfg *config.AgentConfig) bool {
 	// short-lived filtering is disabled, return false
 	if !cfg.EnableShortLivedProcessFilter {
 		return false
 	}
 
 	// createdTime is before ShortLivedTime. Process is not short-lived, return false
-	if time.Unix(createdTime, 0).Before(time.Now().Add(-cfg.ShortLivedProcessQualifierSecs)) {
+	cutOffTime := time.Now().Add(-cfg.ShortLivedProcessQualifierSecs)
+
+	if process.FirstObserved.Before(cutOffTime) {
+		return false
+	}
+	if !process.CreateTime.IsZero() && process.CreateTime.Before(cutOffTime) {
 		return false
 	}
 
-	// process is filtered due to it's short-lived nature, let's log it on trace level
-	log.Debugf("Filter process: %s based on it's short-lived nature; "+
-		"meaning we observed it less than %d seconds. If this behaviour is not desired set the "+
-		"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disabled it in agent.yaml "+
-		"under process_config.filters.short_lived_processes.enabled or increase the qualifier seconds using"+
-		"process_config.filters.short_lived_processes.qualifier_secs.",
-		processID, cfg.ShortLivedProcessQualifierSecs,
+	logShortLivingProcessNoticeOnce.Do(func() {
+		log.Infof("Some processes are filtered because of a short lifetime. If this behaviour is not desired set the " +
+			"STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disabled it in agent.yaml " +
+			"under process_config.filters.short_lived_processes.enabled or increase the qualifier seconds using" +
+			"process_config.filters.short_lived_processes.qualifier_secs.")
+	})
+
+	log.Debugf("Filter process: %s (%s). Short-living: created at %s, first observed at %s, cut off time: %s (%s)",
+		process.Identifier, process.Command.Exe,
+		process.CreateTime.String(), process.FirstObserved.String(),
+		cfg.ShortLivedProcessQualifierSecs.String(), cutOffTime.String(),
 	)
 	return true
 }

@@ -115,6 +115,13 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	for _, conn := range formattedConnections {
 		log.Debugf("%v", conn)
 	}
+	log.Debugf("collected %d http data", len(httpIndex))
+	for key, aggregations := range httpIndex {
+		log.Debugf("http data for %s", key)
+		for _, aggregation := range aggregations.EndpointAggregations {
+			log.Debugf("\t%s %s: %v", aggregation.Method, aggregation.Path, aggregation.StatsByResponseStatus)
+		}
+	}
 	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, aggregatedInterval)}, nil
 }
 

@@ -374,7 +374,7 @@ func isProcessShortLived(process *ProcessCommon, cfg *config.AgentConfig) bool {
 	})
 
 	log.Debugf("Filter process: %s (%s). Short-living: created at %s, first observed at %s, cut off time: %s (%s)",
-		process.Identifier, process.Command.Exe,
+		process.Identifier, strings.Join(process.Command.Args, " "),
 		process.CreateTime.String(), process.FirstObserved.String(),
 		cfg.ShortLivedProcessQualifierSecs.String(), cutOffTime.String(),
 	)

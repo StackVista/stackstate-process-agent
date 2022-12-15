@@ -2,9 +2,10 @@ package checks
 
 import (
 	"fmt"
-	"github.com/DataDog/agent-payload/v5/process"
+	"github.com/StackVista/stackstate-agent/pkg/network"
 	tracerConfig "github.com/StackVista/stackstate-agent/pkg/network/config"
 	tracer "github.com/StackVista/stackstate-agent/pkg/network/tracer"
+	"github.com/StackVista/stackstate-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/model"
 
 	log "github.com/cihub/seelog"
@@ -21,7 +22,7 @@ type ip struct {
 
 type endpoint struct {
 	ip   *ip
-	Port int32
+	Port uint16
 }
 
 type endpointID struct {
@@ -58,13 +59,13 @@ func endpointKeyNoPort(e *endpointID) string {
 }
 
 // CreateNetworkRelationIdentifier returns an identification for the relation this connection may contribute to
-func CreateNetworkRelationIdentifier(namespace string, conn *process.Connection) (string, error) {
-	isV6 := conn.Family == process.ConnectionFamily_v6
-	localEndpoint, err := makeEndpointID(namespace, conn.Laddr.Ip, isV6, conn.Laddr.Port)
+func CreateNetworkRelationIdentifier(namespace string, conn network.ConnectionStats) (string, error) {
+	isV6 := conn.Family == network.AFINET6
+	localEndpoint, err := makeEndpointID(namespace, conn.Source, isV6, conn.SPort)
 	if err != nil {
 		return "", err
 	}
-	remoteEndpoint, err := makeEndpointID(namespace, conn.Raddr.Ip, isV6, conn.Raddr.Port)
+	remoteEndpoint, err := makeEndpointID(namespace, conn.Dest, isV6, conn.DPort)
 	if err != nil {
 		return "", err
 	}
@@ -72,14 +73,14 @@ func CreateNetworkRelationIdentifier(namespace string, conn *process.Connection)
 }
 
 // connectionRelationIdentifier returns an identification for the relation this connection may contribute to
-func createRelationIdentifier(localEndpoint, remoteEndpoint *endpointID, direction process.ConnectionDirection) string {
+func createRelationIdentifier(localEndpoint, remoteEndpoint *endpointID, direction network.ConnectionDirection) string {
 
 	// For directional relations, connections with the same source ip are grouped (port is ignored)
 	// For non-directed relations ports are ignored on both sides
 	switch direction {
-	case process.ConnectionDirection_incoming:
+	case network.INCOMING:
 		return fmt.Sprintf("in:%s:%s", endpointKey(localEndpoint), endpointKeyNoPort(localEndpoint))
-	case process.ConnectionDirection_outgoing:
+	case network.OUTGOING:
 		return fmt.Sprintf("out:%s:%s", endpointKeyNoPort(localEndpoint), endpointKey(remoteEndpoint))
 	default:
 		return fmt.Sprintf("none:%s:%s", endpointKeyNoPort(localEndpoint), endpointKeyNoPort(remoteEndpoint))
@@ -87,17 +88,12 @@ func createRelationIdentifier(localEndpoint, remoteEndpoint *endpointID, directi
 }
 
 // makeEndpointID returns a endpointID if the ip is valid and the hostname as the scope for local ips
-func makeEndpointID(namespace string, ipString string, isV6 bool, port int32) (*endpointID, error) {
-	// We parse the ip here for normalization
-	ipAddress := net.ParseIP(ipString)
-	if ipAddress == nil {
-		return nil, fmt.Errorf("invalid endpoint address: %s", ipString)
-	}
+func makeEndpointID(namespace string, addr util.Address, isV6 bool, port uint16) (*endpointID, error) {
 	endpoint := &endpointID{
 		Namespace: namespace,
 		Endpoint: &endpoint{
 			ip: &ip{
-				Address: ipAddress.String(),
+				Address: addr.String(),
 				IsIPv6:  isV6,
 			},
 			Port: port,
@@ -129,20 +125,14 @@ func (ns namespace) toString() string {
 	return strings.Join(fragments, ":")
 }
 
-func makeNamespace(clusterName string, hostname string, connection *process.Connection) namespace {
+func makeNamespace(clusterName string, hostname string, connection network.ConnectionStats) namespace {
 	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
 	var ns = namespace{"", "", ""}
 	if clusterName != "" {
 		ns.ClusterName = clusterName
 	}
 
-	// In order to tell different pod-local ip addresses from each other,
-	// treat each loopback address as local to the network namespace
-	// Reference implementation: https://github.com/weaveworks/scope/blob/master/report/id.go#L40
-	// https://github.com/weaveworks/scope/blob/7163f42170d72702fd55d2324d203c5b7be5c5cc/probe/endpoint/ebpf.go#L34
-	// We disregard local ip addresses for now, those might be interesting when doing docker setups,
-	// which are not the highest priority atm
-	if isLoopback(connection.Laddr.Ip) && isLoopback(connection.Raddr.Ip) {
+	if connection.Source.IsLoopback() && connection.Dest.IsLoopback() {
 		// For sure this is scoped to the host
 		ns.HostName = hostname
 		// Maybe even to a namespace on the host in case of k8s/docker containers
@@ -154,7 +144,7 @@ func makeNamespace(clusterName string, hostname string, connection *process.Conn
 	return ns
 }
 
-func formatNamespace(clusterName string, hostname string, connection *process.Connection) string {
+func formatNamespace(clusterName string, hostname string, connection network.ConnectionStats) string {
 	return makeNamespace(clusterName, hostname, connection).toString()
 }
 
@@ -166,33 +156,33 @@ func isLoopback(ip string) bool {
 	return ipAddress.IsLoopback()
 }
 
-func formatFamily(f process.ConnectionFamily) model.ConnectionFamily {
+func formatFamily(f network.ConnectionFamily) model.ConnectionFamily {
 	switch f {
-	case process.ConnectionFamily_v4:
+	case network.AFINET:
 		return model.ConnectionFamily_v4
-	case process.ConnectionFamily_v6:
+	case network.AFINET6:
 		return model.ConnectionFamily_v6
 	default:
 		return -1
 	}
 }
 
-func formatType(f process.ConnectionType) model.ConnectionType {
+func formatType(f network.ConnectionType) model.ConnectionType {
 	switch f {
-	case process.ConnectionType_tcp:
+	case network.TCP:
 		return model.ConnectionType_tcp
-	case process.ConnectionType_udp:
+	case network.UDP:
 		return model.ConnectionType_udp
 	default:
 		return -1
 	}
 }
 
-func calculateDirection(d process.ConnectionDirection) model.ConnectionDirection {
+func calculateDirection(d network.ConnectionDirection) model.ConnectionDirection {
 	switch d {
-	case process.ConnectionDirection_outgoing:
+	case network.OUTGOING:
 		return model.ConnectionDirection_outgoing
-	case process.ConnectionDirection_incoming:
+	case network.INCOMING:
 		return model.ConnectionDirection_incoming
 	default:
 		return model.ConnectionDirection_none

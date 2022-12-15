@@ -191,6 +191,8 @@ github.com/StackVista/stackstate-agent v0.0.0-20221206105358-ea4aa0a762eb h1:QSW
 github.com/StackVista/stackstate-agent v0.0.0-20221206105358-ea4aa0a762eb/go.mod h1:rloaA6TbpbBOxrFwW/+J0EzSRwBgOh7ASOrsILiOkjw=
 github.com/StackVista/stackstate-agent v0.0.0-20221207151157-edf3a6c98ef8 h1:Zr2zSuwnal2o3YCQng9q2zxIHz4ULQxtZc2HeichewA=
 github.com/StackVista/stackstate-agent v0.0.0-20221207151157-edf3a6c98ef8/go.mod h1:rloaA6TbpbBOxrFwW/+J0EzSRwBgOh7ASOrsILiOkjw=
+github.com/StackVista/stackstate-agent v0.0.0-20221214135916-7cec813b9442 h1:Ak/vneHXYyODdD/lcDemF8pmE27D6wx5lGGu8Ky8gTU=
+github.com/StackVista/stackstate-agent v0.0.0-20221214135916-7cec813b9442/go.mod h1:rloaA6TbpbBOxrFwW/+J0EzSRwBgOh7ASOrsILiOkjw=
 github.com/StackVista/stackstate-agent/pkg/otlp/model v0.19.0-rc.4 h1:i/P7TBC2Es722eYe3BQZPfw6SrkraXV46y81+ryIjlc=
 github.com/StackVista/stackstate-agent/pkg/otlp/model v0.19.0-rc.4/go.mod h1:4QI/+68qFmwZ64BozPzRUagLX7W1sPTlEd97KWvPJZ4=
 github.com/StackVista/stackstate-agent/pkg/quantile v0.19.0-rc.4 h1:s1YHRMr9NnPtTMgaHp9JLs4VUUHUErbAlwTniMz+IAs=

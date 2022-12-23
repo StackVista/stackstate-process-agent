@@ -79,7 +79,7 @@ func createRelationIdentifier(localEndpoint, remoteEndpoint *endpointID, directi
 	// For non-directed relations ports are ignored on both sides
 	switch direction {
 	case network.INCOMING:
-		return fmt.Sprintf("in:%s:%s", endpointKey(localEndpoint), endpointKeyNoPort(localEndpoint))
+		return fmt.Sprintf("in:%s:%s", endpointKey(localEndpoint), endpointKeyNoPort(remoteEndpoint))
 	case network.OUTGOING:
 		return fmt.Sprintf("out:%s:%s", endpointKeyNoPort(localEndpoint), endpointKey(remoteEndpoint))
 	default:

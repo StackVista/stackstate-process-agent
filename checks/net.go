@@ -96,6 +96,15 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		return nil, err
 	}
 
+	//var newConns []network.ConnectionStats
+	//
+	//for _, conn := range conns.Conns {
+	//	if conn.SPort == 12345 || conn.DPort == 12345 {
+	//		newConns = append(newConns, conn)
+	//	}
+	//}
+	//conns.Conns = newConns
+
 	var aggregatedInterval time.Duration
 	if !c.prevCheckTime.IsZero() {
 		aggregatedInterval = currentTime.Sub(c.prevCheckTime)
@@ -222,20 +231,14 @@ func (c *ConnectionsCheck) formatConnections(
 			}
 		}
 
-		sourceAddr := &model.Addr{
+		// although fields are called Source and Dest, they are in fact local/remote
+		localAddr := &model.Addr{
 			Ip:   conn.Source.String(),
 			Port: int32(conn.SPort),
 		}
-		destAddr := &model.Addr{
+		remoteAddr := &model.Addr{
 			Ip:   conn.Dest.String(),
 			Port: int32(conn.DPort),
-		}
-
-		var localAddr, remoteAddr *model.Addr
-		if conn.Direction == network.INCOMING {
-			localAddr, remoteAddr = destAddr, sourceAddr
-		} else {
-			localAddr, remoteAddr = sourceAddr, destAddr
 		}
 
 		if conn.Direction != network.OUTGOING && conn.Direction != network.INCOMING {
@@ -247,6 +250,8 @@ func (c *ConnectionsCheck) formatConnections(
 		if len(metrics) > 0 {
 			appProto = "http"
 		}
+
+		//fmt.Printf("ADDR\t%s\t%s\n", localAddr.Ip, conn.Direction)
 
 		cxs = append(cxs, &model.Connection{
 			Pid:                    int32(conn.Pid),
@@ -561,22 +566,6 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), hostname, []string{})
 	c.Sender().Gauge("stackstate.process_agent.connnections.invalid", float64(filterStats.Invalid), hostname, []string{})
 	c.Sender().Gauge("stackstate.process_agent.connnections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
-}
-
-// TODO reuse from main agent
-// Build the key for the http map based on whether the local or remote side is http.
-func httpKeyFromConn(c *process.Connection) http.Key {
-	// Retrieve translated addresses
-	laddr, lport := GetNATLocalAddress(c)
-	raddr, rport := GetNATRemoteAddress(c)
-
-	// HTTP data is always indexed as (client, server), so we flip
-	// the lookup key if necessary using the port range heuristic
-	if network.IsEphemeralPort(int(lport)) {
-		return http.NewKey(laddr, raddr, lport, rport, "", http.MethodUnknown)
-	}
-
-	return http.NewKey(raddr, laddr, rport, lport, "", http.MethodUnknown)
 }
 
 // GetNATLocalAddress returns the translated (local ip, local port) pair

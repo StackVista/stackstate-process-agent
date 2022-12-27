@@ -291,7 +291,10 @@ func getConnectionKey(conn network.ConnectionStats) connKey {
 	var saddr, daddr util.Address
 	var sport, dport uint16
 
-	if conn.Direction == network.INCOMING || network.IsEphemeralPort(int(sport)) {
+	connIsIncoming := conn.Direction == network.INCOMING
+	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(sport))
+
+	if connIsIncoming || connLooksLikeIncoming {
 		saddr, sport = network.GetNATRemoteAddress(conn)
 		daddr, dport = network.GetNATLocalAddress(conn)
 	} else {
@@ -415,7 +418,8 @@ func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.
 			))
 		}
 	}
-	return nil
+
+	return result
 }
 
 func makeConnectionMetricWithHistogram(name MetricName, tags map[string]string, histogram *ddsketch.DDSketch) *model.ConnectionMetric {

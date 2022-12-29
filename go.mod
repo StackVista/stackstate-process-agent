@@ -227,7 +227,7 @@ require (
 require (
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
-	github.com/DataDog/agent-payload/v5 v5.0.4
+	github.com/DataDog/agent-payload/v5 v5.0.59
 	github.com/DataDog/gostackparse v0.5.0 // indirect
 	github.com/DataDog/viper v1.9.0 // indirect
 	github.com/DataDog/zstd_0 v0.0.0-20210310093942-586c1286621f // indirect

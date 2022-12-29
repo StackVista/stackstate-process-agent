@@ -350,7 +350,7 @@ const (
 )
 
 func emptySketch() *ddsketch.DDSketch {
-	sketch, err := ddsketch.LogCollapsingLowestDenseDDSketch(0.01, 1024)
+	sketch, err := ddsketch.NewDefaultDDSketch(0.01)
 	if err != nil {
 		_ = log.Errorf("unexpected error from ddsketch constructor: %v", err)
 		return nil
@@ -358,64 +358,113 @@ func emptySketch() *ddsketch.DDSketch {
 	return sketch
 }
 
-func getSketchAnyway(stats struct {
+type aggStatsKey struct {
+	statusCode string
+	path       string
+	method     string
+}
+
+func (k aggStatsKey) toMap() map[string]string {
+	tags := map[string]string{
+		http_StatusCodeTag: k.statusCode,
+	}
+	if k.path != "" {
+		tags[http_PathTag] = k.path
+	}
+	if k.method != "" {
+		tags[http_MethodTag] = k.method
+	}
+	return tags
+}
+
+type requestStats struct {
 	Count              int
 	Latencies          *ddsketch.DDSketch
 	FirstLatencySample float64
-}) *ddsketch.DDSketch {
-	sketch := stats.Latencies
-	if sketch == nil {
-		sketch = emptySketch()
-		if sketch != nil && stats.Count > 0 {
-			_ = sketch.Add(stats.FirstLatencySample)
-		}
-	}
-	return sketch
 }
 
-func erasePath(httpStats map[http.Key]http.RequestStats) map[http.Key]http.RequestStats {
-	result := map[http.Key]http.RequestStats{}
-	for statKey, stats := range httpStats {
-		keyNoPath := statKey
-		keyNoPath.Path = ""
-		accStats, _ := result[keyNoPath]
-		accStats.CombineWith(stats)
-		result[keyNoPath] = accStats
+func aggregateStats(stats []requestStats) (int, *ddsketch.DDSketch) {
+	requestCount := 0
+	latencies := emptySketch()
+	for _, stat := range stats {
+		requestCount += stat.Count
+		if stat.Latencies != nil {
+			latencies.MergeWith(stat.Latencies)
+		} else if stat.Count > 0 {
+			latencies.Add(stat.FirstLatencySample)
+		}
 	}
-	return result
+	return requestCount, latencies
 }
 
 func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.Duration, sendForPath bool) map[connKey][]*model.ConnectionMetric {
 	result := map[connKey][]*model.ConnectionMetric{}
 
-	resultAppend := func(key connKey, metric *model.ConnectionMetric) {
-		metrics, _ := result[key]
-		result[key] = append(metrics, metric)
+	// regrouping statistic
+	// httpStats is map where key describes network connection along with Path & Method
+	// RequestStats has statistics per response status group (1xx, 2xx etc.)
+	// we need to group all path/method together to have overall statistics
+	// and also to have generic groups regarding status code: any, success
+
+	regroupedStats := map[connKey]map[aggStatsKey][]requestStats{}
+
+	appendStats := func(acc map[aggStatsKey][]requestStats, stats requestStats, tags aggStatsKey) map[aggStatsKey][]requestStats {
+		if acc == nil {
+			acc = map[aggStatsKey][]requestStats{}
+		}
+		accStat, _ := acc[tags]
+		acc[tags] = append(accStat, stats)
+		return acc
 	}
 
-	httpStatsWithoutPath := erasePath(httpStats)
+	appendStatsForStatusGroup := func(connStats map[aggStatsKey][]requestStats, statusCodeGroup string, httpKey http.Key, stats requestStats) map[aggStatsKey][]requestStats {
+		connStats = appendStats(connStats, stats, aggStatsKey{
+			statusCode: statusCodeGroup,
+		})
+		if sendForPath {
+			connStats = appendStats(connStats, stats, aggStatsKey{
+				statusCode: statusCodeGroup,
+				method:     httpKey.Method.String(),
+				path:       httpKey.Path,
+			})
+		}
+		return connStats
+	}
 
-	for statKey, statsByCode := range httpStatsWithoutPath {
+	for statKey, statsByCode := range httpStats {
 		for statusCodeClass, stats := range statsByCode {
 			statusCodeGroup := statusCodeClassToString(statusCodeClass)
 			if statusCodeGroup == "" {
 				continue
 			}
 			connKey := getConnectionKeyForStats(statKey)
-			tags := map[string]string{
-				http_StatusCodeTag: statusCodeGroup,
-				//http_MethodTag:     statKey.Method.String(),
-				//http_PathTag:       statKey.Path,
+			connStats := regroupedStats[connKey]
+
+			connStats = appendStatsForStatusGroup(connStats, statusCodeGroup, statKey, stats)
+			connStats = appendStatsForStatusGroup(connStats, "any", statKey, stats)
+			if statusCodeGroup == "1xx" || statusCodeGroup == "2xx" || statusCodeGroup == "3xx" {
+				connStats = appendStatsForStatusGroup(connStats, "success", statKey, stats)
 			}
 
-			resultAppend(connKey, makeConnectionMetricWithNumber(
-				http_RequestsPerSecond, tags,
-				calculateNormalizedRate(uint64(stats.Count), duration),
-			))
-			resultAppend(connKey, makeConnectionMetricWithHistogram(
-				http_ResponseTime, tags,
-				getSketchAnyway(stats),
-			))
+			regroupedStats[connKey] = connStats
+		}
+	}
+
+	// format regrouped statistics
+
+	for connKey, statsByTags := range regroupedStats {
+		for tagsKey, stats := range statsByTags {
+			requestCount, latencies := aggregateStats(stats)
+			result[connKey] = append(result[connKey],
+				makeConnectionMetricWithNumber(
+					http_RequestsPerSecond, tagsKey.toMap(),
+					calculateNormalizedRate(uint64(requestCount), duration),
+				),
+				makeConnectionMetricWithHistogram(
+					http_ResponseTime, tagsKey.toMap(),
+					latencies,
+				),
+			)
 		}
 	}
 

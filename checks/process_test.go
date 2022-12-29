@@ -248,7 +248,7 @@ func TestProcessBlacklisting(t *testing.T) {
 			process: &ProcessCommon{
 				Pid:           1,
 				Identifier:    fmt.Sprintf("1:%d", time.Now().Add(-5*time.Millisecond).Unix()),
-				FirstObserved: time.Now().Add(-5 * time.Millisecond).Unix(),
+				FirstObserved: time.Now().Add(-5 * time.Millisecond),
 				Command: &model.Command{
 					Args:   []string{"some", "args"},
 					Cwd:    "this/working/directory",
@@ -875,7 +875,7 @@ func TestProcessFormatting(t *testing.T) {
 
 			// fill in the process cache
 			for _, fp := range tc.last {
-				fillProcessCache(Process.cache, fp, now.Add(-5*time.Minute).Unix(), now.Unix())
+				fillProcessCache(Process.cache, fp, now.Add(-5*time.Minute), now)
 			}
 
 			processes, _, _ := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
@@ -900,7 +900,7 @@ func TestProcessFormatting(t *testing.T) {
 
 			// fill in the real-time process cache
 			for _, fp := range tc.last {
-				fillProcessCache(RTProcess.cache, fp, now.Add(-5*time.Minute).Unix(), now.Unix())
+				fillProcessCache(RTProcess.cache, fp, now.Add(-5*time.Minute), now)
 			}
 
 			chunkedStat := RTProcess.fmtProcessStats(cfg, cur, containers, syst2, syst1, lastRun)
@@ -1036,7 +1036,7 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 			name: fmt.Sprintf("Should not filter a process that has been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
 			prepCache: func(c *cache.Cache) {
-				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Minute).Unix(), lastRun.Unix())
+				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Minute), lastRun)
 			},
 			expected:                 true,
 			processShortLivedEnabled: true,
@@ -1045,7 +1045,7 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 			name: fmt.Sprintf("Should filter a process that has not been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
 			prepCache: func(c *cache.Cache) {
-				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Second).Unix(), lastRun.Unix())
+				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Second), lastRun)
 			},
 			expected:                 false,
 			processShortLivedEnabled: true,
@@ -1054,7 +1054,7 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 			name: fmt.Sprintf("Should not filter a process when the processShortLivedEnabled is set to false"),
 			prepCache: func(c *cache.Cache) {
 
-				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Second).Unix(), lastRun.Unix())
+				fillProcessCache(c, cur[1], lastRun.Add(-5*time.Second), lastRun)
 			},
 			expected:                 true,
 			processShortLivedEnabled: false,
@@ -1116,7 +1116,7 @@ func floatEquals(a, b float32) bool {
 	return a-b < e && b-a < e
 }
 
-func fillProcessCache(c *cache.Cache, fp *process.FilledProcess, firstObserved, lastObserved int64) {
+func fillProcessCache(c *cache.Cache, fp *process.FilledProcess, firstObserved, lastObserved time.Time) {
 	processID := createProcessID(fp.Pid, fp.CreateTime)
 	cachedProcess := &ProcessCache{
 		ProcessMetrics: ProcessMetrics{

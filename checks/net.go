@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/DataDog/agent-payload/v5/process"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-agent/pkg/ebpf"
 	"github.com/StackVista/stackstate-agent/pkg/network"
@@ -96,15 +95,6 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		return nil, err
 	}
 
-	//var newConns []network.ConnectionStats
-	//
-	//for _, conn := range conns.Conns {
-	//	if conn.SPort == 12345 || conn.DPort == 12345 {
-	//		newConns = append(newConns, conn)
-	//	}
-	//}
-	//conns.Conns = newConns
-
 	var aggregatedInterval time.Duration
 	if !c.prevCheckTime.IsZero() {
 		aggregatedInterval = currentTime.Sub(c.prevCheckTime)
@@ -116,7 +106,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	for ip, addrs := range conns.DNS {
 		dnsMap[ip.String()] = addrs
 	}
-	fmt.Printf("%v", dnsMap)
+	log.Debugf("%v", dnsMap)
 
 	formattedConnections, stats := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats)
 	c.prevCheckTime = currentTime
@@ -145,15 +135,6 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 		cs, err := c.localTracer.GetActiveConnections("process-agent")
 		return cs, err
 	}
-
-	// TODO ????
-	//tu, err := net.GetRemoteNetworkTracerUtil()
-	//if err != nil {
-	//	if net.ShouldLogTracerUtilError() {
-	//		return nil, err
-	//	}
-	//	return nil, ErrTracerStillNotInitialized
-	//}
 
 	return nil, fmt.Errorf("remote ConnectionTracker is not supported")
 }
@@ -202,7 +183,7 @@ func (c *ConnectionsCheck) formatConnections(
 		c.cache.PutNetworkRelationCache(relationID)
 
 		if cfg.EnableShortLivedNetworkRelationFilter &&
-			(!ok || isRelationShortLived(relationID, relationCache.FirstObserved, cfg)) {
+			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
 
 			stats.ShortLiving += 1
 			logShortLivingNoticeOnce.Do(func() {
@@ -250,8 +231,6 @@ func (c *ConnectionsCheck) formatConnections(
 		if len(metrics) > 0 {
 			appProto = "http"
 		}
-
-		//fmt.Printf("ADDR\t%s\t%s\n", localAddr.Ip, conn.Direction)
 
 		cxs = append(cxs, &model.Connection{
 			Pid:                    int32(conn.Pid),
@@ -561,7 +540,7 @@ func isProcessPresent(pidCreateTimes map[uint32]int64, pid uint32) (int64, bool)
 }
 
 // isRelationShortLived checks to see whether a network connection is considered a short-lived network relation
-func isRelationShortLived(relationID string, firstObserved int64, cfg *config.AgentConfig) bool {
+func isRelationShortLived(firstObserved int64, cfg *config.AgentConfig) bool {
 
 	// firstObserved is before ShortLivedTime. Relation is not short-lived, return false
 	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedNetworkRelationQualifierSecs)) {
@@ -619,30 +598,4 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), hostname, []string{})
 	c.Sender().Gauge("stackstate.process_agent.connnections.invalid", float64(filterStats.Invalid), hostname, []string{})
 	c.Sender().Gauge("stackstate.process_agent.connnections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
-}
-
-// GetNATLocalAddress returns the translated (local ip, local port) pair
-func GetNATLocalAddress(c *process.Connection) (util.Address, uint16) {
-	localIP := util.AddressFromString(c.Laddr.Ip)
-	localPort := c.Laddr.Port
-
-	if c.IpTranslation != nil && c.IpTranslation.ReplDstIP != "" {
-		// Fields are flipped
-		localIP = util.AddressFromString(c.IpTranslation.ReplDstIP)
-		localPort = c.IpTranslation.ReplDstPort
-	}
-	return localIP, uint16(localPort)
-}
-
-// GetNATRemoteAddress returns the translated (remote ip, remote port) pair
-func GetNATRemoteAddress(c *process.Connection) (util.Address, uint16) {
-	remoteIP := util.AddressFromString(c.Raddr.Ip)
-	remotePort := c.Raddr.Port
-
-	if c.IpTranslation != nil && c.IpTranslation.ReplDstIP != "" {
-		// Fields are flipped
-		remoteIP = util.AddressFromString(c.IpTranslation.ReplSrcIP)
-		remotePort = c.IpTranslation.ReplSrcPort
-	}
-	return remoteIP, uint16(remotePort)
 }

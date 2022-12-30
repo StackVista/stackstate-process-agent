@@ -15,8 +15,7 @@ def os
 
 desc "Setup dependencies"
 task :deps do
-  system("go install golang.org/x/lint/golint@6edffad5e616")
-  system("go install github.com/awalterschulze/goderive@886b66b111a4")
+  system("go install golang.org/x/lint/golint")
 end
 
 task :default => [:ci]
@@ -134,8 +133,8 @@ task :protobuf do
   sh "protoc proto/agent.proto --proto_path=#{gogo_path} --proto_path=#{sketched_path} -I proto --gogofaster_out model/"
 end
 
-desc "Datadog Process Agent CI script (fmt, vet, etc)"
-task :ci => [:fmt, :vet, :test, :lint, :build]
+desc "Process Agent CI script (fmt, vet, etc)"
+task :ci => [:deps, :fmt, :vet, :test, :lint, :build]
 
 task :err do
   system("go install github.com/kisielk/errcheck")

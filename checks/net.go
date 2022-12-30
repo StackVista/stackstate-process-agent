@@ -139,7 +139,7 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 	return nil, fmt.Errorf("remote ConnectionTracker is not supported")
 }
 
-type FormatStats struct {
+type formattingStats struct {
 	NoProcess   int
 	Invalid     int
 	ShortLiving int
@@ -153,8 +153,8 @@ func (c *ConnectionsCheck) formatConnections(
 	cfg *config.AgentConfig,
 	conns []network.ConnectionStats,
 	prevCheckTimeDiff time.Duration,
-	httpMetrics map[connKey][]*model.ConnectionMetric) ([]*model.Connection, *FormatStats) {
-	stats := &FormatStats{}
+	httpMetrics map[connKey][]*model.ConnectionMetric) ([]*model.Connection, *formattingStats) {
+	stats := &formattingStats{}
 	// Process create-times required to construct unique process hash keys on the backend
 	// attention! There is a conns.Conns[0].PidCreateTime, it is always zero, so we do have to look up the actual value
 	createTimeForPID := Process.createTimesForPIDs(connectionPIDs(conns))
@@ -165,7 +165,7 @@ func (c *ConnectionsCheck) formatConnections(
 
 		pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid)
 		if !ok {
-			stats.NoProcess += 1
+			stats.NoProcess++
 			log.Debugf("connection %v is filtered out because process %d is not observed (finished or just started)", conn, conn.Pid)
 			continue
 		}
@@ -173,7 +173,7 @@ func (c *ConnectionsCheck) formatConnections(
 		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
 		relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
 		if err != nil {
-			stats.Invalid += 1
+			stats.Invalid++
 			log.Warnf("invalid connection description - can't determine ID: %v", err)
 			continue
 		}
@@ -185,7 +185,7 @@ func (c *ConnectionsCheck) formatConnections(
 		if cfg.EnableShortLivedNetworkRelationFilter &&
 			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
 
-			stats.ShortLiving += 1
+			stats.ShortLiving++
 			logShortLivingNoticeOnce.Do(func() {
 				log.Infof("Some of network relations are filtered out as short-living. " +
 					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +
@@ -317,15 +317,15 @@ func statusCodeClassToString(class int) string {
 	}
 }
 
-type MetricName string
+type metricName string
 
 const (
-	http_ResponseTime      MetricName = "http_response_time_seconds"
-	http_RequestsPerSecond MetricName = "http_requests_per_second"
+	httpResponseTime      metricName = "http_response_time_seconds"
+	httpRequestsPerSecond metricName = "http_requests_per_second"
 
-	http_StatusCodeTag = "code"
-	http_PathTag       = "path"
-	http_MethodTag     = "method"
+	httpStatusCodeTag = "code"
+	httpPathTag       = "path"
+	httpMethodTag     = "method"
 )
 
 func emptySketch() *ddsketch.DDSketch {
@@ -345,13 +345,13 @@ type aggStatsKey struct {
 
 func (k aggStatsKey) toMap() map[string]string {
 	tags := map[string]string{
-		http_StatusCodeTag: k.statusCode,
+		httpStatusCodeTag: k.statusCode,
 	}
 	if k.path != "" {
-		tags[http_PathTag] = k.path
+		tags[httpPathTag] = k.path
 	}
 	if k.method != "" {
-		tags[http_MethodTag] = k.method
+		tags[httpMethodTag] = k.method
 	}
 	return tags
 }
@@ -436,11 +436,11 @@ func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.
 			requestCount, latencies := aggregateStats(stats)
 			result[connKey] = append(result[connKey],
 				makeConnectionMetricWithNumber(
-					http_RequestsPerSecond, tagsKey.toMap(),
+					httpRequestsPerSecond, tagsKey.toMap(),
 					calculateNormalizedRate(uint64(requestCount), duration),
 				),
 				makeConnectionMetricWithHistogram(
-					http_ResponseTime, tagsKey.toMap(),
+					httpResponseTime, tagsKey.toMap(),
 					latencies,
 				),
 			)
@@ -450,7 +450,7 @@ func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.
 	return result
 }
 
-func makeConnectionMetricWithHistogram(name MetricName, tags map[string]string, histogram *ddsketch.DDSketch) *model.ConnectionMetric {
+func makeConnectionMetricWithHistogram(name metricName, tags map[string]string, histogram *ddsketch.DDSketch) *model.ConnectionMetric {
 	return &model.ConnectionMetric{
 		Name: string(name),
 		Tags: tags,
@@ -462,7 +462,7 @@ func makeConnectionMetricWithHistogram(name MetricName, tags map[string]string, 
 	}
 }
 
-func makeConnectionMetricWithNumber(name MetricName, tags map[string]string, number float64) *model.ConnectionMetric {
+func makeConnectionMetricWithNumber(name metricName, tags map[string]string, number float64) *model.ConnectionMetric {
 	return &model.ConnectionMetric{
 		Name: string(name),
 		Tags: tags,
@@ -574,7 +574,7 @@ func (rp *reportedProps) Tags() []string {
 	return result
 }
 
-func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, filterStats *FormatStats) {
+func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, filterStats *formattingStats) {
 	c.Sender().Gauge("stackstate.process_agent.connnections.total", float64(len(allConnections.Conns)), hostname, []string{})
 
 	reportedBreakdown := map[reportedProps]int{}

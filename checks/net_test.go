@@ -531,14 +531,14 @@ func sortConnectionMetrics(metrics []*model.ConnectionMetric) {
 		if cmp := strings.Compare(metrics[i].Name, metrics[j].Name); cmp != 0 {
 			return cmp < 0
 		}
-		if cmp := strings.Compare(metrics[i].Tags[http_StatusCodeTag], metrics[j].Tags[http_StatusCodeTag]); cmp != 0 {
+		if cmp := strings.Compare(metrics[i].Tags[httpStatusCodeTag], metrics[j].Tags[httpStatusCodeTag]); cmp != 0 {
 			return cmp < 0
 		}
-		if cmp := strings.Compare(metrics[i].Tags[http_MethodTag], metrics[j].Tags[http_MethodTag]); cmp != 0 {
+		if cmp := strings.Compare(metrics[i].Tags[httpMethodTag], metrics[j].Tags[httpMethodTag]); cmp != 0 {
 			// sort backwards to have empty method last (empty means overall aggregation)
 			return cmp > 0
 		}
-		if cmp := strings.Compare(metrics[i].Tags[http_PathTag], metrics[j].Tags[http_PathTag]); cmp != 0 {
+		if cmp := strings.Compare(metrics[i].Tags[httpPathTag], metrics[j].Tags[httpPathTag]); cmp != 0 {
 			return cmp < 0
 		}
 		return false

@@ -33,7 +33,7 @@ task :build do
     :cmd => "go build -o #{bin}",
     :race => ENV['GO_RACE'] == 'true',
     :add_build_vars => ENV['PROCESS_AGENT_ADD_BUILD_VARS'] != 'false',
-    :static => ENV['PROCESS_AGENT_STATIC'] == 'true',
+    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
     :bpf => true
   })
 end
@@ -64,8 +64,8 @@ end
 desc "Test Datadog Process agent"
 task :test do
   go_test("./...", {
-   :static => ENV['PROCESS_AGENT_STATIC'] == 'true',
-   :bpf => true
+   :bpf => true,
+   :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
   })
 end
 
@@ -82,6 +82,7 @@ task 'build-network-tracer' do
     :cmd => "go build -o #{bin}",
     :add_build_vars => true,
     :static => ENV['NETWORK_AGENT_STATIC'] == 'true',
+    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
     :os => os,
     :bpf => true
   })
@@ -89,8 +90,8 @@ end
 
 task :vet do
   go_vet("./...", {
-    :static => ENV['PROCESS_AGENT_STATIC'] == 'true',
-    :bpf => true
+    :bpf => true,
+    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
   })
 end
 

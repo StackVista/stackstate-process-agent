@@ -575,7 +575,7 @@ func (rp *reportedProps) Tags() []string {
 }
 
 func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, filterStats *formattingStats, telemetry *http.TelemetryStats) {
-	c.Sender().Gauge("stackstate.process_agent.connnections.total", float64(len(allConnections.Conns)), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connections.total", float64(len(allConnections.Conns)), hostname, []string{})
 
 	reportedBreakdown := map[reportedProps]int{}
 	for _, conn := range reportedConnections {
@@ -590,7 +590,7 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 		reportedBreakdown[props] = count + 1
 	}
 	for props, count := range reportedBreakdown {
-		c.Sender().Gauge("stackstate.process_agent.connnections.reported",
+		c.Sender().Gauge("stackstate.process_agent.connections.reported",
 			float64(count), hostname, props.Tags(),
 		)
 	}
@@ -599,12 +599,12 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 		//Misses   int64 // this happens when we can't cope with the rate of events
 		//Dropped  int64 // this happens when httpStatKeeper reaches capacity
 		//Rejected int64 // this happens when a user-defined reject-filter matches a request
-		c.Sender().Gauge("stackstate.process_agent.connnections.http.misses", float64(telemetry.Misses), hostname, []string{})
-		c.Sender().Gauge("stackstate.process_agent.connnections.http.dropped", float64(telemetry.Dropped), hostname, []string{})
-		c.Sender().Gauge("stackstate.process_agent.connnections.http.rejected", float64(telemetry.Rejected), hostname, []string{})
+		c.Sender().Gauge("stackstate.process_agent.connections.http.misses", float64(telemetry.Misses), hostname, []string{})
+		c.Sender().Gauge("stackstate.process_agent.connections.http.dropped", float64(telemetry.Dropped), hostname, []string{})
+		c.Sender().Gauge("stackstate.process_agent.connections.http.rejected", float64(telemetry.Rejected), hostname, []string{})
 	}
 
-	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), hostname, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connnections.invalid", float64(filterStats.Invalid), hostname, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connnections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connections.no_process", float64(filterStats.NoProcess), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connections.invalid", float64(filterStats.Invalid), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
 }

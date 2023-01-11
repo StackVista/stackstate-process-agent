@@ -29,7 +29,7 @@ require (
 	github.com/DataDog/sketches-go v1.2.1
 	github.com/DataDog/zstd v1.4.8
 	github.com/StackExchange/wmi v1.2.1
-	github.com/StackVista/stackstate-agent v0.0.0-20221214135916-7cec813b9442
+	github.com/StackVista/stackstate-agent v0.0.0-20230111172057-ebb63e115603
 	github.com/StackVista/stackstate-agent/pkg/util/log v0.19.0-rc.4
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible

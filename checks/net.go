@@ -111,7 +111,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	formattedConnections, stats := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats)
 	c.prevCheckTime = currentTime
 
-	c.reportMetrics(cfg.HostName, conns, formattedConnections, stats)
+	c.reportMetrics(cfg.HostName, conns, formattedConnections, stats, conns.HTTPTelemetry)
 
 	log.Debugf("collected %d connections in %s", len(formattedConnections), time.Since(start))
 	for _, conn := range formattedConnections {
@@ -574,7 +574,7 @@ func (rp *reportedProps) Tags() []string {
 	return result
 }
 
-func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, filterStats *formattingStats) {
+func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, filterStats *formattingStats, telemetry *http.TelemetryStats) {
 	c.Sender().Gauge("stackstate.process_agent.connnections.total", float64(len(allConnections.Conns)), hostname, []string{})
 
 	reportedBreakdown := map[reportedProps]int{}
@@ -593,6 +593,15 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 		c.Sender().Gauge("stackstate.process_agent.connnections.reported",
 			float64(count), hostname, props.Tags(),
 		)
+	}
+
+	if telemetry != nil {
+		//Misses   int64 // this happens when we can't cope with the rate of events
+		//Dropped  int64 // this happens when httpStatKeeper reaches capacity
+		//Rejected int64 // this happens when a user-defined reject-filter matches a request
+		c.Sender().Gauge("stackstate.process_agent.connnections.http.misses", float64(telemetry.Misses), hostname, []string{})
+		c.Sender().Gauge("stackstate.process_agent.connnections.http.dropped", float64(telemetry.Dropped), hostname, []string{})
+		c.Sender().Gauge("stackstate.process_agent.connnections.http.rejected", float64(telemetry.Rejected), hostname, []string{})
 	}
 
 	c.Sender().Gauge("stackstate.process_agent.connnections.no_process", float64(filterStats.NoProcess), hostname, []string{})

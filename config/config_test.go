@@ -1288,7 +1288,7 @@ func TestStackStateFallbackAgentConfigEmptyUrlToEnvSTSUrl(t *testing.T) {
 	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
-//case 5: STS_URL as env	PROCESS_AGENT_URL as env
+// case 5: STS_URL as env	PROCESS_AGENT_URL as env
 func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 	assert := assert.New(t)
 	os.Unsetenv("DD_PROCESS_AGENT_URL")
@@ -1319,7 +1319,7 @@ func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
-//case 7: STS_URL as env	PROCESS_AGENT_URL as yaml - STS URL wins, more specific
+// case 7: STS_URL as env	PROCESS_AGENT_URL as yaml - STS URL wins, more specific
 func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
 	assert := assert.New(t)
 	os.Unsetenv("DD_PROCESS_AGENT_URL")
@@ -1350,7 +1350,7 @@ func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
 	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
-//case 8: STS_URL as yaml, PROCESS_AGENT_URL as env - ENV wins
+// case 8: STS_URL as yaml, PROCESS_AGENT_URL as env - ENV wins
 func TestStackStatePreferPROCESS_AGENT_URLOverYamlsts_sts_url(t *testing.T) {
 	assert := assert.New(t)
 	os.Unsetenv("STS_PROCESS_AGENT_URL")

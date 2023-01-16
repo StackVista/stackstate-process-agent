@@ -6,22 +6,11 @@ def get_tag_set(opts)
     tag_set += ' netgo' if opts[:bpf] && opts[:static]
     cmd += " -tags \'#{tag_set}\'"
   end
-  return cmd
+  cmd
 end
 
-def go_build(program, opts={})
-  default_cmd = "go build -a"
-  if ENV["INCREMENTAL_BUILD"] then
-    default_cmd = "go build -i"
-  end
-  opts = {
-    :cmd => default_cmd,
-    :race => false,
-    :add_build_vars => true,
-    :static => false,
-  }.merge(opts)
-
-  dd = 'main'
+def get_ldflags(opts)
+  prefix = 'main'
   commit = `git rev-parse --short HEAD`.strip
   branch = `git rev-parse --abbrev-ref HEAD`.strip
   if os == "windows"
@@ -33,42 +22,68 @@ def go_build(program, opts={})
   goversion = `go version`.strip
   agentversion = ENV["AGENT_VERSION"] || ENV["PROCESS_AGENT_VERSION"] || "0.99.0"
 
-  # NOTE: This value is currently hardcoded and needs to be manually incremented during release
-  winversion = "6.6.0".split(".")
-
   vars = {}
-  vars["#{dd}.Version"] = agentversion
+  vars["#{prefix}.Version"] = agentversion
   if opts[:add_build_vars]
-    vars["#{dd}.BuildDate"] = date
-    vars["#{dd}.GitCommit"] = commit
-    vars["#{dd}.GitBranch"] = branch
-    vars["#{dd}.GoVersion"] = goversion
+    vars["#{prefix}.BuildDate"] = date
+    vars["#{prefix}.GitCommit"] = commit
+    vars["#{prefix}.GitBranch"] = branch
+    vars["#{prefix}.GoVersion"] = goversion
   end
 
   ldflags = vars.map { |name, value| "-X '#{name}=#{value}'" }
 
+  if opts[:embed_path]
+    ldflags << "-r #{opts[:embed_path]}/lib"
+  end
+
+  " -ldflags \"#{ldflags.join(' ')}\""
+end
+
+def get_env(opts)
+  env = {}
+  if opts[:embed_path]
+    embedder_dir = opts[:embed_path]
+    env['CPATH'] = "#{embedder_dir}/include"
+    env['CGO_LDFLAGS_ALLOW'] = '-Wl,--wrap=.*'
+    env['DYLD_LIBRARY_PATH'] = "#{embedder_dir}/lib"
+    env['LD_LIBRARY_PATH'] = "#{embedder_dir}/lib"
+    env['CGO_LDFLAGS'] = "-L#{embedder_dir}/lib"
+    env['CGO_CFLAGS'] = " -Werror -Wno-deprecated-declarations -I#{embedder_dir}/include -I#{embedder_dir}/common"
+  end
+  env
+end
+
+def print_env(env)
+  if env.length == 0
+    puts "no additional environment variables set"
+  else
+    puts "additional environment variables"
+    env.each do |key, value|
+      puts "#{key}=#{value}"
+    end
+  end
+end
+
+def go_build(program, opts={})
+  default_cmd = "go build -a"
+  if ENV["INCREMENTAL_BUILD"] then
+    default_cmd = "go build -i"
+  end
+  opts = {
+    :cmd => default_cmd,
+    :race => false,
+    :add_build_vars => true,
+  }.merge(opts)
+
   cmd = opts[:cmd]
   cmd += ' -race' if opts[:race]
   cmd += get_tag_set(opts)
-  print "cmd"
-
-  # NOTE: We currently have issues running eBPF components in statically linked binaries, so in the meantime,
-  #       if eBPF is enabled, the binary will be dynamically linked, and will not work in environments without glibc.
-  if opts[:static]
-    ldflags << '-linkmode external'
-    ldflags << '-extldflags \'-static\''
-    if opts[:bpf]
-      # eBPF will require kernel headers
-      # TODO: Further debug this and get eBPF working with musl-based statically linked binaries.
-      ENV['CGO_CFLAGS'] = '-I/kernel-headers/include/'
-    else
-      # Statically linked builds use musl-gcc for full support
-      # of alpine and other machines with different gcc versions.
-      ENV['CC'] = '/usr/local/musl/bin/musl-gcc'
-    end
-  end
+  cmd += get_ldflags(opts)
 
   if ENV['windres'] then
+    # NOTE: This value is currently hardcoded and needs to be manually incremented during release
+    winversion = "6.6.0".split(".")
     resdir = "cmd/agent/windows_resources"
     # first compile the message table, as it's an input to the resource file
     msgcmd = "windmc --target pe-x86-64 -r #{resdir} #{resdir}/process-agent-msg.mc"
@@ -80,8 +95,11 @@ def go_build(program, opts={})
     sh rescmd
   end
 
+  env = get_env(opts)
+  print_env(env)
+
   # Building the binary
-  sh "#{cmd} -ldflags \"#{ldflags.join(' ')}\" #{program}"
+  sh env, "#{cmd}  #{program}"
 
   if ENV['SIGN_WINDOWS'] then
     signcmd = "signtool sign /v /t http://timestamp.verisign.com/scripts/timestamp.dll /fd SHA256 /sm /s \"My\" /sha1 ECCDAE36FDCB654D2CBAB3E8975AA55469F96E4C process-agent.exe"
@@ -101,17 +119,17 @@ def go_lint(path)
 end
 
 def go_vet(path, opts={})
-  sh "go vet #{get_tag_set(opts)} #{path}"
+  sh get_env(opts), "go vet #{get_tag_set(opts)} #{get_ldflags(opts)} #{path}"
 end
 
 def go_test(path, opts = {})
-  cmd = "go test #{get_tag_set(opts)}"
+  cmd = "go test #{get_tag_set(opts)} #{get_ldflags(opts)}"
   filter = ''
   if opts[:coverage_file]
     cmd += " -coverprofile=#{opts[:coverage_file]} -coverpkg=./..."
     filter = "2>&1 | grep -v 'warning: no packages being tested depend on'" # ugly hack
   end
-  sh "#{cmd} #{path} #{filter}"
+  sh get_env(opts), "#{cmd} #{path} #{filter}"
 end
 
 # return the dependencies of all the packages who start with the root path
@@ -137,4 +155,8 @@ def go_fmt(path)
     end
     fail
   end
+end
+
+def get_go_module_path(path)
+  `go list -f '{{ .Dir }}' -m #{path}`.strip
 end

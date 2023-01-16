@@ -3,14 +3,15 @@ package checks
 import (
 	"bytes"
 	"fmt"
-	"math"
+	"github.com/DataDog/sketches-go/ddsketch"
+	"github.com/StackVista/stackstate-agent/pkg/network"
+	"github.com/StackVista/stackstate-agent/pkg/network/http"
+	"github.com/StackVista/stackstate-agent/pkg/process/util"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/DataDog/sketches-go/ddsketch"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	"github.com/patrickmn/go-cache"
 
 	"github.com/StackVista/stackstate-process-agent/config"
@@ -84,57 +85,51 @@ func TestNetworkConnectionBatching(t *testing.T) {
 	}
 }
 
-func makeConnectionStats(pid uint32, local, remote string, localPort, remotePort uint16) common.ConnectionStats {
-	return common.ConnectionStats{
-		Pid:              pid,
-		Type:             common.TCP,
-		Family:           common.AF_INET,
-		Direction:        common.OUTGOING,
-		Local:            local,
-		Remote:           remote,
-		LocalPort:        localPort,
-		RemotePort:       remotePort,
-		NetworkNamespace: "ns",
-		SendBytes:        0,
-		RecvBytes:        0,
-		State:            common.ACTIVE,
+func makeProcessConnection(pid uint32, local, remote string, localPort, remotePort uint16) network.ConnectionStats {
+	return network.ConnectionStats{
+		Pid:       pid,
+		Type:      network.TCP,
+		Family:    network.AFINET,
+		Direction: network.OUTGOING,
+		Source:    util.AddressFromString(local),
+		SPort:     localPort,
+		Dest:      util.AddressFromString(remote),
+		DPort:     remotePort,
+		NetNS:     1,
 	}
 }
 
-func amendConnectionStats(stats common.ConnectionStats, sent, received uint64) common.ConnectionStats {
-	stats.SendBytes = sent
-	stats.RecvBytes = received
+func amendConnectionStats(stats network.ConnectionStats, sent, received uint64) network.ConnectionStats {
+	stats.LastSentBytes = sent - stats.LastSentBytes
+	stats.LastRecvBytes = received - stats.LastRecvBytes
 	return stats
 }
 
-func makeConnectionStatsNoNs(pid uint32, local, remote string, localPort, remotePort uint16) common.ConnectionStats {
-	return common.ConnectionStats{
-		Pid:        pid,
-		Type:       common.TCP,
-		Family:     common.AF_INET,
-		Direction:  common.OUTGOING,
-		Local:      local,
-		Remote:     remote,
-		LocalPort:  localPort,
-		RemotePort: remotePort,
-		SendBytes:  0,
-		RecvBytes:  0,
-		State:      common.ACTIVE,
+func makeConnectionStatsNoNs(pid uint32, local, remote string, localPort, remotePort uint16) network.ConnectionStats {
+	return network.ConnectionStats{
+		Pid:       pid,
+		Type:      network.TCP,
+		Family:    network.AFINET,
+		Direction: network.OUTGOING,
+		Source:    util.AddressFromString(local),
+		SPort:     localPort,
+		Dest:      util.AddressFromString(remote),
+		DPort:     remotePort,
 	}
 }
 
 func TestNetworkRelationCacheExpiration(t *testing.T) {
 	cache := NewNetworkRelationCache(100 * time.Millisecond)
 	hostname := "example.org"
-	addStats := func(stats ...common.ConnectionStats) {
-		for _, conn := range stats {
+	addStats := func(conns ...network.ConnectionStats) {
+		for _, conn := range conns {
 			relationID, _ := CreateNetworkRelationIdentifier(hostname, conn)
-			cache.PutNetworkRelationCache(relationID, conn)
+			cache.PutNetworkRelationCache(relationID)
 		}
 	}
 
 	addStats(
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
 	)
 	assert.Equal(t, 1, cache.ItemCount())
 
@@ -142,9 +137,9 @@ func TestNetworkRelationCacheExpiration(t *testing.T) {
 
 	addStats(
 		// a new connection for existing relation (remote port 8080)
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12346, 8080),
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12346, 8080),
 		// a new connection for a new relation (remote port 2000)
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 1000, 2000),
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 1000, 2000),
 	)
 	assert.Equal(t, 2, cache.ItemCount()) // should be now 2 relations in total
 
@@ -154,7 +149,7 @@ func TestNetworkRelationCacheExpiration(t *testing.T) {
 
 	addStats(
 		// a new connection for existing relation (remote port 8080)
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12347, 8080),
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12347, 8080),
 	)
 	assert.Equal(t, 2, cache.ItemCount())
 
@@ -172,11 +167,11 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 	}
 
 	// create the connection stats
-	connStats := []common.ConnectionStats{
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
-		makeConnectionStats(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
-		makeConnectionStats(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
-		makeConnectionStats(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
+	connStats := []network.ConnectionStats{
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+		makeProcessConnection(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
+		makeProcessConnection(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
+		makeProcessConnection(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
 	}
 
 	// fill in the relation cache
@@ -193,7 +188,7 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 		// pid 4 filtered by process blacklisting, so we expect no connections for pid 4
 	}
 
-	connections := c.formatConnections(cfg, connStats, 15*time.Second, map[common.ConnTuple]connectionMetrics{})
+	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil)
 
 	assert.Len(t, connections, 3)
 
@@ -218,11 +213,11 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 	}
 
 	// create the connection stats
-	connStats := []common.ConnectionStats{
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
-		makeConnectionStats(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
-		makeConnectionStats(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
-		makeConnectionStats(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
+	connStats := []network.ConnectionStats{
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+		makeProcessConnection(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
+		makeProcessConnection(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
+		makeProcessConnection(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
 	}
 
 	// fill in the relation cache
@@ -240,7 +235,7 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 		4: {Pid: 4, CreateTime: now.Add(-5 * time.Minute).Unix()},
 	}
 
-	connections := c.formatConnections(cfg, connStats, 15*time.Second, map[common.ConnTuple]connectionMetrics{})
+	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil)
 
 	assert.Len(t, connections, 4)
 	for _, c := range connections {
@@ -263,11 +258,11 @@ func TestRelationCache(t *testing.T) {
 	}
 
 	// create the connection stats
-	connStats := []common.ConnectionStats{
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
-		makeConnectionStats(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
-		makeConnectionStats(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
-		makeConnectionStats(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
+	connStats := []network.ConnectionStats{
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+		makeProcessConnection(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
+		makeProcessConnection(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
+		makeProcessConnection(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
 	}
 
 	// fill in the procs in the lastProcState map to get process create time for the connection mapping
@@ -282,7 +277,7 @@ func TestRelationCache(t *testing.T) {
 	assert.Zero(t, c.cache.ItemCount(), "Cache should be empty before running")
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	firstRun := c.formatConnections(cfg, connStats, 15*time.Second, map[common.ConnTuple]connectionMetrics{})
+	firstRun, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil)
 	assert.Zero(t, len(firstRun), "Connections should be empty when the cache is not present")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -290,13 +285,13 @@ func TestRelationCache(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun := c.formatConnections(cfg, connStats, 10*time.Second, map[common.ConnTuple]connectionMetrics{})
+	secondRun, _ := c.formatConnections(cfg, connStats, 10*time.Second, nil)
 	assert.Equal(t, 4, len(secondRun), "Connections should contain 4 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
 	// delete last connection from the connection stats slice, expect it to be excluded from the connection list, but not the cache
 	connStats = connStats[:len(connStats)-1]
-	thirdRun := c.formatConnections(cfg, connStats, 5*time.Second, map[common.ConnTuple]connectionMetrics{})
+	thirdRun, _ := c.formatConnections(cfg, connStats, 5*time.Second, nil)
 	assert.Equal(t, 3, len(thirdRun), "Connections should contain 3 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -344,24 +339,6 @@ const (
 	PID1CONN1RECV2EXPECT = float32(PID1CONN1RECV2-PID1CONN1RECV1) / TIME2
 	PID1CONN2RECV2EXPECT = float32(PID1CONN2RECV2-PID1CONN2RECV1) / TIME2
 	PID2CONN1RECV2EXPECT = float32(PID2CONN1RECV2-PID2CONN1RECV1) / TIME2
-
-	TIME3                = float32(5)
-	PID1CONN1SEND3EXPECT = float32(PID1CONN1SEND3-PID1CONN1SEND2) / TIME3
-	PID1CONN2SEND3EXPECT = float32(PID1CONN2SEND3-PID1CONN2SEND2) / TIME3
-	PID2CONN1SEND3EXPECT = float32(PID2CONN1SEND3-PID2CONN1SEND2) / TIME3
-
-	PID1CONN1RECV3EXPECT = float32(PID1CONN1RECV3-PID1CONN1RECV2) / TIME3
-	PID1CONN2RECV3EXPECT = float32(PID1CONN2RECV3-PID1CONN2RECV2) / TIME3
-	PID2CONN1RECV3EXPECT = float32(PID2CONN1RECV3-PID2CONN1RECV2) / TIME3
-
-	TIME4                = float32(10)
-	PID1CONN1SEND4EXPECT = float32(PID1CONN1SEND4) / TIME4
-	PID1CONN2SEND4EXPECT = float32(PID1CONN2SEND4) / TIME4
-	PID2CONN1SEND4EXPECT = float32(PID2CONN1SEND4) / TIME4
-
-	PID1CONN1RECV4EXPECT = float32(PID1CONN1RECV4) / TIME4
-	PID1CONN2RECV4EXPECT = float32(PID1CONN2RECV4) / TIME4
-	PID2CONN1RECV4EXPECT = float32(PID2CONN1RECV4) / TIME4
 )
 
 func TestRelationCacheOrdering(t *testing.T) {
@@ -376,15 +353,14 @@ func TestRelationCacheOrdering(t *testing.T) {
 	}
 
 	// create the connection stats
-	connStats := []common.ConnectionStats{
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12346, 8080),
-		makeConnectionStats(2, "10.0.0.1", "10.0.0.3", 12347, 8080),
-		makeConnectionStats(3, "10.0.0.1", "10.0.0.4", 12348, 8080),
+	connStats := []network.ConnectionStats{
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12346, 8080),
+		makeProcessConnection(2, "10.0.0.1", "10.0.0.3", 12347, 8080),
+		makeProcessConnection(3, "10.0.0.1", "10.0.0.4", 12348, 8080),
 	}
 
-	prevConnStats := []common.ConnectionStats{}
-	connStats = []common.ConnectionStats{
+	connStats = []network.ConnectionStats{
 		amendConnectionStats(connStats[0], PID1CONN1SEND1, PID1CONN1RECV1),
 		amendConnectionStats(connStats[1], PID1CONN2SEND1, PID1CONN2RECV1),
 		amendConnectionStats(connStats[2], PID2CONN1SEND1, PID2CONN1RECV1),
@@ -400,13 +376,12 @@ func TestRelationCacheOrdering(t *testing.T) {
 	}
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	c.formatConnections(cfg, connStats, 15*time.Second, makeMetricsLookupMap(prevConnStats))
+	c.formatConnections(cfg, connStats, 15*time.Second, nil)
 
-	prevConnStats = connStats
-	connStats = []common.ConnectionStats{
-		amendConnectionStats(prevConnStats[0], PID1CONN1SEND2, PID1CONN1RECV2),
-		amendConnectionStats(prevConnStats[1], PID1CONN2SEND2, PID1CONN2RECV2),
-		amendConnectionStats(prevConnStats[2], PID2CONN1SEND2, PID2CONN1RECV2),
+	connStats = []network.ConnectionStats{
+		amendConnectionStats(connStats[0], PID1CONN1SEND2, PID1CONN1RECV2),
+		amendConnectionStats(connStats[1], PID1CONN2SEND2, PID1CONN2RECV2),
+		amendConnectionStats(connStats[2], PID2CONN1SEND2, PID2CONN1RECV2),
 		connStats[3],
 	}
 
@@ -414,7 +389,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, makeMetricsLookupMap(prevConnStats))
+	secondRun, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil)
 
 	assert.Equal(t, PID1CONN1SEND2EXPECT, secondRun[0].BytesSentPerSecond, "BytesSentPerSecond")
 	assert.Equal(t, PID1CONN2SEND2EXPECT, secondRun[1].BytesSentPerSecond, "BytesSentPerSecond")
@@ -424,42 +399,6 @@ func TestRelationCacheOrdering(t *testing.T) {
 	assert.Equal(t, PID1CONN2RECV2EXPECT, secondRun[1].BytesReceivedPerSecond, "BytesReceivedPerSecond")
 	assert.Equal(t, PID2CONN1RECV2EXPECT, secondRun[2].BytesReceivedPerSecond, "BytesReceivedPerSecond")
 
-	prevConnStats = connStats
-	connStats = []common.ConnectionStats{
-		amendConnectionStats(connStats[0], PID1CONN1SEND3, PID1CONN1RECV3),
-		amendConnectionStats(connStats[1], PID1CONN2SEND3, PID1CONN2RECV3),
-		amendConnectionStats(connStats[2], PID2CONN1SEND3, PID2CONN1RECV3),
-		connStats[3],
-	}
-
-	thirdRun := c.formatConnections(cfg, connStats, time.Duration(TIME3)*time.Second, makeMetricsLookupMap(prevConnStats))
-
-	assert.Equal(t, PID1CONN1SEND3EXPECT, thirdRun[0].BytesSentPerSecond, "BytesSentPerSecond")
-	assert.Equal(t, PID1CONN2SEND3EXPECT, thirdRun[1].BytesSentPerSecond, "BytesSentPerSecond")
-	assert.Equal(t, PID2CONN1SEND3EXPECT, thirdRun[2].BytesSentPerSecond, "BytesSentPerSecond")
-
-	assert.Equal(t, PID1CONN1RECV3EXPECT, thirdRun[0].BytesReceivedPerSecond, "BytesReceivedPerSecond")
-	assert.Equal(t, PID1CONN2RECV3EXPECT, thirdRun[1].BytesReceivedPerSecond, "BytesReceivedPerSecond")
-	assert.Equal(t, PID2CONN1RECV3EXPECT, thirdRun[2].BytesReceivedPerSecond, "BytesReceivedPerSecond")
-
-	prevConnStats = connStats
-	connStats = []common.ConnectionStats{
-		amendConnectionStats(connStats[0], PID1CONN1SEND1, PID1CONN1RECV1),
-		amendConnectionStats(connStats[1], PID1CONN2SEND1, PID1CONN2RECV1),
-		amendConnectionStats(connStats[2], PID2CONN1SEND1, PID2CONN1RECV1),
-		connStats[3],
-	}
-
-	fourthRun := c.formatConnections(cfg, connStats, time.Duration(TIME4)*time.Second, makeMetricsLookupMap(prevConnStats))
-
-	assert.Equal(t, PID1CONN1SEND4EXPECT, fourthRun[0].BytesSentPerSecond, "BytesSentPerSecond")
-	assert.Equal(t, PID1CONN2SEND4EXPECT, fourthRun[1].BytesSentPerSecond, "BytesSentPerSecond")
-	assert.Equal(t, PID2CONN1SEND4EXPECT, fourthRun[2].BytesSentPerSecond, "BytesSentPerSecond")
-
-	assert.Equal(t, PID1CONN1RECV4EXPECT, fourthRun[0].BytesReceivedPerSecond, "BytesReceivedPerSecond")
-	assert.Equal(t, PID1CONN2RECV4EXPECT, fourthRun[1].BytesReceivedPerSecond, "BytesReceivedPerSecond")
-	assert.Equal(t, PID2CONN1RECV4EXPECT, fourthRun[2].BytesReceivedPerSecond, "BytesReceivedPerSecond")
-
 	c.cache.Flush()
 }
 
@@ -468,8 +407,8 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 	lastRun := time.Now().Add(-5 * time.Second)
 	now := time.Now()
 	// create the connection stats
-	connStats := []common.ConnectionStats{
-		makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+	connStats := []network.ConnectionStats{
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
 	}
 
 	// fill in the procs in the lastProcState map to get process create time for the connection mapping
@@ -498,7 +437,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
 			prepCache: func(c *NetworkRelationCache) {
 				// use a "similar" connection; thus we observed a similar connection in the previous run
-				conn := makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 54321, 8080)
+				conn := makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 54321, 8080)
 				err := fillNetworkRelationCache(cfg.HostName, c, conn, lastRun.Add(-5*time.Minute).Unix(), lastRun.Unix())
 				assert.NoError(t, err)
 			},
@@ -537,7 +476,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			// fill in the relation cache
 			tc.prepCache(c.cache)
 
-			connections := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), map[common.ConnTuple]connectionMetrics{})
+			connections, _ := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), nil)
 			var rIDs []string
 			for _, conn := range connections {
 				rIDs = append(rIDs, conn.ConnectionIdentifier)
@@ -561,15 +500,15 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 }
 
 func TestFormatNamespace(t *testing.T) {
-	assert.Equal(t, "", formatNamespace("", "h", makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080)))
-	assert.Equal(t, "c", formatNamespace("c", "h", makeConnectionStats(1, "10.0.0.1", "10.0.0.2", 12345, 8080)))
-	assert.Equal(t, "c", formatNamespace("c", "h", makeConnectionStats(1, "127.0.0.1", "10.0.0.2", 12345, 8080)))
-	assert.Equal(t, "c", formatNamespace("c", "h", makeConnectionStats(1, "10.0.0.1", "127.0.0.1", 12345, 8080)))
-	assert.Equal(t, "c:h:ns", formatNamespace("c", "h", makeConnectionStats(1, "127.0.0.1", "127.0.0.1", 12345, 8080)))
+	assert.Equal(t, "", formatNamespace("", "h", makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080)))
+	assert.Equal(t, "c", formatNamespace("c", "h", makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080)))
+	assert.Equal(t, "c", formatNamespace("c", "h", makeProcessConnection(1, "127.0.0.1", "10.0.0.2", 12345, 8080)))
+	assert.Equal(t, "c", formatNamespace("c", "h", makeProcessConnection(1, "10.0.0.1", "127.0.0.1", 12345, 8080)))
+	assert.Equal(t, "c:h:1", formatNamespace("c", "h", makeProcessConnection(1, "127.0.0.1", "127.0.0.1", 12345, 8080)))
 	assert.Equal(t, "c:h", formatNamespace("c", "h", makeConnectionStatsNoNs(1, "127.0.0.1", "127.0.0.1", 12345, 8080)))
 }
 
-func fillNetworkRelationCache(hostname string, c *NetworkRelationCache, conn common.ConnectionStats, firstObserved, lastObserved int64) error {
+func fillNetworkRelationCache(hostname string, c *NetworkRelationCache, conn network.ConnectionStats, firstObserved, lastObserved int64) error {
 	relationID, err := CreateNetworkRelationIdentifier(hostname, conn)
 	if err != nil {
 		return err
@@ -583,126 +522,361 @@ func fillNetworkRelationCache(hostname string, c *NetworkRelationCache, conn com
 }
 
 func TestFormatMetricsEmpty(t *testing.T) {
-	metrics := formatMetrics([]common.ConnectionMetric{}, 2*time.Second)
+	metrics := aggregateHTTPStats(nil, 1*time.Second, true)
 	assert.Len(t, metrics, 0)
 }
 
-func TestFormatMetrics(t *testing.T) {
-	httpMetrics := []common.ConnectionMetric{
-		{
-			Name: "http_response_time_seconds",
-			Tags: map[string]string{"code": "100"},
-			Value: common.ConnectionMetricValue{
-				Histogram: &common.Histogram{
-					DDSketch: makeDDSketch(),
-				},
-			},
-		},
-		{
-			Name: "http_response_time_seconds",
-			Tags: map[string]string{"code": "200"},
-			Value: common.ConnectionMetricValue{
-				Histogram: &common.Histogram{
-					DDSketch: makeDDSketch(1),
-				},
-			},
-		},
-		{
-			Name: "http_response_time_seconds",
-			Tags: map[string]string{"code": "201"},
-			Value: common.ConnectionMetricValue{
-				Histogram: &common.Histogram{
-					DDSketch: makeDDSketch(2, 2),
-				},
-			},
-		},
-		{
-			Name: "http_response_time_seconds",
-			Tags: map[string]string{"code": "400"},
-			Value: common.ConnectionMetricValue{
-				Histogram: &common.Histogram{
-					DDSketch: makeDDSketch(3, 3, 3),
-				},
-			},
-		},
-		{
-			Name: "http_response_time_seconds",
-			Tags: map[string]string{"code": "501"},
-			Value: common.ConnectionMetricValue{
-				Histogram: &common.Histogram{
-					DDSketch: makeDDSketch(4, 4, 4, 4),
-				},
-			},
-		},
-	}
-
-	metrics := formatMetrics(httpMetrics, 2*time.Second)
-
+func sortConnectionMetrics(metrics []*model.ConnectionMetric) {
 	sort.Slice(metrics, func(i, j int) bool {
-		switch strings.Compare(metrics[i].Name, metrics[j].Name) {
-		case -1:
-			return false
-		case 1:
-			return true
-		default:
-			return strings.Compare(metrics[i].Tags["code"], metrics[j].Tags["code"]) < 0
+		if cmp := strings.Compare(metrics[i].Name, metrics[j].Name); cmp != 0 {
+			return cmp < 0
 		}
+		if cmp := strings.Compare(metrics[i].Tags[httpStatusCodeTag], metrics[j].Tags[httpStatusCodeTag]); cmp != 0 {
+			return cmp < 0
+		}
+		if cmp := strings.Compare(metrics[i].Tags[httpMethodTag], metrics[j].Tags[httpMethodTag]); cmp != 0 {
+			// sort backwards to have empty method last (empty means overall aggregation)
+			return cmp > 0
+		}
+		if cmp := strings.Compare(metrics[i].Tags[httpPathTag], metrics[j].Tags[httpPathTag]); cmp != 0 {
+			return cmp < 0
+		}
+		return false
 	})
-
-	expected := []string{"200", "201", "2xx", "400", "4xx", "501", "5xx", "any", "success", "100", "1xx", "200", "201", "2xx", "3xx", "400", "4xx", "501", "5xx", "any", "success"}
-	var actual []string
-	for _, m := range metrics {
-		actual = append(actual, m.Tags["code"])
-	}
-	assert.Equal(t, expected, actual)
-
-	assertHTTPResponseTimeConnectionMetric(t, metrics[0], "200", 1, 1, 1)
-	assertHTTPResponseTimeConnectionMetric(t, metrics[1], "201", 2, 2, 2)
-	assertHTTPResponseTimeConnectionMetric(t, metrics[2], "2xx", 1, 2, 3)
-	assertHTTPResponseTimeConnectionMetric(t, metrics[3], "400", 3, 3, 3)
-	assertHTTPResponseTimeConnectionMetric(t, metrics[4], "4xx", 3, 3, 3)
-	assertHTTPResponseTimeConnectionMetric(t, metrics[5], "501", 4, 4, 4)
-	assertHTTPResponseTimeConnectionMetric(t, metrics[6], "5xx", 4, 4, 4)
-	assertHTTPResponseTimeConnectionMetric(t, metrics[7], "any", 1, 4, 10)
-	assertHTTPResponseTimeConnectionMetric(t, metrics[8], "success", 1, 2, 3)
-
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[9], "100", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[10], "1xx", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[11], "200", 0.5)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[12], "201", 1)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[13], "2xx", 1.5)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[14], "3xx", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[15], "400", 1.5)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[16], "4xx", 1.5)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[17], "501", 2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[18], "5xx", 2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[19], "any", 5)
-	assertHTTPRequestsPerSecondConnectionMetric(t, metrics[20], "success", 1.5)
 }
 
-func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode string, min int, max int, total int) {
+func TestHTTPAggregation_SingleReq(t *testing.T) {
+
+	conn1req1 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		"/page", http.MethodGet)
+
+	conn1Key := getConnectionKeyForStats(conn1req1)
+
+	metrics := aggregateHTTPStats(map[http.Key]http.RequestStats{
+		conn1req1: {
+			{},
+			{
+				Count:              1,
+				FirstLatencySample: 100,
+			},
+			{},
+			{
+				Count:     4,
+				Latencies: makeDDSketch(2, 4, 6, 8),
+			},
+			{},
+		},
+	}, 2*time.Second, true)
+
+	assert.Len(t, metrics, 1)
+	conn1Metrics := metrics[conn1Key]
+	assert.NotNil(t, conn1Metrics)
+
+	sortConnectionMetrics(conn1Metrics)
+
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[0], "1xx", "GET", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[1], "1xx", "", "", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[2], "2xx", "GET", "/page", 1.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[3], "2xx", "", "", 1.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[4], "3xx", "GET", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[5], "3xx", "", "", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[6], "4xx", "GET", "/page", 4/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[7], "4xx", "", "", 4/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[8], "5xx", "GET", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[9], "5xx", "", "", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[10], "any", "GET", "/page", 5.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[11], "any", "", "", 5.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[12], "success", "GET", "/page", 1.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[13], "success", "", "", 1.0/2)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[14], "1xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[15], "1xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[16], "2xx", "GET", "/page", 100, 100, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[17], "2xx", "", "", 100, 100, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[18], "3xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[19], "3xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[20], "4xx", "GET", "/page", 2, 8, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[21], "4xx", "", "", 2, 8, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[22], "5xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[23], "5xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[24], "any", "GET", "/page", 2, 100, 5)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[25], "any", "", "", 2, 100, 5)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[26], "success", "GET", "/page", 100, 100, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[27], "success", "", "", 100, 100, 1)
+
+	assert.Len(t, conn1Metrics, 28)
+}
+
+func TestHTTPAggregation_MultipleReq(t *testing.T) {
+
+	conn1req1 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		"/page", http.MethodGet)
+	conn1req2 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		"/page", http.MethodPost)
+	conn1req3 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		"/otherpath", http.MethodGet)
+	conn2req4 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
+		"/page", http.MethodGet)
+	conn2req5 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
+		"/page", http.MethodPost)
+
+	conn1Key := getConnectionKeyForStats(conn1req1)
+	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req2))
+	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req3))
+	conn2Key := getConnectionKeyForStats(conn2req4)
+	assert.Equal(t, conn2Key, getConnectionKeyForStats(conn2req5))
+	assert.NotEqual(t, conn1Key, conn2Key)
+
+	metrics := aggregateHTTPStats(map[http.Key]http.RequestStats{
+		conn1req2: { // post /page
+			{},
+			{},
+			{
+				Count:              1,
+				FirstLatencySample: 90000,
+			},
+			{},
+			{
+				Count:     4,
+				Latencies: makeDDSketch(60000, 90000, 120000, 60000),
+			},
+		},
+		conn1req3: { // get /otherpath
+			{
+				Count:              1,
+				FirstLatencySample: 60000,
+			},
+			{
+				Count:     2,
+				Latencies: makeDDSketch(90000, 120000),
+			},
+			{
+				Count:     4,
+				Latencies: makeDDSketch(12000, 90000, 120000, 60000),
+			},
+			{
+				Count:     5,
+				Latencies: makeDDSketch(60000, 90000, 120000, 60000, 90000),
+			},
+			{
+				Count:              1,
+				FirstLatencySample: 180000,
+			},
+		},
+		conn1req1: { // get /page
+			{},
+			{
+				Count:              1,
+				FirstLatencySample: 120000,
+			},
+			{},
+			{
+				Count:     3,
+				Latencies: makeDDSketch(120000, 60000, 90000),
+			},
+			{},
+		},
+		conn2req4: { // get /page
+			{},
+			{
+				Count:              1,
+				FirstLatencySample: 6000,
+			},
+			{},
+			{
+				Count:     2,
+				Latencies: makeDDSketch(12000, 24000),
+			},
+			{},
+		},
+	}, 2*time.Second, true)
+
+	assert.Equal(t, len(metrics), 2)
+	conn1Metrics := metrics[conn1Key]
+	assert.NotNil(t, conn1Metrics)
+	conn2Metrics := metrics[conn2Key]
+	assert.NotNil(t, conn2Metrics)
+
+	sortConnectionMetrics(conn1Metrics)
+	sortConnectionMetrics(conn2Metrics)
+
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[0], "1xx", "POST", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[1], "1xx", "GET", "/otherpath", 1.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[2], "1xx", "GET", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[3], "1xx", "", "", (0+1.0+0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[4], "2xx", "POST", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[5], "2xx", "GET", "/otherpath", 2.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[6], "2xx", "GET", "/page", 1.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[7], "2xx", "", "", (0+2.0+1.0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[8], "3xx", "POST", "/page", 1.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[9], "3xx", "GET", "/otherpath", 4.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[10], "3xx", "GET", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[11], "3xx", "", "", (1.0+4.0+0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[12], "4xx", "POST", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[13], "4xx", "GET", "/otherpath", 5.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[14], "4xx", "GET", "/page", 3.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[15], "4xx", "", "", (0+5.0+3.0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[16], "5xx", "POST", "/page", 4.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[17], "5xx", "GET", "/otherpath", 1.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[18], "5xx", "GET", "/page", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[19], "5xx", "", "", (4.0+1.0+0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[20], "any", "POST", "/page", (0+0+1.0+0+4.0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[21], "any", "GET", "/otherpath", (1.0+2.0+4.0+5.0+1.0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[22], "any", "GET", "/page", (0+1.0+0+3.0+0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[23], "any", "", "", ((0+0+1.0+0+4.0)+(1.0+2.0+4.0+5.0+1.0)+(0+1.0+0+3.0+0))/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[24], "success", "POST", "/page", (0+0+1.0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[25], "success", "GET", "/otherpath", (1.0+2.0+4.0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[26], "success", "GET", "/page", (0+1.0+0)/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[27], "success", "", "", ((0+0+1.0)+(1.0+2.0+4.0)+(0+1.0+0))/2)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[28], "1xx", "POST", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[29], "1xx", "GET", "/otherpath", 60000, 60000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[30], "1xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[31], "1xx", "", "", 60000, 60000, 1)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[32], "2xx", "POST", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[33], "2xx", "GET", "/otherpath", 90000, 120000, 2)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[34], "2xx", "GET", "/page", 120000, 120000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[35], "2xx", "", "", 90000, 120000, 3)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[36], "3xx", "POST", "/page", 90000, 90000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[37], "3xx", "GET", "/otherpath", 12000, 120000, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[38], "3xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[39], "3xx", "", "", 12000, 120000, 5)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[40], "4xx", "POST", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[41], "4xx", "GET", "/otherpath", 60000, 120000, 5)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[42], "4xx", "GET", "/page", 60000, 120000, 3)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[43], "4xx", "", "", 60000, 120000, 8)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[44], "5xx", "POST", "/page", 60000, 120000, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[45], "5xx", "GET", "/otherpath", 180000, 180000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[46], "5xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[47], "5xx", "", "", 60000, 180000, 5)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[48], "any", "POST", "/page", 60000, 120000, 5)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[49], "any", "GET", "/otherpath", 12000, 180000, 13)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[50], "any", "GET", "/page", 60000, 120000, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[51], "any", "", "", 12000, 180000, 22)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[52], "success", "POST", "/page", 90000, 90000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[53], "success", "GET", "/otherpath", 12000, 120000, 7)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[54], "success", "GET", "/page", 120000, 120000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[55], "success", "", "", 12000, 120000, 9)
+
+	// no more metrics for conn1
+	assert.Equal(t, 56, len(conn1Metrics))
+
+	// for the second connection we just check the number of metrics
+	// and be happy that it didn't influence the first connection's metrics
+	// number calculated as product of
+	//  * 1+1 - specific route and aggregated
+	//  * 5+2 - specific status code groups + any + success
+	//  * 2 - rate + response time
+	assert.Equal(t, (1+1)*(5+2)*2, len(conn2Metrics))
+}
+
+func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
+
+	conn1req1 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		"/page", http.MethodGet)
+
+	conn1Key := getConnectionKeyForStats(conn1req1)
+
+	metrics := aggregateHTTPStats(map[http.Key]http.RequestStats{
+		conn1req1: {
+			{},
+			{
+				Count:              1,
+				FirstLatencySample: 100,
+			},
+			{},
+			{
+				Count:     4,
+				Latencies: makeDDSketch(2, 4, 6, 8),
+			},
+			{},
+		},
+	}, 2*time.Second, false)
+
+	assert.Len(t, metrics, 1)
+	conn1Metrics := metrics[conn1Key]
+	assert.NotNil(t, conn1Metrics)
+
+	sortConnectionMetrics(conn1Metrics)
+
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[0], "1xx", "", "", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[1], "2xx", "", "", 1.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[2], "3xx", "", "", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[3], "4xx", "", "", 4/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[4], "5xx", "", "", 0)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[5], "any", "", "", 5.0/2)
+	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[6], "success", "", "", 1.0/2)
+
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[7], "1xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[8], "2xx", "", "", 100, 100, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[9], "3xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[10], "4xx", "", "", 2, 8, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[11], "5xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[12], "any", "", "", 2, 100, 5)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[13], "success", "", "", 100, 100, 1)
+
+	assert.Len(t, conn1Metrics, 14)
+}
+
+func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, min, max, total int) {
 	assert.Equal(t, "http_response_time_seconds", formattedMetric.Name)
-	codeIsOk := assert.Equal(t, map[string]string{
+	expectedTags := map[string]string{
 		"code": statusCode,
-	}, formattedMetric.Tags)
+	}
+	if path != "" || method != "" {
+		expectedTags["path"] = path
+		expectedTags["method"] = method
+	}
+	codeIsOk := assert.Equal(t, expectedTags, formattedMetric.Tags)
 	if codeIsOk {
 		actualSketch, err := ddsketch.FromProto(formattedMetric.Value.GetHistogram())
 		assert.NoError(t, err)
 		assert.Equal(t, total, int(actualSketch.GetCount()), "Total doesn't match for status code `%s`", statusCode)
-		actualMin, err := actualSketch.GetMinValue()
-		assert.NoError(t, err)
-		assert.Equal(t, min, int(math.Round(actualMin)), "Min doesn't match for status code `%s`", statusCode)
-		actualMax, err := actualSketch.GetMaxValue()
-		assert.NoError(t, err)
-		assert.Equal(t, max, int(math.Round(actualMax)), "Max doesn't match for status code `%s`", statusCode)
+		var actualMin, actualMax float64
+		if int(actualSketch.GetCount()) != 0 {
+			actualMin, err = actualSketch.GetMinValue()
+			assert.NoError(t, err)
+			actualMax, err = actualSketch.GetMaxValue()
+			assert.NoError(t, err)
+		}
+		if min == 0 {
+			assert.Equal(t, 0.0, actualMin, "Min doesn't match for status code `%s`", statusCode)
+		} else {
+			// We use a 1% error margin to account for the fact that the sketch is not exact
+			assert.InEpsilon(t, min, actualMin, 0.01, "Min doesn't match for status code `%s`", statusCode)
+		}
+		if max == 0 {
+			assert.Equal(t, 0.0, actualMax, "Max doesn't match for status code `%s`", statusCode)
+		} else {
+			// We use a 1% error margin to account for the fact that the sketch is not exact
+			assert.InEpsilon(t, max, actualMax, 0.01, "Max doesn't match for status code `%s`", statusCode)
+		}
 	}
 }
 
-func assertHTTPRequestsPerSecondConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode string, expectedRate float64) {
+func assertHTTPRequestsPerSecondConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedRate float64) {
 	assert.Equal(t, "http_requests_per_second", formattedMetric.Name)
-	codeIsOk := assert.Equal(t, map[string]string{
+	expectedTags := map[string]string{
 		"code": statusCode,
-	}, formattedMetric.Tags)
+	}
+	if path != "" || method != "" {
+		expectedTags["path"] = path
+		expectedTags["method"] = method
+	}
+	codeIsOk := assert.Equal(t, expectedTags, formattedMetric.Tags)
 	if codeIsOk {
 		assert.Equal(t, expectedRate, formattedMetric.Value.GetNumber())
 	}

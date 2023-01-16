@@ -15,8 +15,7 @@ def os
 
 desc "Setup dependencies"
 task :deps do
-  system("go install golang.org/x/lint/golint@6edffad5e616")
-  system("go install github.com/awalterschulze/goderive@886b66b111a4")
+  system("go install golang.org/x/lint/golint")
 end
 
 task :default => [:ci]
@@ -33,7 +32,7 @@ task :build do
     :cmd => "go build -o #{bin}",
     :race => ENV['GO_RACE'] == 'true',
     :add_build_vars => ENV['PROCESS_AGENT_ADD_BUILD_VARS'] != 'false',
-    :static => ENV['PROCESS_AGENT_STATIC'] == 'true',
+    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
     :bpf => true
   })
 end
@@ -64,8 +63,8 @@ end
 desc "Test Datadog Process agent"
 task :test do
   go_test("./...", {
-   :static => ENV['PROCESS_AGENT_STATIC'] == 'true',
-   :bpf => true
+   :bpf => true,
+   :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
   })
 end
 
@@ -82,6 +81,7 @@ task 'build-network-tracer' do
     :cmd => "go build -o #{bin}",
     :add_build_vars => true,
     :static => ENV['NETWORK_AGENT_STATIC'] == 'true',
+    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
     :os => os,
     :bpf => true
   })
@@ -89,8 +89,8 @@ end
 
 task :vet do
   go_vet("./...", {
-    :static => ENV['PROCESS_AGENT_STATIC'] == 'true',
-    :bpf => true
+    :bpf => true,
+    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
   })
 end
 
@@ -125,12 +125,16 @@ task :protobuf do
   if protocv != 'libprotoc 3.6.1'
     fail "Requires protoc version 3.6.1"
   end
-  sh "protoc proto/agent_payload.proto -I $GOPATH/src -I vendor -I proto --gogofaster_out $GOPATH/src"
-  sh "protoc proto/agent.proto -I $GOPATH/src -I vendor -I proto --gogofaster_out $GOPATH/src"
+
+  gogo_path = get_go_module_path("github.com/gogo/protobuf")
+  sketched_path = get_go_module_path("github.com/DataDog/sketches-go")
+
+  sh "protoc proto/agent_payload.proto --proto_path=#{gogo_path} -I proto --gogofaster_out model/"
+  sh "protoc proto/agent.proto --proto_path=#{gogo_path} --proto_path=#{sketched_path} -I proto --gogofaster_out model/"
 end
 
-desc "Datadog Process Agent CI script (fmt, vet, etc)"
-task :ci => [:derive, :fmt, :vet, :test, :lint, :build]
+desc "Process Agent CI script (fmt, vet, etc)"
+task :ci => [:deps, :fmt, :vet, :test, :lint, :build]
 
 task :err do
   system("go install github.com/kisielk/errcheck")
@@ -147,3 +151,30 @@ task 'windows-tag-or-commit-artifact' do
   sh "echo %s" % process_agent_version
   system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end
+
+
+# ========= embedded_path: /opt/stackstate-agent/embedded
+# ========= rtloader_root: None
+# ========= rtloader_lib: ['/opt/stackstate-agent/embedded/lib']
+# {
+# go build -mod=mod  -a -tags "
+#  kubelet secrets orchestrator systemd containerd jetson jmx npm etcd
+# cri linux_bpf apm python docker zlib gce zk consul process netcgo ec2 kubeapiserver clusterchecks"
+# -o ./bin/system-probe/system-probe -gcflags=""
+# -ldflags="
+#               -X github.com/StackVista/stackstate-agent/pkg/version.Commit=ea4aa0a76
+#               -X github.com/StackVista/stackstate-agent/pkg/version.AgentVersion=2.19.1+git.7.ea4aa0a
+#               -X github.com/StackVista/stackstate-agent/pkg/serializer.AgentPayloadVersion=v5.0.4
+#               -X github.com/StackVista/stackstate-agent/pkg/config.ForceDefaultPython=true
+#               -X github.com/StackVista/stackstate-agent/pkg/config.DefaultPython=3
+#               -r /opt/stackstate-agent/embedded/lib "
+#  github.com/StackVista/stackstate-agent/cmd/system-probe
+
+# cmdgo build -o process-agent -tags 'docker kubelet kubeapiserver linux cri containerd linux_bpf'
+# -ldflags "
+#             -X 'main.GitCommit=b49885de'
+#             -X 'main.Version=0.99.0'
+#             -X 'main.BuildDate=2022-12-06T19:41:18+0000'
+#             -X 'main.GitBranch=upstream-connections'
+#             -X 'main.GoVersion=go version go1.17.13 linux/amd64'"
+# github.com/StackVista/stackstate-process-agent/cmd/agent

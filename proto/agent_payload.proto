@@ -2,11 +2,10 @@
 
 syntax = "proto3";
 
-package datadog.agentpayload;
+package stackstate.agentpayload;
+option go_package = "model";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-
-option go_package = "github.com/StackVista/stackstate-process-agent/model";
+import "gogoproto/gogo.proto";
 
 message CommonMetadata {
 	string agent_version = 1;

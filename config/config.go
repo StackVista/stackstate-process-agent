@@ -4,6 +4,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -197,6 +198,9 @@ func NewDefaultAgentConfig() *AgentConfig {
 		// This is a hardcoded URL so parsing it should not fail
 		panic(err)
 	}
+
+	// TODO: not sure this is correct. Process agent config changed a lot.
+	ddconfig.DetectFeatures()
 
 	// Note: This only considers container sources that are already setup. It's possible that container sources may
 	//       need a few minutes to be ready.
@@ -483,7 +487,7 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 	} */
 	// Get hostname from agent util since the process-agent image doesn't include the main agent
 	if cfg.HostName == "" {
-		if hostname, err := agentutil.GetHostname(); err == nil {
+		if hostname, err := agentutil.GetHostname(context.TODO()); err == nil {
 			cfg.HostName = hostname
 			log.Debugf("Got hostname from agent util")
 		} else if hostname, err := getHostname(cfg.DDAgentPy, cfg.DDAgentBin, cfg.DDAgentPyEnv); err == nil {

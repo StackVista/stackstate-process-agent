@@ -5,7 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
-	"strconv"
+	"github.com/StackVista/stackstate-agent/pkg/ebpf"
+	"github.com/StackVista/stackstate-agent/pkg/network"
+	"github.com/StackVista/stackstate-agent/pkg/network/http"
+	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
+	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"sync"
+
 	"strings"
 	"time"
 
@@ -14,9 +20,6 @@ import (
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
-	"github.com/StackVista/stackstate-process-agent/net"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer/common"
 	log "github.com/cihub/seelog"
 )
 
@@ -32,11 +35,10 @@ var (
 type ConnectionsCheck struct {
 	// Local network tracer
 	useLocalTracer bool
-	localTracer    tracer.Tracer
+	localTracer    *tracer.Tracer
 	localTracerErr error
 
 	prevCheckTime time.Time
-	prevConns     map[common.ConnTuple]connectionMetrics
 
 	buf *bytes.Buffer // Internal buffer
 
@@ -87,191 +89,368 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	conns, err := c.getConnections()
 	if err != nil {
 		// If the tracer is not initialized, or still not initialized, then we want to exit without error'ing
-		if err == common.ErrNotImplemented || err == ErrTracerStillNotInitialized {
+		if err == ebpf.ErrNotImplemented || err == ErrTracerStillNotInitialized {
 			return nil, nil
 		}
 		return nil, err
 	}
 
-	if c.prevCheckTime.IsZero() { // End check early if this is our first run.
-		// fill in the relation cache
-		for _, conn := range conns {
-			relationID, err := CreateNetworkRelationIdentifier(cfg.HostName, conn)
-			if err != nil {
-				log.Warnf("invalid connection description - can't determine ID: %v", err)
-			}
-			c.cache.PutNetworkRelationCache(relationID, conn)
-		}
-		c.prevCheckTime = currentTime
-		c.prevConns = makeMetricsLookupMap(conns)
-		return nil, nil
+	var aggregatedInterval time.Duration
+	if !c.prevCheckTime.IsZero() {
+		aggregatedInterval = currentTime.Sub(c.prevCheckTime)
 	}
 
-	aggregatedInterval := currentTime.Sub(c.prevCheckTime)
-	formattedConnections := c.formatConnections(cfg, conns, aggregatedInterval, c.prevConns)
-	c.prevCheckTime = currentTime
-	c.prevConns = makeMetricsLookupMap(conns)
+	httpStats := aggregateHTTPStats(conns.HTTP, aggregatedInterval, false)
 
-	log.Debugf("collected connections in %s, connections found: %v", time.Since(start), formattedConnections)
+	dnsMap := map[string][]string{}
+	for ip, addrs := range conns.DNS {
+		dnsMap[ip.String()] = addrs
+	}
+	log.Debugf("%v", dnsMap)
+
+	formattedConnections, stats := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats)
+	c.prevCheckTime = currentTime
+
+	c.reportMetrics(cfg.HostName, conns, formattedConnections, stats, conns.HTTPTelemetry)
+
+	log.Debugf("collected %d connections in %s", len(formattedConnections), time.Since(start))
+	for _, conn := range formattedConnections {
+		log.Debugf("%v", conn)
+	}
+	log.Debugf("collected %d http data", len(httpStats))
+	for key, metrics := range httpStats {
+		log.Debugf("http data for %s", key)
+		for _, metric := range metrics {
+			log.Debugf("\t%v", metric)
+		}
+	}
 	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, aggregatedInterval)}, nil
 }
 
-func (c *ConnectionsCheck) getConnections() ([]common.ConnectionStats, error) {
+func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 	if c.useLocalTracer { // If local tracer is set up, use that
 		if c.localTracer == nil {
 			return nil, fmt.Errorf("using local network tracer, but no tracer was initialized")
 		}
-		cs, err := c.localTracer.GetConnections()
-		return cs.Conns, err
+		cs, err := c.localTracer.GetActiveConnections("process-agent")
+		return cs, err
 	}
 
-	tu, err := net.GetRemoteNetworkTracerUtil()
-	if err != nil {
-		if net.ShouldLogTracerUtilError() {
-			return nil, err
-		}
-		return nil, ErrTracerStillNotInitialized
-	}
-
-	return tu.GetConnections()
+	return nil, fmt.Errorf("remote ConnectionTracker is not supported")
 }
 
-func makeMetricsLookupMap(conns []common.ConnectionStats) map[common.ConnTuple]connectionMetrics {
-	lookupMap := make(map[common.ConnTuple]connectionMetrics, len(conns))
-	for _, conn := range conns {
-		lookupMap[conn.GetConnection()] = connectionMetrics{
-			SendBytes: conn.SendBytes,
-			RecvBytes: conn.RecvBytes,
-		}
-	}
-	return lookupMap
+type formattingStats struct {
+	NoProcess   int
+	Invalid     int
+	ShortLiving int
 }
+
+var logShortLivingNoticeOnce = &sync.Once{}
 
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
-func (c *ConnectionsCheck) formatConnections(cfg *config.AgentConfig, conns []common.ConnectionStats, prevCheckTimeDiff time.Duration, prevConnStats map[common.ConnTuple]connectionMetrics) []*model.Connection {
+func (c *ConnectionsCheck) formatConnections(
+	cfg *config.AgentConfig,
+	conns []network.ConnectionStats,
+	prevCheckTimeDiff time.Duration,
+	httpMetrics map[connKey][]*model.ConnectionMetric) ([]*model.Connection, *formattingStats) {
+	stats := &formattingStats{}
 	// Process create-times required to construct unique process hash keys on the backend
+	// attention! There is a conns.Conns[0].PidCreateTime, it is always zero, so we do have to look up the actual value
 	createTimeForPID := Process.createTimesForPIDs(connectionPIDs(conns))
 
 	cxs := make([]*model.Connection, 0, len(conns))
 	for _, conn := range conns {
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
-		if pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid); ok {
-			namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
-			relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
-			if err != nil {
-				log.Warnf("invalid connection description - can't determine ID: %v", err)
-				continue
-			}
-			// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
-			if relationCache, ok := c.cache.IsNetworkRelationCached(relationID); ok {
-				if !isRelationShortLived(relationID, relationCache.FirstObserved, cfg) {
-					var prevSentBytes, prevRecvBytes uint64 = 0, 0
-					prevValues, ok := prevConnStats[conn.GetConnection()]
-					if ok && conn.SendBytes >= prevValues.SendBytes && conn.RecvBytes >= prevValues.RecvBytes {
-						prevSentBytes = prevValues.SendBytes
-						prevRecvBytes = prevValues.RecvBytes
-					}
 
-					cxs = append(cxs, &model.Connection{
-						Pid:           int32(conn.Pid),
-						PidCreateTime: pidCreateTime,
-						Family:        formatFamily(conn.Family),
-						Type:          formatType(conn.Type),
-						Laddr: &model.Addr{
-							Ip:   conn.Local,
-							Port: int32(conn.LocalPort),
-						},
-						Raddr: &model.Addr{
-							Ip:   conn.Remote,
-							Port: int32(conn.RemotePort),
-						},
-						BytesSentPerSecond:     float32(calculateNormalizedRate(conn.SendBytes-prevSentBytes, prevCheckTimeDiff)),
-						BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.RecvBytes-prevRecvBytes, prevCheckTimeDiff)),
-						Direction:              calculateDirection(conn.Direction),
-						Namespace:              namespace,
-						ConnectionIdentifier:   relationID,
-						ApplicationProtocol:    conn.ApplicationProtocol,
-						Metrics:                formatMetrics(conn.Metrics, prevCheckTimeDiff),
-					})
-				}
-			}
-
-			// put it in the cache for the next run
-			c.cache.PutNetworkRelationCache(relationID, conn)
+		pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid)
+		if !ok {
+			stats.NoProcess++
+			log.Debugf("connection %v is filtered out because process %d is not observed (finished or just started)", conn, conn.Pid)
+			continue
 		}
+
+		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
+		relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
+		if err != nil {
+			stats.Invalid++
+			log.Warnf("invalid connection description - can't determine ID: %v", err)
+			continue
+		}
+		// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
+		relationCache, ok := c.cache.IsNetworkRelationCached(relationID)
+		// put it in the cache for the next run
+		c.cache.PutNetworkRelationCache(relationID)
+
+		if cfg.EnableShortLivedNetworkRelationFilter &&
+			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
+
+			stats.ShortLiving++
+			logShortLivingNoticeOnce.Do(func() {
+				log.Infof("Some of network relations are filtered out as short-living. " +
+					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +
+					"STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml " +
+					"under process_config.filters.short_lived_network_relations.enabled or increase the qualifier seconds using" +
+					"process_config.filters.short_lived_network_relations.qualifier_secs.")
+			})
+			log.Debugf("Filter relation: %s (%v) based on it's short-lived nature; ",
+				relationID, conn, cfg.ShortLivedNetworkRelationQualifierSecs,
+			)
+			continue
+		}
+		var natladdr, natraddr *model.Addr
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP != nil {
+			natraddr = &model.Addr{
+				Ip:   conn.IPTranslation.ReplSrcIP.String(),
+				Port: int32(conn.IPTranslation.ReplSrcPort),
+			}
+		}
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP != nil {
+			natladdr = &model.Addr{
+				Ip:   conn.IPTranslation.ReplDstIP.String(),
+				Port: int32(conn.IPTranslation.ReplDstPort),
+			}
+		}
+
+		// although fields are called Source and Dest, they are in fact local/remote
+		localAddr := &model.Addr{
+			Ip:   conn.Source.String(),
+			Port: int32(conn.SPort),
+		}
+		remoteAddr := &model.Addr{
+			Ip:   conn.Dest.String(),
+			Port: int32(conn.DPort),
+		}
+
+		if conn.Direction != network.OUTGOING && conn.Direction != network.INCOMING {
+			log.Warnf("unexpected connection direction %s for %v", conn.Direction.String(), conn)
+		}
+
+		appProto := ""
+		metrics := httpMetrics[getConnectionKey(conn)]
+		if len(metrics) > 0 {
+			appProto = "http"
+		}
+
+		cxs = append(cxs, &model.Connection{
+			Pid:                    int32(conn.Pid),
+			PidCreateTime:          pidCreateTime,
+			Family:                 formatFamily(conn.Family),
+			Type:                   formatType(conn.Type),
+			Laddr:                  localAddr,
+			Raddr:                  remoteAddr,
+			Natladdr:               natladdr,
+			Natraddr:               natraddr,
+			BytesSentPerSecond:     float32(calculateNormalizedRate(conn.LastSentBytes, prevCheckTimeDiff)),
+			BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.LastRecvBytes, prevCheckTimeDiff)),
+			Direction:              calculateDirection(conn.Direction),
+			Namespace:              namespace,
+			ConnectionIdentifier:   relationID,
+			ApplicationProtocol:    appProto,
+			Metrics:                metrics,
+		})
+
+		// put it in the cache for the next run
+		c.cache.PutNetworkRelationCache(relationID)
 	}
-	return cxs
+
+	return cxs, stats
 }
 
-func formatMetrics(metrics []common.ConnectionMetric, elapsedDuration time.Duration) []*model.ConnectionMetric {
-	formattedMetrics := make([]*model.ConnectionMetric, 0, len(metrics))
+type connKey struct {
+	SrcIPHigh uint64
+	SrcIPLow  uint64
+	SrcPort   uint16
+	DstIPHigh uint64
+	DstIPLow  uint64
+	DstPort   uint16
+}
 
-	groups := initialStatusCodeGroups()
+func getConnectionKey(conn network.ConnectionStats) connKey {
+	var saddr, daddr util.Address
+	var sport, dport uint16
 
-	reqCounts := map[string]uint64{}
-	for _, group := range groups {
-		reqCounts[group.tag] = 0
+	connIsIncoming := conn.Direction == network.INCOMING
+	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(sport))
+
+	if connIsIncoming || connLooksLikeIncoming {
+		saddr, sport = network.GetNATRemoteAddress(conn)
+		daddr, dport = network.GetNATLocalAddress(conn)
+	} else {
+		saddr, sport = network.GetNATLocalAddress(conn)
+		daddr, dport = network.GetNATRemoteAddress(conn)
 	}
 
-	isThereAnyHTTP := false
+	saddrl, saddrh := util.ToLowHigh(saddr)
+	daddrl, daddrh := util.ToLowHigh(daddr)
+	return connKey{
+		SrcIPHigh: saddrh, SrcIPLow: saddrl, SrcPort: sport,
+		DstIPHigh: daddrh, DstIPLow: daddrl, DstPort: dport,
+	}
+}
 
-	for i := range metrics {
-		metric := metrics[i]
-		if metric.Name == common.HTTPResponseTime {
-			isThereAnyHTTP = true
-			tag := metric.Tags[common.HTTPStatusCodeTagName]
+func getConnectionKeyForStats(key http.Key) connKey {
+	return connKey{
+		SrcIPHigh: key.SrcIPHigh,
+		SrcIPLow:  key.SrcIPLow,
+		SrcPort:   key.SrcPort,
+		DstIPHigh: key.DstIPHigh,
+		DstIPLow:  key.DstIPLow,
+		DstPort:   key.DstPort,
+	}
+}
 
-			if metric.Value.Histogram.DDSketch != nil && !metric.Value.Histogram.DDSketch.IsEmpty() {
-				formattedMetrics = append(
-					formattedMetrics,
-					makeConnectionMetricWithHistogram(
-						metric.Name, metric.Tags, metric.Value.Histogram.DDSketch,
-					),
-				)
+func statusCodeClassToString(class int) string {
+	switch class {
+	case 0:
+		return "1xx"
+	case 1:
+		return "2xx"
+	case 2:
+		return "3xx"
+	case 3:
+		return "4xx"
+	case 4:
+		return "5xx"
+	default:
+		return ""
+	}
+}
+
+type metricName string
+
+const (
+	httpResponseTime      metricName = "http_response_time_seconds"
+	httpRequestsPerSecond metricName = "http_requests_per_second"
+
+	httpStatusCodeTag = "code"
+	httpPathTag       = "path"
+	httpMethodTag     = "method"
+)
+
+func emptySketch() *ddsketch.DDSketch {
+	sketch, err := ddsketch.NewDefaultDDSketch(0.01)
+	if err != nil {
+		_ = log.Errorf("unexpected error from ddsketch constructor: %v", err)
+		return nil
+	}
+	return sketch
+}
+
+type aggStatsKey struct {
+	statusCode string
+	path       string
+	method     string
+}
+
+func (k aggStatsKey) toMap() map[string]string {
+	tags := map[string]string{
+		httpStatusCodeTag: k.statusCode,
+	}
+	if k.path != "" {
+		tags[httpPathTag] = k.path
+	}
+	if k.method != "" {
+		tags[httpMethodTag] = k.method
+	}
+	return tags
+}
+
+type requestStats struct {
+	Count              int
+	Latencies          *ddsketch.DDSketch
+	FirstLatencySample float64
+}
+
+func aggregateStats(stats []requestStats) (int, *ddsketch.DDSketch) {
+	requestCount := 0
+	latencies := emptySketch()
+	for _, stat := range stats {
+		requestCount += stat.Count
+		if stat.Latencies != nil {
+			latencies.MergeWith(stat.Latencies)
+		} else if stat.Count > 0 {
+			latencies.Add(stat.FirstLatencySample)
+		}
+	}
+	return requestCount, latencies
+}
+
+func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.Duration, sendForPath bool) map[connKey][]*model.ConnectionMetric {
+	result := map[connKey][]*model.ConnectionMetric{}
+
+	// regrouping statistic
+	// httpStats is map where key describes network connection along with Path & Method
+	// RequestStats has statistics per response status group (1xx, 2xx etc.)
+	// we need to group all path/method together to have overall statistics
+	// and also to have generic groups regarding status code: any, success
+
+	regroupedStats := map[connKey]map[aggStatsKey][]requestStats{}
+
+	appendStats := func(acc map[aggStatsKey][]requestStats, stats requestStats, tags aggStatsKey) map[aggStatsKey][]requestStats {
+		if acc == nil {
+			acc = map[aggStatsKey][]requestStats{}
+		}
+		accStat, _ := acc[tags]
+		acc[tags] = append(accStat, stats)
+		return acc
+	}
+
+	appendStatsForStatusGroup := func(connStats map[aggStatsKey][]requestStats, statusCodeGroup string, httpKey http.Key, stats requestStats) map[aggStatsKey][]requestStats {
+		connStats = appendStats(connStats, stats, aggStatsKey{
+			statusCode: statusCodeGroup,
+		})
+		if sendForPath {
+			connStats = appendStats(connStats, stats, aggStatsKey{
+				statusCode: statusCodeGroup,
+				method:     httpKey.Method.String(),
+				path:       httpKey.Path,
+			})
+		}
+		return connStats
+	}
+
+	for statKey, statsByCode := range httpStats {
+		for statusCodeClass, stats := range statsByCode {
+			statusCodeGroup := statusCodeClassToString(statusCodeClass)
+			if statusCodeGroup == "" {
+				continue
+			}
+			connKey := getConnectionKeyForStats(statKey)
+			connStats := regroupedStats[connKey]
+
+			connStats = appendStatsForStatusGroup(connStats, statusCodeGroup, statKey, stats)
+			connStats = appendStatsForStatusGroup(connStats, "any", statKey, stats)
+			if statusCodeGroup == "1xx" || statusCodeGroup == "2xx" || statusCodeGroup == "3xx" {
+				connStats = appendStatsForStatusGroup(connStats, "success", statKey, stats)
 			}
 
-			statusCodeCount := metric.Value.Histogram.DDSketch.GetCount()
-			accumulatedCount := reqCounts[tag] + uint64(statusCodeCount)
-			reqCounts[tag] = accumulatedCount
-			for _, group := range groups {
-				c, err := strconv.Atoi(tag)
-				if err == nil && group.inRange(c) {
-					group.ddSketch = mergeWithHistogram(metric.Value.Histogram.DDSketch, group.ddSketch)
-					reqCounts[group.tag] = reqCounts[group.tag] + uint64(statusCodeCount)
-				} else if err != nil {
-					log.Warnf("could not convert tag(%s) to int error(%v)", tag, err)
-				}
-			}
+			regroupedStats[connKey] = connStats
 		}
 	}
 
-	if isThereAnyHTTP {
-		for _, group := range groups {
-			if group.ddSketch != nil && !group.ddSketch.IsEmpty() {
-				formattedMetrics = append(formattedMetrics,
-					makeConnectionMetricWithHistogram(
-						common.HTTPResponseTime,
-						map[string]string{common.HTTPStatusCodeTagName: group.tag},
-						group.ddSketch,
-					))
-			}
-		}
-		for key, value := range reqCounts {
-			formattedMetrics = append(
-				formattedMetrics,
+	// format regrouped statistics
+
+	for connKey, statsByTags := range regroupedStats {
+		for tagsKey, stats := range statsByTags {
+			requestCount, latencies := aggregateStats(stats)
+			result[connKey] = append(result[connKey],
 				makeConnectionMetricWithNumber(
-					common.HTTPRequestsPerSecond,
-					map[string]string{common.HTTPStatusCodeTagName: key},
-					calculateNormalizedRate(value, elapsedDuration),
+					httpRequestsPerSecond, tagsKey.toMap(),
+					calculateNormalizedRate(uint64(requestCount), duration),
+				),
+				makeConnectionMetricWithHistogram(
+					httpResponseTime, tagsKey.toMap(),
+					latencies,
 				),
 			)
 		}
 	}
-	return formattedMetrics
+
+	return result
 }
 
-func makeConnectionMetricWithHistogram(name common.MetricName, tags map[string]string, histogram *ddsketch.DDSketch) *model.ConnectionMetric {
+func makeConnectionMetricWithHistogram(name metricName, tags map[string]string, histogram *ddsketch.DDSketch) *model.ConnectionMetric {
 	return &model.ConnectionMetric{
 		Name: string(name),
 		Tags: tags,
@@ -283,7 +462,7 @@ func makeConnectionMetricWithHistogram(name common.MetricName, tags map[string]s
 	}
 }
 
-func makeConnectionMetricWithNumber(name common.MetricName, tags map[string]string, number float64) *model.ConnectionMetric {
+func makeConnectionMetricWithNumber(name metricName, tags map[string]string, number float64) *model.ConnectionMetric {
 	return &model.ConnectionMetric{
 		Name: string(name),
 		Tags: tags,
@@ -293,72 +472,6 @@ func makeConnectionMetricWithNumber(name common.MetricName, tags map[string]stri
 			},
 		},
 	}
-}
-
-func initialStatusCodeGroups() []*statusCodeGroup {
-	return []*statusCodeGroup{
-		{
-			tag: "any",
-			inRange: func(statusCode int) bool {
-				return true
-			},
-			ddSketch: nil,
-		},
-		{
-			tag: "success",
-			inRange: func(statusCode int) bool {
-				return 100 <= statusCode && statusCode <= 399
-			},
-			ddSketch: nil,
-		},
-		{
-			tag: "1xx",
-			inRange: func(statusCode int) bool {
-				return 100 <= statusCode && statusCode <= 199
-			},
-			ddSketch: nil,
-		},
-		{
-			tag: "2xx",
-			inRange: func(statusCode int) bool {
-				return 200 <= statusCode && statusCode <= 299
-			},
-			ddSketch: nil,
-		},
-		{
-			tag: "3xx",
-			inRange: func(statusCode int) bool {
-				return 300 <= statusCode && statusCode <= 399
-			},
-			ddSketch: nil,
-		},
-		{
-			tag: "4xx",
-			inRange: func(statusCode int) bool {
-				return 400 <= statusCode && statusCode <= 499
-			},
-			ddSketch: nil,
-		},
-		{
-			tag: "5xx",
-			inRange: func(statusCode int) bool {
-				return 500 <= statusCode && statusCode <= 599
-			},
-			ddSketch: nil,
-		},
-	}
-}
-
-func mergeWithHistogram(metricSketch *ddsketch.DDSketch, rtHist *ddsketch.DDSketch) *ddsketch.DDSketch {
-	if rtHist == nil {
-		rtHist = metricSketch.Copy()
-	} else {
-		err := rtHist.MergeWith(metricSketch)
-		if err != nil {
-			log.Warnf("can't merge ddsketch: %v", err)
-		}
-	}
-	return rtHist
 }
 
 func batchConnections(cfg *config.AgentConfig, groupID int32, cxs []*model.Connection, interval time.Duration) []model.MessageBody {
@@ -401,7 +514,7 @@ func min(a, b int) int {
 	return b
 }
 
-func connectionPIDs(conns []common.ConnectionStats) []uint32 {
+func connectionPIDs(conns []network.ConnectionStats) []uint32 {
 	ps := make(map[uint32]struct{}) // Map used to represent a set
 	for _, c := range conns {
 		ps[c.Pid] = struct{}{}
@@ -427,24 +540,71 @@ func isProcessPresent(pidCreateTimes map[uint32]int64, pid uint32) (int64, bool)
 }
 
 // isRelationShortLived checks to see whether a network connection is considered a short-lived network relation
-func isRelationShortLived(relationID string, firstObserved int64, cfg *config.AgentConfig) bool {
-	// short-lived filtering is disabled, return false
-	if !cfg.EnableShortLivedNetworkRelationFilter {
-		return false
-	}
+func isRelationShortLived(firstObserved int64, cfg *config.AgentConfig) bool {
 
 	// firstObserved is before ShortLivedTime. Relation is not short-lived, return false
 	if time.Unix(firstObserved, 0).Before(time.Now().Add(-cfg.ShortLivedNetworkRelationQualifierSecs)) {
 		return false
 	}
-
-	// connection / relation is filtered due to it's short-lived nature, let's log it on trace level
-	log.Debugf("Filter relation: %s based on it's short-lived nature; "+
-		"meaning we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the "+
-		"STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml "+
-		"under process_config.filters.short_lived_network_relations.enabled or increase the qualifier seconds using"+
-		"process_config.filters.short_lived_network_relations.qualifier_secs.",
-		relationID, cfg.ShortLivedNetworkRelationQualifierSecs,
-	)
 	return true
+}
+
+type reportedProps struct {
+	nat        bool
+	connFamily model.ConnectionFamily
+	connType   model.ConnectionType
+	direction  model.ConnectionDirection
+	appProto   string
+}
+
+func (rp *reportedProps) Tags() []string {
+	result := []string{
+		"ipver:" + rp.connFamily.String(),
+		"proto:" + rp.connType.String(),
+		"direction:" + rp.direction.String(),
+	}
+	if rp.nat {
+		result = append(result, "nat:true")
+	} else {
+		result = append(result, "nat:false")
+	}
+	if rp.appProto != "" {
+		result = append(result, "app_proto:"+rp.appProto)
+	}
+	return result
+}
+
+func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, filterStats *formattingStats, telemetry *http.TelemetryStats) {
+	c.Sender().Gauge("stackstate.process_agent.connections.total", float64(len(allConnections.Conns)), hostname, []string{})
+
+	reportedBreakdown := map[reportedProps]int{}
+	for _, conn := range reportedConnections {
+		props := reportedProps{
+			nat:        conn.Natladdr != nil || conn.Natraddr != nil,
+			connFamily: conn.Family,
+			connType:   conn.Type,
+			direction:  conn.Direction,
+			appProto:   conn.ApplicationProtocol,
+		}
+		count, _ := reportedBreakdown[props]
+		reportedBreakdown[props] = count + 1
+	}
+	for props, count := range reportedBreakdown {
+		c.Sender().Gauge("stackstate.process_agent.connections.reported",
+			float64(count), hostname, props.Tags(),
+		)
+	}
+
+	if telemetry != nil {
+		//Misses   int64 // this happens when we can't cope with the rate of events
+		//Dropped  int64 // this happens when httpStatKeeper reaches capacity
+		//Rejected int64 // this happens when a user-defined reject-filter matches a request
+		c.Sender().Gauge("stackstate.process_agent.connections.http.misses", float64(telemetry.Misses), hostname, []string{})
+		c.Sender().Gauge("stackstate.process_agent.connections.http.dropped", float64(telemetry.Dropped), hostname, []string{})
+		c.Sender().Gauge("stackstate.process_agent.connections.http.rejected", float64(telemetry.Rejected), hostname, []string{})
+	}
+
+	c.Sender().Gauge("stackstate.process_agent.connections.no_process", float64(filterStats.NoProcess), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connections.invalid", float64(filterStats.Invalid), hostname, []string{})
+	c.Sender().Gauge("stackstate.process_agent.connections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
 }

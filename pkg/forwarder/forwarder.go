@@ -5,6 +5,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-agent/pkg/batcher"
 	"github.com/StackVista/stackstate-agent/pkg/forwarder"
+	orchcfg "github.com/StackVista/stackstate-agent/pkg/orchestrator/config"
 	"github.com/StackVista/stackstate-agent/pkg/serializer"
 	"github.com/StackVista/stackstate-agent/pkg/util/flavor"
 	"github.com/StackVista/stackstate-process-agent/config"
@@ -31,9 +32,15 @@ func (pf ProcessForwarder) Start() {
 	pf.Forwarder.Start() //nolint:errcheck
 	log.Debugf("Forwarder started")
 
+	// setup the orchestrator forwarder
+	orchestratorForwarder := orchcfg.NewOrchestratorForwarder()
+	if orchestratorForwarder != nil {
+		orchestratorForwarder.Start() //nolint:errcheck
+	}
+
 	// setup the aggregator
-	s := serializer.NewSerializer(common.Forwarder)
-	agg := aggregator.InitAggregator(s, pf.AgentConfig.HostName)
+	s := serializer.NewSerializer(common.Forwarder, orchestratorForwarder)
+	agg := aggregator.InitAggregator(s, nil, pf.AgentConfig.HostName)
 	agg.MetricPrefix = "stackstate"
 	// [sts] init the batcher for topology production
 	batcher.InitBatcher(s, pf.AgentConfig.HostName, "agent", agentConfig.GetMaxCapacity())

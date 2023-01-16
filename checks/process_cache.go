@@ -16,8 +16,8 @@ type ProcessMetrics struct {
 // ProcessCache is used as the struct in the cache for all seen processes
 type ProcessCache struct {
 	ProcessMetrics ProcessMetrics
-	FirstObserved  int64
-	LastObserved   int64
+	FirstObserved  time.Time
+	LastObserved   time.Time
 }
 
 // IsProcessCached checks whether the given process ID (pid + pidCreateTime) is present
@@ -36,7 +36,7 @@ func IsProcessCached(c *cache.Cache, fp *process.FilledProcess) (*ProcessCache, 
 func PutProcessCache(c *cache.Cache, fp *process.FilledProcess) *ProcessCache {
 	var cachedProcess *ProcessCache
 	processID := createProcessID(fp.Pid, fp.CreateTime)
-	nowUnix := time.Now().Unix()
+	now := time.Now()
 
 	cPointer, found := c.Get(processID)
 	if found {
@@ -45,15 +45,15 @@ func PutProcessCache(c *cache.Cache, fp *process.FilledProcess) *ProcessCache {
 			CPUTime: fp.CpuTime,
 			IOStat:  fp.IOStat,
 		}
-		cachedProcess.LastObserved = nowUnix
+		cachedProcess.LastObserved = now
 	} else {
 		cachedProcess = &ProcessCache{
 			ProcessMetrics: ProcessMetrics{
 				CPUTime: fp.CpuTime,
 				IOStat:  fp.IOStat,
 			},
-			FirstObserved: nowUnix,
-			LastObserved:  nowUnix,
+			FirstObserved: now,
+			LastObserved:  now,
 		}
 	}
 

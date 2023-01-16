@@ -425,6 +425,7 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 		io.Copy(ioutil.Discard, resp.Body)
 		return resp, fmt.Errorf("unexpected response from %s. Status: %s, Body: %v", url, resp.Status, resp.Body)
 	}
+	log.Debugf("Response from %s is %d", url, resp.StatusCode)
 
 	return resp, nil
 

@@ -130,4 +130,6 @@ var defaultBlacklistPatterns = []string{
 	"^/sbin/wpa_supplicant",
 	"^/usr/lib/xorg/Xorg",
 	"^/usr/lib/snapd/snapd",
+	"^/usr/local/bin/kubelet",
+	"^/usr/bin/kubelet",
 }

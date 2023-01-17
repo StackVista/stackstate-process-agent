@@ -40,6 +40,7 @@ process_config:
       - "^/usr/lib/systemd/"
       - "^/usr/sbin/"
       - "^\\(sd-pam\\)"
+      - "^/usr(/local)?/bin/kubelet"
       # Windows Specific patterns
       - "cmd.exe"
       - "conhost.exe"

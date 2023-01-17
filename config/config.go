@@ -715,7 +715,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	}
 
 	var patterns []string
-	amountTopCPUPercentageUsage, amountTopIOReadUsage, amountTopIOWriteUsage, amountTopMemoryUsage := 0, 0, 0, 0
+	amountTopCPUPercentageUsage, amountTopIOReadUsage, amountTopIOWriteUsage, amountTopMemoryUsage := -1, -1, -1, -1
 	CPUPercentageUsageThreshold, memoryUsageThreshold := 0, 0
 	if v := os.Getenv("STS_PROCESS_BLACKLIST_PATTERNS"); v != "" {
 		patterns = strings.Split(v, ",")
@@ -826,19 +826,19 @@ func setProcessBlacklist(agentConf *AgentConfig,
 	} else {
 		log.Infof("Using default processes blacklist %v", agentConf.Blacklist)
 	}
-	if amountTopCPUPercentageUsage != 0 {
+	if amountTopCPUPercentageUsage >= 0 {
 		log.Infof("Overriding top CPU percentage using processes inclusions to %d", amountTopCPUPercentageUsage)
 		agentConf.AmountTopCPUPercentageUsage = amountTopCPUPercentageUsage
 	}
-	if amountTopIOReadUsage != 0 {
+	if amountTopIOReadUsage >= 0 {
 		log.Infof("Overriding top IO read using processes inclusions to %d", amountTopIOReadUsage)
 		agentConf.AmountTopIOReadUsage = amountTopIOReadUsage
 	}
-	if amountTopIOWriteUsage != 0 {
+	if amountTopIOWriteUsage >= 0 {
 		log.Infof("Overriding top IO write using processes inclusions to %d", amountTopIOWriteUsage)
 		agentConf.AmountTopIOWriteUsage = amountTopIOWriteUsage
 	}
-	if amountTopMemoryUsage != 0 {
+	if amountTopMemoryUsage >= 0 {
 		log.Infof("Overriding top memory using processes inclusions to %d", amountTopMemoryUsage)
 		agentConf.AmountTopMemoryUsage = amountTopMemoryUsage
 	}

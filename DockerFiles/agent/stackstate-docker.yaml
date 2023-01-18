@@ -71,11 +71,11 @@ process_config:
       #- "smss.exe"
     # Process blacklist inclusions for top resource using processes
     inclusions:
-      amount_top_cpu_pct_usage: 3
+      amount_top_cpu_pct_usage: 0
       cpu_pct_usage_threshold: 20
-      amount_top_io_read_usage: 3
-      amount_top_io_write_usage: 3
-      amount_top_mem_usage: 3
+      amount_top_io_read_usage: 0
+      amount_top_io_write_usage: 0
+      amount_top_mem_usage: 0
       mem_usage_threshold: 35
 network_tracer_config:
   network_tracing_enabled: 'true'

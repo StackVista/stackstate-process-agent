@@ -285,6 +285,21 @@ func TestDefaultBlacklistNix(t *testing.T) {
 			processArgs: []string{"docker-container-shim"},
 			expected:    true,
 		},
+		{
+			name:        "Should filter kubelet process in Kubernetes based on Blacklist",
+			processArgs: []string{"/usr/local/bin/kubelet", "--some", "--extra=path", "arguments", "--config=/var/lib/kubelet/kubelet.conf"},
+			expected:    true,
+		},
+		{
+			name:        "Should filter kubelet process in Kubernetes based on Blacklist",
+			processArgs: []string{"/usr/bin/kubelet", "--some", "--extra=path", "arguments", "--config=/var/lib/kubelet/kubelet.conf"},
+			expected:    true,
+		},
+		{
+			name:        "Should filter kubelet process in OpenShift based on Blacklist",
+			processArgs: []string{"kubelet", "--config=/etc/kubernetes/kubelet.conf"},
+			expected:    true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			filter := IsBlacklisted(tc.processArgs, agentConfig.Blacklist)

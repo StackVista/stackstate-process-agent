@@ -130,6 +130,6 @@ var defaultBlacklistPatterns = []string{
 	"^/sbin/wpa_supplicant",
 	"^/usr/lib/xorg/Xorg",
 	"^/usr/lib/snapd/snapd",
-	"^/usr/local/bin/kubelet",
-	"^/usr/bin/kubelet",
+	// matches /usr/bin/kubelet, /usr/local/bin/kubelet, kubelet for Kubernetes + OpenShift variations and expects kubelet config to be passed
+	"^(/usr(/local)?/bin/)?kubelet.*--config=.*/kubelet.conf",
 }

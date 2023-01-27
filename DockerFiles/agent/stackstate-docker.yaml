@@ -40,7 +40,7 @@ process_config:
       - "^/usr/lib/systemd/"
       - "^/usr/sbin/"
       - "^\\(sd-pam\\)"
-      - "^/usr(/local)?/bin/kubelet"
+      - "^(/usr(/local)?/bin/)?kubelet.*--config=.*/kubelet.conf" # matches /usr/bin/kubelet, /usr/local/bin/kubelet, kubelet for Kubernetes + OpenShift variations and expects kubelet config to be passed
       # Windows Specific patterns
       - "cmd.exe"
       - "conhost.exe"

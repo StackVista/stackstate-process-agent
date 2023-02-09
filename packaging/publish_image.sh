@@ -31,7 +31,7 @@ if [ -n "$EXTRA_TAG" ]; then
 
     # If K8S_REPO is not equal to "NOP" and is set then push the image to the k8s repo
     if [ -n "${K8S_REPO}" ] && [ "${K8S_REPO}" != "NOP" ]; then
-        DOCKER_K8S_TAG="${REGISTRY}/${ORGANIZATION}/${K8S_REPO}:${EXTRA_TAG}"
+        DOCKER_K8S_TAG="${REGISTRY}/${ORGANIZATION}/${K8S_REPO}:${CI_COMMIT_SHORT_SHA}"
         docker_tag_and_push "${DOCKER_K8S_TAG}"
     fi
 fi

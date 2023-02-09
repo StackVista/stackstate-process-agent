@@ -187,7 +187,7 @@ publish_linux_deb_rpm:
   script:
     - export BUILD_TAG="${REPO}:${TAG}"
     - docker build -t "${BUILD_TAG}" .
-    - ./packaging/publish_image.sh $BUILD_TAG $REPO $TAG $EXTRA_TAG $REPO_K8S
+    - ./packaging/publish_image.sh $BUILD_TAG $REPO $TAG $EXTRA_TAG
 
 publish_linux_docker:
   extends: [ .publish_linux_docker ]
@@ -195,7 +195,13 @@ publish_linux_docker:
     REPO: $STS_DOCKER_TEST_REPO
     TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
     EXTRA_TAG: $CI_COMMIT_REF_NAME
-    REPO_K8S: $STS_DOCKER_K8S_REPO
+
+publish_k8s_docker:
+  extends: [ .publish_linux_docker ]
+  variables:
+    REPO: $STS_DOCKER_K8S_REPO
+    TAG: "$CI_COMMIT_REF_NAME"
+    EXTRA_TAG: $CI_COMMIT_SHORT_SHA
 
 publish_linux_docker_release:
   extends: [ .publish_linux_docker ]

@@ -10,6 +10,7 @@ variables:
   CIRCLE_BRANCH: $CI_COMMIT_REF_NAME
   STS_DOCKER_RELEASE_REPO: stackstate-process-agent
   STS_DOCKER_TEST_REPO: stackstate-process-agent-test
+  STS_DOCKER_K8S_REPO: stackstate-k8s-process-agent
   GO111MODULE: "on"
   QUAY_REGISTRY: quay.io
   DOCKER_REGISTRY: docker.io
@@ -194,6 +195,13 @@ publish_linux_docker:
     REPO: $STS_DOCKER_TEST_REPO
     TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
     EXTRA_TAG: $CI_COMMIT_REF_NAME
+
+publish_k8s_docker:
+  extends: [ .publish_linux_docker ]
+  variables:
+    REPO: $STS_DOCKER_K8S_REPO
+    TAG: "$CI_COMMIT_REF_NAME"
+    EXTRA_TAG: $CI_COMMIT_SHORT_SHA
 
 publish_linux_docker_release:
   extends: [ .publish_linux_docker ]

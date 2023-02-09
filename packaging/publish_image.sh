@@ -6,8 +6,7 @@ BUILD_TAG="${1}"
 IMAGE_REPO="${2}"
 IMAGE_TAG="${3}"
 EXTRA_TAG="${4}"
-REGISTRY_DOCKERHUB="docker.io"
-REGISTRY_QUAY="quay.io"
+REGISTRY="quay.io"
 ORGANIZATION="stackstate"
 
 echo "IMAGE_TAG=${IMAGE_TAG}"
@@ -21,15 +20,14 @@ docker_tag_and_push () {
   PUBLISHED="$PUBLISHED $1"
 }
 
-for REGISTRY in "${REGISTRY_DOCKERHUB}" "${REGISTRY_QUAY}"; do
-    DOCKER_TAG="${REGISTRY}/${ORGANIZATION}/${IMAGE_REPO}:${IMAGE_TAG}"
-    docker_tag_and_push "${DOCKER_TAG}"
 
-    if [ -n "$EXTRA_TAG" ]; then
-        DOCKER_EXTRA_TAG="${REGISTRY}/${ORGANIZATION}/${IMAGE_REPO}:${EXTRA_TAG}"
-        docker_tag_and_push "${DOCKER_EXTRA_TAG}"
-    fi
-done
+DOCKER_TAG="${REGISTRY}/${ORGANIZATION}/${IMAGE_REPO}:${IMAGE_TAG}"
+docker_tag_and_push "${DOCKER_TAG}"
+
+if [ -n "$EXTRA_TAG" ]; then
+    DOCKER_EXTRA_TAG="${REGISTRY}/${ORGANIZATION}/${IMAGE_REPO}:${EXTRA_TAG}"
+    docker_tag_and_push "${DOCKER_EXTRA_TAG}"
+fi
 
 set +x
 echo ""

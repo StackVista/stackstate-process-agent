@@ -10,6 +10,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/network/http"
 	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
 	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	"sync"
 
 	"strings"
@@ -38,24 +39,14 @@ type ConnectionsCheck struct {
 	localTracer    *tracer.Tracer
 	localTracerErr error
 
+	podsWatcher *pods.Watcher
+
 	prevCheckTime time.Time
 
 	buf *bytes.Buffer // Internal buffer
 
 	// Use this as the network relation cache to calculate rate metrics and drop short-lived network relations
 	cache *NetworkRelationCache
-}
-
-type connectionMetrics struct {
-	SendBytes uint64
-	RecvBytes uint64
-}
-
-type statusCodeGroup struct {
-	// Local network tracer
-	tag      string
-	inRange  func(int) bool
-	ddSketch *ddsketch.DDSketch
 }
 
 // Name returns the name of the ConnectionsCheck.
@@ -108,7 +99,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	}
 	log.Debugf("%v", dnsMap)
 
-	formattedConnections, stats := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats)
+	formattedConnections, stats, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats)
 	c.prevCheckTime = currentTime
 
 	c.reportMetrics(cfg.HostName, conns, formattedConnections, stats, conns.HTTPTelemetry)
@@ -124,7 +115,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 			log.Debugf("\t%v", metric)
 		}
 	}
-	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, aggregatedInterval)}, nil
+	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, connsPods, aggregatedInterval)}, nil
 }
 
 func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
@@ -147,27 +138,55 @@ type formattingStats struct {
 
 var logShortLivingNoticeOnce = &sync.Once{}
 
+type connectionsPodsIndex struct {
+	pods        map[string]*model.Pod
+	pidToPodUid map[uint32]string
+}
+
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
 func (c *ConnectionsCheck) formatConnections(
 	cfg *config.AgentConfig,
 	conns []network.ConnectionStats,
 	prevCheckTimeDiff time.Duration,
-	httpMetrics map[connKey][]*model.ConnectionMetric) ([]*model.Connection, *formattingStats) {
+	httpMetrics map[connKey][]*model.ConnectionMetric) ([]*model.Connection, *formattingStats, *connectionsPodsIndex) {
 	stats := &formattingStats{}
 	// Process create-times required to construct unique process hash keys on the backend
 	// attention! There is a conns.Conns[0].PidCreateTime, it is always zero, so we do have to look up the actual value
-	createTimeForPID := Process.createTimesForPIDs(connectionPIDs(conns))
+	processes := Process.getProcesses(connectionPIDs(conns))
+
+	connsPods := &connectionsPodsIndex{
+		pods:        make(map[string]*model.Pod),
+		pidToPodUid: make(map[uint32]string),
+	}
 
 	cxs := make([]*model.Connection, 0, len(conns))
 	for _, conn := range conns {
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
-
-		pidCreateTime, ok := isProcessPresent(createTimeForPID, conn.Pid)
+		process, ok := processes[conn.Pid]
 		if !ok {
 			stats.NoProcess++
-			log.Debugf("connection %v is filtered out because process %d is not observed (finished or just started)", conn, conn.Pid)
+			log.Debugf("Filter connection: %v is out because process %d is not observed (gone or just started)", conn, conn.Pid)
 			continue
+		}
+		pidCreateTime := process.CreateTime
+		if c.podsWatcher != nil {
+			pod := c.podsWatcher.GetPodForContainerID(process.ContainerId)
+			if pod != nil {
+				if outPod, ok := connsPods.pods[pod.Metadata.UID]; !ok {
+					connsPods.pods[pod.Metadata.UID] = &model.Pod{
+						Namespace: pod.Metadata.Namespace,
+						Name:      pod.Metadata.Name,
+						Uid:       pod.Metadata.UID,
+						Labels:    pod.Metadata.Labels,
+						Pids:      []uint32{conn.Pid},
+					}
+					connsPods.pidToPodUid[conn.Pid] = pod.Metadata.UID
+				} else {
+					outPod.Pids = append(outPod.Pids, conn.Pid)
+					connsPods.pidToPodUid[conn.Pid] = pod.Metadata.UID // TODO consider process create time
+				}
+			}
 		}
 
 		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
@@ -254,7 +273,7 @@ func (c *ConnectionsCheck) formatConnections(
 		c.cache.PutNetworkRelationCache(relationID)
 	}
 
-	return cxs, stats
+	return cxs, stats, connsPods
 }
 
 type connKey struct {
@@ -474,9 +493,25 @@ func makeConnectionMetricWithNumber(name metricName, tags map[string]string, num
 	}
 }
 
-func batchConnections(cfg *config.AgentConfig, groupID int32, cxs []*model.Connection, interval time.Duration) []model.MessageBody {
+func batchConnections(cfg *config.AgentConfig, groupID int32, cxs []*model.Connection, connsPods *connectionsPodsIndex, interval time.Duration) []model.MessageBody {
 	groupSize := groupSize(len(cxs), cfg.MaxConnectionsPerMessage)
 	batches := make([]model.MessageBody, 0, groupSize)
+
+	podsForConnections := func(cxs []*model.Connection) []*model.Pod {
+		podsMap := map[string]*model.Pod{}
+		for _, conn := range cxs {
+			if uid, ok := connsPods.pidToPodUid[uint32(conn.Pid)]; ok {
+				if pod, ok := connsPods.pods[uid]; ok {
+					podsMap[uid] = pod
+				}
+			}
+		}
+		pods := make([]*model.Pod, 0, len(podsMap))
+		for _, pod := range podsMap {
+			pods = append(pods, pod)
+		}
+		return pods
+	}
 
 	for len(cxs) > 0 {
 		batchSize := min(cfg.MaxConnectionsPerMessage, len(cxs))
@@ -487,6 +522,7 @@ func batchConnections(cfg *config.AgentConfig, groupID int32, cxs []*model.Conne
 			GroupId:            groupID,
 			GroupSize:          groupSize,
 			CollectionInterval: int32(interval / time.Millisecond),
+			Pods:               podsForConnections(cxs[:batchSize]),
 		}
 		if strings.TrimSpace(cfg.ClusterName) != "" {
 			batch.ClusterName = cfg.ClusterName
@@ -525,18 +561,6 @@ func connectionPIDs(conns []network.ConnectionStats) []uint32 {
 		pids = append(pids, pid)
 	}
 	return pids
-}
-
-// isProcessPresent checks to see if this process was present in the pidCreateTimes map created by the Process check,
-// otherwise we don't report connections for this pid
-func isProcessPresent(pidCreateTimes map[uint32]int64, pid uint32) (int64, bool) {
-	pidCreateTime, ok := pidCreateTimes[pid]
-	if !ok {
-		log.Debugf("Filter connection: it's corresponding pid [%d] is not present in the last process state", pid)
-		return pidCreateTime, false
-	}
-
-	return pidCreateTime, true
 }
 
 // isRelationShortLived checks to see whether a network connection is considered a short-lived network relation

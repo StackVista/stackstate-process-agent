@@ -7,7 +7,9 @@ import (
 	"bytes"
 	tracerConfig "github.com/StackVista/stackstate-agent/pkg/network/config"
 	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
+	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	"os"
+	"time"
 
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
@@ -47,6 +49,10 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 			return
 		}
 
+		c.podsWatcher, err = pods.MakeWatcher(10*time.Second, 60*time.Second)
+		if err != nil {
+			log.Warnf("failed to create pods watcher: %s", err)
+		}
 		c.localTracer = t
 	} else {
 		// Calling the remote tracer will cause it to initialize and check connectivity

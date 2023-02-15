@@ -15,7 +15,6 @@ type Watcher struct {
 	expirationTime time.Duration
 	stopCh         chan interface{}
 
-	ipToPod          map[string]*podEntry
 	containerIDToPod map[string]*podEntry
 	podsGauge        prometheus.Gauge
 }
@@ -40,6 +39,7 @@ func MakeWatcher(updateInterval time.Duration, expirationTime time.Duration) (*W
 			Name:      "pods",
 			Help:      "Number of pods in state",
 		}),
+		containerIDToPod: make(map[string]*podEntry),
 	}, nil
 }
 
@@ -85,12 +85,6 @@ func (p *Watcher) updatePods(ctx context.Context) {
 	now := time.Now()
 	for _, pod := range pods {
 		log.Debugf("Got pod: %v", pod)
-		if pod.Status.PodIP != pod.Status.HostIP {
-			p.ipToPod[pod.Status.PodIP] = &podEntry{
-				pod:      pod,
-				lastSeen: now,
-			}
-		}
 		for _, container := range pod.Status.Containers {
 			p.containerIDToPod[container.ID] = &podEntry{
 				pod:      pod,
@@ -100,11 +94,6 @@ func (p *Watcher) updatePods(ctx context.Context) {
 	}
 
 	// cleanup old pods
-	for ip, entry := range p.ipToPod {
-		if now.Sub(entry.lastSeen) > p.expirationTime {
-			delete(p.ipToPod, ip)
-		}
-	}
 	for containerID, entry := range p.containerIDToPod {
 		if now.Sub(entry.lastSeen) > p.expirationTime {
 			delete(p.containerIDToPod, containerID)

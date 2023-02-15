@@ -115,6 +115,12 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 			log.Debugf("\t%v", metric)
 		}
 	}
+
+	log.Infof("collected %d pods for connections", len(connsPods.pods))
+	for _, pod := range connsPods.pods {
+		log.Debugf("%v", pod)
+	}
+
 	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, connsPods, aggregatedInterval)}, nil
 }
 

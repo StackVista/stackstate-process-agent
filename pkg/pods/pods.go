@@ -84,9 +84,9 @@ func (p *Watcher) updatePods(ctx context.Context) {
 	}
 	now := time.Now()
 	for _, pod := range pods {
-		log.Debugf("Got pod: %v", pod)
+		log.Tracef("Got pod: %v", pod)
 		for _, container := range pod.Status.Containers {
-			p.containerIDToPod[container.ID] = &podEntry{
+			p.containerIDToPod[kubelet.TrimRuntimeFromCID(container.ID)] = &podEntry{
 				pod:      pod,
 				lastSeen: now,
 			}

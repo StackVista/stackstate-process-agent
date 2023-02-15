@@ -51,7 +51,7 @@ message Pod {
 	string name = 2;
 	string uid = 3;
 	map<string, string> labels = 4;
-	repeated uint32 pids = 5;
+	repeated int32 pids = 5;
 }
 
 message CollectorConnections {

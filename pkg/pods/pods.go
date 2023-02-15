@@ -45,6 +45,7 @@ func MakeWatcher(updateInterval time.Duration, expirationTime time.Duration) (*W
 
 func (p *Watcher) Start(ctx context.Context) {
 	go func() {
+		p.stopCh = make(chan interface{})
 		// Initial update
 		p.updatePods(ctx)
 

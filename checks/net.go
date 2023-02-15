@@ -10,6 +10,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/network/http"
 	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
 	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/StackVista/stackstate-agent/pkg/util/kubernetes/kubelet"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	"sync"
 
@@ -144,9 +145,29 @@ type formattingStats struct {
 
 var logShortLivingNoticeOnce = &sync.Once{}
 
+// this structure keeps list of pods that are related to observed connections
+// relation to connection is defined by process id (pid)
 type connectionsPodsIndex struct {
 	pods        map[string]*model.Pod
-	pidToPodUid map[uint32]string
+	pidToPodUID map[int32]string
+}
+
+func (cp *connectionsPodsIndex) addPodWithPID(pod *kubelet.Pod, pid int32) {
+	if _, ok := cp.pidToPodUID[pid]; ok {
+		return // process has already added
+	}
+	cp.pidToPodUID[pid] = pod.Metadata.UID
+	if modelPod, ok := cp.pods[pod.Metadata.UID]; ok {
+		modelPod.Pids = append(modelPod.Pids, pid)
+	} else {
+		cp.pods[pod.Metadata.UID] = &model.Pod{
+			Namespace: pod.Metadata.Namespace,
+			Name:      pod.Metadata.Name,
+			Uid:       pod.Metadata.UID,
+			Labels:    pod.Metadata.Labels,
+			Pids:      []int32{pid},
+		}
+	}
 }
 
 // Connections are split up into a chunks of at most 100 connections per message to
@@ -161,9 +182,23 @@ func (c *ConnectionsCheck) formatConnections(
 	// attention! There is a conns.Conns[0].PidCreateTime, it is always zero, so we do have to look up the actual value
 	processes := Process.getProcesses(connectionPIDs(conns))
 
+	// build process to pod association
 	connsPods := &connectionsPodsIndex{
 		pods:        make(map[string]*model.Pod),
-		pidToPodUid: make(map[uint32]string),
+		pidToPodUID: make(map[int32]string),
+	}
+	if c.podsWatcher != nil {
+		for pid, process := range processes {
+			pod := c.podsWatcher.GetPodForContainerID(process.ContainerId)
+			if pod != nil {
+				connsPods.addPodWithPID(pod, int32(pid))
+				log.Tracef("found pod for container %s: %v", process.ContainerId, pod)
+			} else {
+				log.Debugf("not found pod for container %s", process.ContainerId)
+			}
+		}
+	} else {
+		_ = log.Errorf("podsWatcher is not initialized: could not map connections to pods")
 	}
 
 	cxs := make([]*model.Connection, 0, len(conns))
@@ -176,29 +211,6 @@ func (c *ConnectionsCheck) formatConnections(
 			continue
 		}
 		pidCreateTime := process.CreateTime
-		if c.podsWatcher != nil {
-			pod := c.podsWatcher.GetPodForContainerID(process.ContainerId)
-			if pod != nil {
-				if outPod, ok := connsPods.pods[pod.Metadata.UID]; !ok {
-					connsPods.pods[pod.Metadata.UID] = &model.Pod{
-						Namespace: pod.Metadata.Namespace,
-						Name:      pod.Metadata.Name,
-						Uid:       pod.Metadata.UID,
-						Labels:    pod.Metadata.Labels,
-						Pids:      []uint32{conn.Pid},
-					}
-					connsPods.pidToPodUid[conn.Pid] = pod.Metadata.UID
-				} else {
-					outPod.Pids = append(outPod.Pids, conn.Pid)
-					connsPods.pidToPodUid[conn.Pid] = pod.Metadata.UID // TODO consider process create time
-				}
-				log.Debugf("found pod for container %s: %v", process.ContainerId, pod)
-			} else {
-				log.Debugf("not found pod for container %s", process.ContainerId)
-			}
-		} else {
-			log.Debugf("podsWatcher is not initialized")
-		}
 
 		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
 		relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
@@ -508,20 +520,21 @@ func batchConnections(cfg *config.AgentConfig, groupID int32, cxs []*model.Conne
 	groupSize := groupSize(len(cxs), cfg.MaxConnectionsPerMessage)
 	batches := make([]model.MessageBody, 0, groupSize)
 
+	// picks only pods that are related to specified list of connections
 	podsForConnections := func(cxs []*model.Connection) []*model.Pod {
 		podsMap := map[string]*model.Pod{}
 		for _, conn := range cxs {
-			if uid, ok := connsPods.pidToPodUid[uint32(conn.Pid)]; ok {
+			if uid, ok := connsPods.pidToPodUID[conn.Pid]; ok {
 				if pod, ok := connsPods.pods[uid]; ok {
 					podsMap[uid] = pod
 				}
 			}
 		}
-		pods := make([]*model.Pod, 0, len(podsMap))
+		podsList := make([]*model.Pod, 0, len(podsMap))
 		for _, pod := range podsMap {
-			pods = append(pods, pod)
+			podsList = append(podsList, pod)
 		}
-		return pods
+		return podsList
 	}
 
 	for len(cxs) > 0 {

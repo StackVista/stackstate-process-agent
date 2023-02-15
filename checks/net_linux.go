@@ -5,6 +5,7 @@ package checks
 
 import (
 	"bytes"
+	"context"
 	tracerConfig "github.com/StackVista/stackstate-agent/pkg/network/config"
 	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
@@ -52,6 +53,8 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 		c.podsWatcher, err = pods.MakeWatcher(10*time.Second, 60*time.Second)
 		if err != nil {
 			log.Warnf("failed to create pods watcher: %s", err)
+		} else {
+			c.podsWatcher.Start(context.Background())
 		}
 		c.localTracer = t
 	} else {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/StackVista/stackstate-agent/pkg/util/kubernetes/kubelet"
 	log "github.com/cihub/seelog"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
 )
 
@@ -15,6 +17,7 @@ type Watcher struct {
 
 	ipToPod          map[string]*podEntry
 	containerIDToPod map[string]*podEntry
+	podsGauge        prometheus.Gauge
 }
 
 type podEntry struct {
@@ -31,6 +34,12 @@ func MakeWatcher(updateInterval time.Duration, expirationTime time.Duration) (*W
 		kubeutil:       kubeutil,
 		updateInterval: updateInterval,
 		expirationTime: expirationTime,
+		podsGauge: promauto.NewGauge(prometheus.GaugeOpts{
+			Namespace: "stackstate_process_agent",
+			Subsystem: "pods_watcher",
+			Name:      "pods",
+			Help:      "Number of pods in state",
+		}),
 	}, nil
 }
 
@@ -68,12 +77,14 @@ func (p *Watcher) GetPodForContainerID(containerID string) *kubelet.Pod {
 func (p *Watcher) updatePods(ctx context.Context) {
 	// get new pods
 	pods, err := p.kubeutil.GetLocalPodList(ctx)
+	log.Debugf("GetLocalPodList result: %v, %v", len(pods), err)
 	if err != nil {
 		_ = log.Errorf("Could not get pods: %s", err)
 		return
 	}
 	now := time.Now()
 	for _, pod := range pods {
+		log.Debugf("Got pod: %v", pod)
 		if pod.Status.PodIP != pod.Status.HostIP {
 			p.ipToPod[pod.Status.PodIP] = &podEntry{
 				pod:      pod,
@@ -99,4 +110,6 @@ func (p *Watcher) updatePods(ctx context.Context) {
 			delete(p.containerIDToPod, containerID)
 		}
 	}
+
+	p.podsGauge.Set(float64(len(p.containerIDToPod)))
 }

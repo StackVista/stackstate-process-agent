@@ -7,6 +7,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/pkg/forwarder"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -201,6 +202,14 @@ func runAgent(exit chan bool) {
 	// Run a profile server.
 	go func() {
 		http.ListenAndServe("localhost:6062", nil)
+	}()
+
+	// Run metrics server
+	go func() {
+		promServerMux := http.NewServeMux()
+		promServerMux.Handle("/metrics", promhttp.Handler())
+		log.Infof("Starting metrics server at http://localhost:6063/metrics")
+		http.ListenAndServe("localhost:6063", promServerMux)
 	}()
 
 	cl, err := NewCollector(cfg)

@@ -192,7 +192,12 @@ func (c *ConnectionsCheck) formatConnections(
 					outPod.Pids = append(outPod.Pids, conn.Pid)
 					connsPods.pidToPodUid[conn.Pid] = pod.Metadata.UID // TODO consider process create time
 				}
+				log.Debugf("found pod for container %s: %v", process.ContainerId, pod)
+			} else {
+				log.Debugf("not found pod for container %s", process.ContainerId)
 			}
+		} else {
+			log.Debugf("podsWatcher is not initialized")
 		}
 
 		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)

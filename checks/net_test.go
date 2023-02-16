@@ -868,7 +868,11 @@ func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model
 }
 
 func assertHTTPRequestsPerSecondConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedRate float64) {
-	assert.Equal(t, "http_requests_per_second", formattedMetric.Name)
+	assertHttpRequestsBaseMetric(t, "http_requests_per_second", formattedMetric, statusCode, method, path, expectedRate)
+}
+
+func assertHttpRequestsBaseMetric(t *testing.T, expectedMetric string, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedValue float64) {
+	assert.Equal(t, expectedMetric, formattedMetric.Name)
 	expectedTags := map[string]string{
 		"code": statusCode,
 	}
@@ -878,8 +882,12 @@ func assertHTTPRequestsPerSecondConnectionMetric(t *testing.T, formattedMetric *
 	}
 	codeIsOk := assert.Equal(t, expectedTags, formattedMetric.Tags)
 	if codeIsOk {
-		assert.Equal(t, expectedRate, formattedMetric.Value.GetNumber())
+		assert.Equal(t, expectedValue, formattedMetric.Value.GetNumber())
 	}
+}
+
+func assertHTTPRequestsCountMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedCount float64) {
+	assertHttpRequestsBaseMetric(t, "http_requests_count", formattedMetric, statusCode, method, path, expectedCount)
 }
 
 func makeDDSketch(responseTimes ...float64) *ddsketch.DDSketch {

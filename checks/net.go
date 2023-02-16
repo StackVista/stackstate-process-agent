@@ -322,6 +322,7 @@ type metricName string
 const (
 	httpResponseTime      metricName = "http_response_time_seconds"
 	httpRequestsPerSecond metricName = "http_requests_per_second"
+	httpRequestsCount     metricName = "http_requests_count"
 
 	httpStatusCodeTag = "code"
 	httpPathTag       = "path"
@@ -435,6 +436,10 @@ func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.
 		for tagsKey, stats := range statsByTags {
 			requestCount, latencies := aggregateStats(stats)
 			result[connKey] = append(result[connKey],
+				makeConnectionMetricWithNumber(
+					httpRequestsCount, tagsKey.toMap(),
+					float64(requestCount),
+				),
 				makeConnectionMetricWithNumber(
 					httpRequestsPerSecond, tagsKey.toMap(),
 					calculateNormalizedRate(uint64(requestCount), duration),

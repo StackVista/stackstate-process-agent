@@ -387,9 +387,6 @@ message Connection {
 	repeated ConnectionMetric metrics = 54;
 	Addr natladdr = 55; // Translated local address
 	Addr natraddr = 56; // Translated remote address
-
-	string kubeNamespace = 57;
-	string kubePod = 58;
 }
 
 message Addr {

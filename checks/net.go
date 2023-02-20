@@ -2,6 +2,7 @@ package checks
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"github.com/StackVista/stackstate-agent/pkg/aggregator"
@@ -12,6 +13,8 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-agent/pkg/util/kubernetes/kubelet"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"sync"
 
 	"strings"
@@ -40,7 +43,7 @@ type ConnectionsCheck struct {
 	localTracer    *tracer.Tracer
 	localTracerErr error
 
-	podsWatcher *pods.Watcher
+	podsCache *pods.CachedPods
 
 	prevCheckTime time.Time
 
@@ -100,10 +103,12 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	}
 	log.Debugf("%v", dnsMap)
 
-	formattedConnections, stats, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats)
+	containerToPod := c.podsCache.GetContainerToPodMap(context.TODO())
+
+	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats, containerToPod)
 	c.prevCheckTime = currentTime
 
-	c.reportMetrics(cfg.HostName, conns, formattedConnections, stats, conns.HTTPTelemetry)
+	c.reportMetrics(cfg.HostName, conns, formattedConnections, conns.HTTPTelemetry)
 
 	log.Debugf("collected %d connections in %s", len(formattedConnections), time.Since(start))
 	for _, conn := range formattedConnections {
@@ -170,14 +175,24 @@ func (cp *connectionsPodsIndex) addPodWithPID(pod *kubelet.Pod, pid int32) {
 	}
 }
 
+var (
+	connectionCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "stackstate_process_agent",
+		Subsystem: "connections",
+		Name:      "processed",
+		Help:      "Number of connections processed by the connections check",
+	}, []string{"state"})
+)
+
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
 func (c *ConnectionsCheck) formatConnections(
 	cfg *config.AgentConfig,
 	conns []network.ConnectionStats,
 	prevCheckTimeDiff time.Duration,
-	httpMetrics map[connKey][]*model.ConnectionMetric) ([]*model.Connection, *formattingStats, *connectionsPodsIndex) {
-	stats := &formattingStats{}
+	httpMetrics map[connKey][]*model.ConnectionMetric,
+	containerToPod map[string]*kubelet.Pod,
+) ([]*model.Connection, *connectionsPodsIndex) {
 	// Process create-times required to construct unique process hash keys on the backend
 	// attention! There is a conns.Conns[0].PidCreateTime, it is always zero, so we do have to look up the actual value
 	processes := Process.getProcesses(connectionPIDs(conns))
@@ -187,18 +202,13 @@ func (c *ConnectionsCheck) formatConnections(
 		pods:        make(map[string]*model.Pod),
 		pidToPodUID: make(map[int32]string),
 	}
-	if c.podsWatcher != nil {
-		for pid, process := range processes {
-			pod := c.podsWatcher.GetPodForContainerID(process.ContainerId)
-			if pod != nil {
-				connsPods.addPodWithPID(pod, int32(pid))
-				log.Tracef("found pod for container %s: %v", process.ContainerId, pod)
-			} else {
-				log.Debugf("not found pod for container %s", process.ContainerId)
-			}
+	for pid, process := range processes {
+		if pod, ok := containerToPod[process.ContainerId]; ok {
+			connsPods.addPodWithPID(pod, int32(pid))
+			log.Tracef("found pod for container %s: %v", process.ContainerId, pod)
+		} else {
+			log.Debugf("not found pod for container %s", process.ContainerId)
 		}
-	} else {
-		_ = log.Errorf("podsWatcher is not initialized: could not map connections to pods")
 	}
 
 	cxs := make([]*model.Connection, 0, len(conns))
@@ -206,7 +216,7 @@ func (c *ConnectionsCheck) formatConnections(
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		process, ok := processes[conn.Pid]
 		if !ok {
-			stats.NoProcess++
+			connectionCounter.WithLabelValues("no_process").Inc()
 			log.Debugf("Filter connection: %v is out because process %d is not observed (gone or just started)", conn, conn.Pid)
 			continue
 		}
@@ -215,7 +225,7 @@ func (c *ConnectionsCheck) formatConnections(
 		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
 		relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
 		if err != nil {
-			stats.Invalid++
+			connectionCounter.WithLabelValues("invalid").Inc()
 			log.Warnf("invalid connection description - can't determine ID: %v", err)
 			continue
 		}
@@ -227,7 +237,7 @@ func (c *ConnectionsCheck) formatConnections(
 		if cfg.EnableShortLivedNetworkRelationFilter &&
 			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
 
-			stats.ShortLiving++
+			connectionCounter.WithLabelValues("short_living").Inc()
 			logShortLivingNoticeOnce.Do(func() {
 				log.Infof("Some of network relations are filtered out as short-living. " +
 					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +
@@ -292,11 +302,12 @@ func (c *ConnectionsCheck) formatConnections(
 			Metrics:                metrics,
 		})
 
+		connectionCounter.WithLabelValues("reported").Inc()
 		// put it in the cache for the next run
 		c.cache.PutNetworkRelationCache(relationID)
 	}
 
-	return cxs, stats, connsPods
+	return cxs, connsPods
 }
 
 type connKey struct {
@@ -622,7 +633,7 @@ func (rp *reportedProps) Tags() []string {
 	return result
 }
 
-func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, filterStats *formattingStats, telemetry *http.TelemetryStats) {
+func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, telemetry *http.TelemetryStats) {
 	c.Sender().Gauge("stackstate.process_agent.connections.total", float64(len(allConnections.Conns)), hostname, []string{})
 
 	reportedBreakdown := map[reportedProps]int{}
@@ -651,8 +662,4 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 		c.Sender().Gauge("stackstate.process_agent.connections.http.dropped", float64(telemetry.Dropped), hostname, []string{})
 		c.Sender().Gauge("stackstate.process_agent.connections.http.rejected", float64(telemetry.Rejected), hostname, []string{})
 	}
-
-	c.Sender().Gauge("stackstate.process_agent.connections.no_process", float64(filterStats.NoProcess), hostname, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connections.invalid", float64(filterStats.Invalid), hostname, []string{})
-	c.Sender().Gauge("stackstate.process_agent.connections.short_living", float64(filterStats.ShortLiving), hostname, []string{})
 }

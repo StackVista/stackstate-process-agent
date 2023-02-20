@@ -7,6 +7,7 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/network"
 	"github.com/StackVista/stackstate-agent/pkg/network/http"
 	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/StackVista/stackstate-agent/pkg/util/kubernetes/kubelet"
 	"sort"
 	"strings"
 	"testing"
@@ -192,7 +193,7 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 		// pid 4 filtered by process blacklisting, so we expect no connections for pid 4
 	}
 
-	connections, _, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil)
+	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil)
 
 	assert.Len(t, connections, 3)
 
@@ -202,6 +203,60 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 	}
 
 	assert.NotContains(t, pids, 4)
+}
+
+func TestPodsIndexFormatted(t *testing.T) {
+	cfg := config.NewDefaultAgentConfig()
+	now := time.Now()
+	c := &ConnectionsCheck{
+		buf:   new(bytes.Buffer),
+		cache: NewNetworkRelationCache(cfg.NetworkRelationCacheDurationMin),
+	}
+
+	// create the connection stats
+	connStats := []network.ConnectionStats{
+		makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080),
+		makeProcessConnection(2, "10.0.0.1", "10.0.0.3", 12346, 8080),
+		makeProcessConnection(3, "10.0.0.1", "10.0.0.4", 12347, 8080),
+		makeProcessConnection(4, "10.0.0.1", "10.0.0.5", 12348, 8080),
+	}
+
+	// fill in the relation cache
+	for _, conn := range connStats {
+		err := fillNetworkRelationCache(cfg.HostName, c.cache, conn, now.Add(-5*time.Minute).Unix(), now.Unix())
+		assert.NoError(t, err)
+	}
+
+	// fill in the procs in the lastProcState map to get process create time for the connection mapping
+	Process.lastProcState = map[int32]*model.Process{
+		1: {Pid: 1, CreateTime: now.Add(-5 * time.Minute).Unix(), ContainerId: "container-id-1"},
+		2: {Pid: 2, CreateTime: now.Add(-5 * time.Minute).Unix(), ContainerId: "container-id-2"},
+		3: {Pid: 3, CreateTime: now.Add(-5 * time.Minute).Unix(), ContainerId: "container-id-3"},
+		// pid 4 filtered by process blacklisting, so we expect no connections for pid 4
+	}
+
+	podA := &kubelet.Pod{
+		Metadata: kubelet.PodMetadata{Name: "pod-a", UID: "pod-a-uid"},
+	}
+	podB := &kubelet.Pod{
+		Metadata: kubelet.PodMetadata{Name: "pod-b", UID: "pod-b-uid"},
+	}
+
+	containerToPod := map[string]*kubelet.Pod{
+		"container-id-1": podA,
+		"container-id-2": podB,
+		"container-id-3": podB,
+	}
+
+	_, podsIndex := c.formatConnections(cfg, connStats, 15*time.Second, nil, containerToPod)
+
+	assert.Len(t, podsIndex.pods, 2)
+	assert.Equal(t, podA, podsIndex.pods["pod-a-uid"])
+	assert.Equal(t, podB, podsIndex.pods["pod-b-uid"])
+	assert.Len(t, podsIndex.pidToPodUID, 3)
+	assert.Equal(t, "pod-a-uid", podsIndex.pidToPodUID[1])
+	assert.Equal(t, "pod-b-uid", podsIndex.pidToPodUID[2])
+	assert.Equal(t, "pod-b-uid", podsIndex.pidToPodUID[3])
 }
 
 func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
@@ -239,7 +294,7 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 		4: {Pid: 4, CreateTime: now.Add(-5 * time.Minute).Unix()},
 	}
 
-	connections, _, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil)
+	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil)
 
 	assert.Len(t, connections, 4)
 	for _, c := range connections {
@@ -281,7 +336,7 @@ func TestRelationCache(t *testing.T) {
 	assert.Zero(t, c.cache.ItemCount(), "Cache should be empty before running")
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	firstRun, _, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil)
+	firstRun, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil)
 	assert.Zero(t, len(firstRun), "Connections should be empty when the cache is not present")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -289,13 +344,13 @@ func TestRelationCache(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _, _ := c.formatConnections(cfg, connStats, 10*time.Second, nil)
+	secondRun, _ := c.formatConnections(cfg, connStats, 10*time.Second, nil, nil)
 	assert.Equal(t, 4, len(secondRun), "Connections should contain 4 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
 	// delete last connection from the connection stats slice, expect it to be excluded from the connection list, but not the cache
 	connStats = connStats[:len(connStats)-1]
-	thirdRun, _, _ := c.formatConnections(cfg, connStats, 5*time.Second, nil)
+	thirdRun, _ := c.formatConnections(cfg, connStats, 5*time.Second, nil, nil)
 	assert.Equal(t, 3, len(thirdRun), "Connections should contain 3 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -380,7 +435,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	}
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	c.formatConnections(cfg, connStats, 15*time.Second, nil)
+	c.formatConnections(cfg, connStats, 15*time.Second, nil, nil)
 
 	connStats = []network.ConnectionStats{
 		amendConnectionStats(connStats[0], PID1CONN1SEND2, PID1CONN1RECV2),
@@ -393,7 +448,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil)
+	secondRun, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil, nil)
 
 	assert.Equal(t, PID1CONN1SEND2EXPECT, secondRun[0].BytesSentPerSecond, "BytesSentPerSecond")
 	assert.Equal(t, PID1CONN2SEND2EXPECT, secondRun[1].BytesSentPerSecond, "BytesSentPerSecond")
@@ -480,7 +535,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			// fill in the relation cache
 			tc.prepCache(c.cache)
 
-			connections, _, _ := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), nil)
+			connections, _ := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), nil, nil)
 			var rIDs []string
 			for _, conn := range connections {
 				rIDs = append(rIDs, conn.ConnectionIdentifier)

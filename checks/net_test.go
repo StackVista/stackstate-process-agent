@@ -331,14 +331,22 @@ const (
 	PID2CONN1SEND4 = uint64(1324)
 	PID2CONN1RECV4 = uint64(2132)
 
-	TIME2                = float32(10)
-	PID1CONN1SEND2EXPECT = float32(PID1CONN1SEND2-PID1CONN1SEND1) / TIME2
-	PID1CONN2SEND2EXPECT = float32(PID1CONN2SEND2-PID1CONN2SEND1) / TIME2
-	PID2CONN1SEND2EXPECT = float32(PID2CONN1SEND2-PID2CONN1SEND1) / TIME2
+	PID1CONN1SEND2DELTA = float64(PID1CONN1SEND2 - PID1CONN1SEND1)
+	PID1CONN2SEND2DELTA = float64(PID1CONN2SEND2 - PID1CONN2SEND1)
+	PID2CONN1SEND2DELTA = float64(PID2CONN1SEND2 - PID2CONN1SEND1)
 
-	PID1CONN1RECV2EXPECT = float32(PID1CONN1RECV2-PID1CONN1RECV1) / TIME2
-	PID1CONN2RECV2EXPECT = float32(PID1CONN2RECV2-PID1CONN2RECV1) / TIME2
-	PID2CONN1RECV2EXPECT = float32(PID2CONN1RECV2-PID2CONN1RECV1) / TIME2
+	PID1CONN1RECV2DELTA = float64(PID1CONN1RECV2 - PID1CONN1RECV1)
+	PID1CONN2RECV2DELTA = float64(PID1CONN2RECV2 - PID1CONN2RECV1)
+	PID2CONN1RECV2DELTA = float64(PID2CONN1RECV2 - PID2CONN1RECV1)
+
+	TIME2                = float32(10)
+	PID1CONN1SEND2EXPECT = float32(PID1CONN1SEND2DELTA) / TIME2
+	PID1CONN2SEND2EXPECT = float32(PID1CONN2SEND2DELTA) / TIME2
+	PID2CONN1SEND2EXPECT = float32(PID2CONN1SEND2DELTA) / TIME2
+
+	PID1CONN1RECV2EXPECT = float32(PID1CONN1RECV2DELTA) / TIME2
+	PID1CONN2RECV2EXPECT = float32(PID1CONN2RECV2DELTA) / TIME2
+	PID2CONN1RECV2EXPECT = float32(PID2CONN1RECV2DELTA) / TIME2
 )
 
 func TestRelationCacheOrdering(t *testing.T) {
@@ -390,6 +398,14 @@ func TestRelationCacheOrdering(t *testing.T) {
 
 	// second run with filled in cache; expect all processes.
 	secondRun, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil)
+
+	assert.Equal(t, PID1CONN1SEND2DELTA, getConnectionMetricNumber(t, secondRun[0].Metrics, bytesSentDelta), bytesSentDelta)
+	assert.Equal(t, PID1CONN2SEND2DELTA, getConnectionMetricNumber(t, secondRun[1].Metrics, bytesSentDelta), bytesSentDelta)
+	assert.Equal(t, PID2CONN1SEND2DELTA, getConnectionMetricNumber(t, secondRun[2].Metrics, bytesSentDelta), bytesSentDelta)
+
+	assert.Equal(t, PID1CONN1RECV2DELTA, getConnectionMetricNumber(t, secondRun[0].Metrics, bytesReceivedDelta), bytesReceivedDelta)
+	assert.Equal(t, PID1CONN2RECV2DELTA, getConnectionMetricNumber(t, secondRun[1].Metrics, bytesReceivedDelta), bytesReceivedDelta)
+	assert.Equal(t, PID2CONN1RECV2DELTA, getConnectionMetricNumber(t, secondRun[2].Metrics, bytesReceivedDelta), bytesReceivedDelta)
 
 	assert.Equal(t, PID1CONN1SEND2EXPECT, secondRun[0].BytesSentPerSecond, "BytesSentPerSecond")
 	assert.Equal(t, PID1CONN2SEND2EXPECT, secondRun[1].BytesSentPerSecond, "BytesSentPerSecond")
@@ -545,6 +561,18 @@ func sortConnectionMetrics(metrics []*model.ConnectionMetric) {
 	})
 }
 
+func getConnectionMetricNumber(t *testing.T, metrics []*model.ConnectionMetric, name metricName) float64 {
+	// Can be replaced with https://pkg.go.dev/golang.org/x/exp/slices#IndexFunc in go 1.18
+	for _, v := range metrics {
+		if v.Name == string(name) {
+			return v.Value.GetNumber()
+		}
+	}
+
+	t.Fatalf("Could not find %s among %v", name, metrics)
+	return 0
+}
+
 func TestHTTPAggregation_SingleReq(t *testing.T) {
 
 	conn1req1 := http.NewKey(
@@ -575,20 +603,20 @@ func TestHTTPAggregation_SingleReq(t *testing.T) {
 
 	sortConnectionMetrics(conn1Metrics)
 
-	assertHTTPRequestsCountMetric(t, conn1Metrics[0], "1xx", "GET", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[1], "1xx", "", "", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[2], "2xx", "GET", "/page", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[3], "2xx", "", "", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[4], "3xx", "GET", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[5], "3xx", "", "", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[6], "4xx", "GET", "/page", 4)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[7], "4xx", "", "", 4)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[8], "5xx", "GET", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[9], "5xx", "", "", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[10], "any", "GET", "/page", 5)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[11], "any", "", "", 5)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[12], "success", "GET", "/page", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[13], "success", "", "", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[0], "1xx", "GET", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[1], "1xx", "", "", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[2], "2xx", "GET", "/page", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[3], "2xx", "", "", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[4], "3xx", "GET", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[5], "3xx", "", "", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[6], "4xx", "GET", "/page", 4)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[7], "4xx", "", "", 4)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[8], "5xx", "GET", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[9], "5xx", "", "", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[10], "any", "GET", "/page", 5)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[11], "any", "", "", 5)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[12], "success", "GET", "/page", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[13], "success", "", "", 1)
 
 	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[14], "1xx", "GET", "/page", 0)
 	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[15], "1xx", "", "", 0)
@@ -721,34 +749,34 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 	sortConnectionMetrics(conn1Metrics)
 	sortConnectionMetrics(conn2Metrics)
 
-	assertHTTPRequestsCountMetric(t, conn1Metrics[0], "1xx", "POST", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[1], "1xx", "GET", "/otherpath", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[2], "1xx", "GET", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[3], "1xx", "", "", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[4], "2xx", "POST", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[5], "2xx", "GET", "/otherpath", 2)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[6], "2xx", "GET", "/page", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[7], "2xx", "", "", 3)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[8], "3xx", "POST", "/page", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[9], "3xx", "GET", "/otherpath", 4)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[10], "3xx", "GET", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[11], "3xx", "", "", 5)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[12], "4xx", "POST", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[13], "4xx", "GET", "/otherpath", 5)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[14], "4xx", "GET", "/page", 3)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[15], "4xx", "", "", 8)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[16], "5xx", "POST", "/page", 4)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[17], "5xx", "GET", "/otherpath", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[18], "5xx", "GET", "/page", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[19], "5xx", "", "", 5)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[20], "any", "POST", "/page", 5)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[21], "any", "GET", "/otherpath", 13)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[22], "any", "GET", "/page", 4)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[23], "any", "", "", 22)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[24], "success", "POST", "/page", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[25], "success", "GET", "/otherpath", 7)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[26], "success", "GET", "/page", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[27], "success", "", "", 9)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[0], "1xx", "POST", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[1], "1xx", "GET", "/otherpath", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[2], "1xx", "GET", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[3], "1xx", "", "", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[4], "2xx", "POST", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[5], "2xx", "GET", "/otherpath", 2)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[6], "2xx", "GET", "/page", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[7], "2xx", "", "", 3)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[8], "3xx", "POST", "/page", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[9], "3xx", "GET", "/otherpath", 4)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[10], "3xx", "GET", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[11], "3xx", "", "", 5)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[12], "4xx", "POST", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[13], "4xx", "GET", "/otherpath", 5)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[14], "4xx", "GET", "/page", 3)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[15], "4xx", "", "", 8)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[16], "5xx", "POST", "/page", 4)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[17], "5xx", "GET", "/otherpath", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[18], "5xx", "GET", "/page", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[19], "5xx", "", "", 5)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[20], "any", "POST", "/page", 5)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[21], "any", "GET", "/otherpath", 13)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[22], "any", "GET", "/page", 4)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[23], "any", "", "", 22)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[24], "success", "POST", "/page", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[25], "success", "GET", "/otherpath", 7)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[26], "success", "GET", "/page", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[27], "success", "", "", 9)
 
 	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[28], "1xx", "POST", "/page", 0)
 	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[29], "1xx", "GET", "/otherpath", 1.0/2)
@@ -856,13 +884,13 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 
 	sortConnectionMetrics(conn1Metrics)
 
-	assertHTTPRequestsCountMetric(t, conn1Metrics[0], "1xx", "", "", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[1], "2xx", "", "", 1)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[2], "3xx", "", "", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[3], "4xx", "", "", 4)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[4], "5xx", "", "", 0)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[5], "any", "", "", 5)
-	assertHTTPRequestsCountMetric(t, conn1Metrics[6], "success", "", "", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[0], "1xx", "", "", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[1], "2xx", "", "", 1)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[2], "3xx", "", "", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[3], "4xx", "", "", 4)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[4], "5xx", "", "", 0)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[5], "any", "", "", 5)
+	assertHTTPRequestsDeltaMetric(t, conn1Metrics[6], "success", "", "", 1)
 
 	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[7], "1xx", "", "", 0)
 	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[8], "2xx", "", "", 1.0/2)
@@ -938,8 +966,8 @@ func assertHTTPRequestsBaseMetric(t *testing.T, expectedMetric string, formatted
 	}
 }
 
-func assertHTTPRequestsCountMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedCount float64) {
-	assertHTTPRequestsBaseMetric(t, "http_requests_count", formattedMetric, statusCode, method, path, expectedCount)
+func assertHTTPRequestsDeltaMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedDelta float64) {
+	assertHTTPRequestsBaseMetric(t, "http_requests_delta", formattedMetric, statusCode, method, path, expectedDelta)
 }
 
 func makeDDSketch(responseTimes ...float64) *ddsketch.DDSketch {

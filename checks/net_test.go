@@ -236,10 +236,20 @@ func TestPodsIndexFormatted(t *testing.T) {
 	}
 
 	podA := &kubelet.Pod{
-		Metadata: kubelet.PodMetadata{Name: "pod-a", UID: "pod-a-uid"},
+		Metadata: kubelet.PodMetadata{
+			Namespace: "test",
+			Name:      "pod-a",
+			UID:       "pod-a-uid",
+			Labels:    map[string]string{},
+		},
 	}
 	podB := &kubelet.Pod{
-		Metadata: kubelet.PodMetadata{Name: "pod-b", UID: "pod-b-uid"},
+		Metadata: kubelet.PodMetadata{
+			Namespace: "test",
+			Name:      "pod-b",
+			UID:       "pod-b-uid",
+			Labels:    map[string]string{},
+		},
 	}
 
 	containerToPod := map[string]*kubelet.Pod{
@@ -248,15 +258,30 @@ func TestPodsIndexFormatted(t *testing.T) {
 		"container-id-3": podB,
 	}
 
+	expectedPodA := &model.Pod{
+		Namespace: "test",
+		Name:      "pod-a",
+		Uid:       "pod-a-uid",
+		Labels:    map[string]string{},
+		Pids:      []int32{1},
+	}
+	expectedPodB := &model.Pod{
+		Namespace: "test",
+		Name:      "pod-b",
+		Uid:       "pod-b-uid",
+		Labels:    map[string]string{},
+		Pids:      []int32{2, 3},
+	}
+
 	_, podsIndex := c.formatConnections(cfg, connStats, 15*time.Second, nil, containerToPod)
 
-	assert.Len(t, podsIndex.pods, 2)
-	assert.Equal(t, podA, podsIndex.pods["pod-a-uid"])
-	assert.Equal(t, podB, podsIndex.pods["pod-b-uid"])
 	assert.Len(t, podsIndex.pidToPodUID, 3)
 	assert.Equal(t, "pod-a-uid", podsIndex.pidToPodUID[1])
 	assert.Equal(t, "pod-b-uid", podsIndex.pidToPodUID[2])
 	assert.Equal(t, "pod-b-uid", podsIndex.pidToPodUID[3])
+	assert.Len(t, podsIndex.pods, 2)
+	assert.Equal(t, expectedPodA, podsIndex.pods["pod-a-uid"])
+	assert.Equal(t, expectedPodB, podsIndex.pods["pod-b-uid"])
 }
 
 func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {

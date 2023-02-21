@@ -232,6 +232,26 @@ func (c *ConnectionsCheck) formatConnections(
 			appProto = "http"
 		}
 
+		metrics = append(metrics, &model.ConnectionMetric{
+			Name: string(bytesSentDelta),
+			Tags: make(map[string]string),
+			Value: &model.ConnectionMetricValue{
+				Value: &model.ConnectionMetricValue_Number{
+					Number: float64(conn.LastSentBytes),
+				},
+			},
+		})
+
+		metrics = append(metrics, &model.ConnectionMetric{
+			Name: string(bytesReceivedDelta),
+			Tags: make(map[string]string),
+			Value: &model.ConnectionMetricValue{
+				Value: &model.ConnectionMetricValue_Number{
+					Number: float64(conn.LastRecvBytes),
+				},
+			},
+		})
+
 		cxs = append(cxs, &model.Connection{
 			Pid:                    int32(conn.Pid),
 			PidCreateTime:          pidCreateTime,
@@ -320,8 +340,20 @@ func statusCodeClassToString(class int) string {
 type metricName string
 
 const (
+	/**
+	 * Why are we useing delta's here? The best thing would be to use a cumulative counter. However, currently
+	 * this data gets aggregated by the correllator. Aggregation of a counter in a streaming way is tough, because it requires
+	 * detection of resets and lifecycle management of the inputs. Because of that, deltas are easier to aggregate.
+	 *
+	 * Only downside is that a counter is more robust. If a message gets lost along the way, a counter will fix that,
+	 * a delta will not.
+	 */
+	bytesSentDelta     metricName = "bytes_sent_delta"
+	bytesReceivedDelta metricName = "bytes_received_delta"
+
 	httpResponseTime      metricName = "http_response_time_seconds"
 	httpRequestsPerSecond metricName = "http_requests_per_second"
+	httpRequestsDelta     metricName = "http_requests_delta"
 
 	httpStatusCodeTag = "code"
 	httpPathTag       = "path"
@@ -435,6 +467,10 @@ func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.
 		for tagsKey, stats := range statsByTags {
 			requestCount, latencies := aggregateStats(stats)
 			result[connKey] = append(result[connKey],
+				makeConnectionMetricWithNumber(
+					httpRequestsDelta, tagsKey.toMap(),
+					float64(requestCount),
+				),
 				makeConnectionMetricWithNumber(
 					httpRequestsPerSecond, tagsKey.toMap(),
 					calculateNormalizedRate(uint64(requestCount), duration),

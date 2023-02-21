@@ -168,7 +168,6 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da // indirect
 	github.com/sassoftware/go-rpmutils v0.2.0 // indirect
 	github.com/shirou/gopsutil v3.21.9+incompatible // indirect
-	github.com/shuLhan/go-bindata v4.0.0+incompatible // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/smira/go-ftp-protocol v0.0.0-20140829150050-066b75c2b70d // indirect
 	github.com/smira/go-xz v0.0.0-20150414201226-0c531f070014 // indirect
@@ -227,7 +226,7 @@ require (
 require (
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	contrib.go.opencensus.io/exporter/prometheus v0.4.0 // indirect
-	github.com/DataDog/agent-payload/v5 v5.0.59
+	github.com/DataDog/agent-payload/v5 v5.0.59 // indirect
 	github.com/DataDog/gostackparse v0.5.0 // indirect
 	github.com/DataDog/viper v1.9.0 // indirect
 	github.com/DataDog/zstd_0 v0.0.0-20210310093942-586c1286621f // indirect

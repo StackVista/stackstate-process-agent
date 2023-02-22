@@ -11,6 +11,8 @@ import (
 	"github.com/StackVista/stackstate-agent/pkg/telemetry"
 	"github.com/StackVista/stackstate-agent/pkg/topology"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -92,12 +94,22 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 	}, nil
 }
 
+var (
+	checkRunDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "stackstate_process_agent",
+		Subsystem: "checks",
+		Name:      "run_duration",
+		Help:      "How long time it took to check to run, in seconds",
+	}, []string{"check"})
+)
+
 func (l *Collector) runCheck(c checks.Check, features features.Features) {
 	runCounter := atomic.AddInt32(&l.runCounter, 1)
 	currentTime := time.Now()
 	// update the last collected timestamp for info
 	updateLastCollectTime(currentTime)
 	result, err := c.Run(l.cfg, features, atomic.AddInt32(&l.groupID, 1), currentTime)
+	checkRunDuration.WithLabelValues(c.Name()).Observe(time.Since(currentTime).Seconds())
 	// defer commit to after check run
 	defer c.Sender().Commit()
 

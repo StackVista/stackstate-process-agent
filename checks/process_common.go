@@ -316,17 +316,17 @@ func isProcessBlacklisted(
 	return config.IsBlacklisted(cmdLine, cfg.Blacklist)
 }
 
-func (p *ProcessCheck) createTimesForPIDs(pids []uint32) map[uint32]int64 {
+func (p *ProcessCheck) getProcesses(pids []uint32) map[uint32]*model.Process {
 	p.Lock()
 	defer p.Unlock()
 
-	createTimeForPID := make(map[uint32]int64)
+	requestedProcesses := make(map[uint32]*model.Process)
 	for _, pid := range pids {
 		if p, ok := p.lastProcState[int32(pid)]; ok {
-			createTimeForPID[pid] = p.CreateTime
+			requestedProcesses[pid] = p
 		}
 	}
-	return createTimeForPID
+	return requestedProcesses
 }
 
 func replicateKubernetesLabelsToProcess(process *model.Process, container *model.Container) *model.Process {

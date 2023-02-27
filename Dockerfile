@@ -25,6 +25,8 @@ RUN apt-get update \
 # useful tools for network debugging
 RUN apt-get install -y iproute2 conntrack
 
+RUN apt-get install -y curl
+
 # cleanup image's filesystem
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

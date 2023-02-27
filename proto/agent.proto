@@ -46,6 +46,14 @@ message CollectorCommands {
 	int32 groupSize = 7;
 }
 
+message Pod {
+	string namespace = 1;
+	string name = 2;
+	string uid = 3;
+	map<string, string> labels = 4;
+	repeated int32 pids = 5;
+}
+
 message CollectorConnections {
 	string hostName = 2;
 	repeated Connection connections = 3;
@@ -62,6 +70,9 @@ message CollectorConnections {
 
 	// The interval which the connections are collected
 	int32 collectionInterval = 8;
+
+	// Pods
+	repeated Pod pods = 9;
 }
 
 message CollectorRealTime {

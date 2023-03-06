@@ -281,6 +281,9 @@ func TestPodsIndexFormatted(t *testing.T) {
 	assert.Equal(t, "pod-b-uid", podsIndex.pidToPodUID[3])
 	assert.Len(t, podsIndex.pods, 2)
 	assert.Equal(t, expectedPodA, podsIndex.pods["pod-a-uid"])
+	sort.Slice(podsIndex.pods["pod-b-uid"].Pids, func(i, j int) bool {
+		return podsIndex.pods["pod-b-uid"].Pids[i] < podsIndex.pods["pod-b-uid"].Pids[j]
+	})
 	assert.Equal(t, expectedPodB, podsIndex.pods["pod-b-uid"])
 }
 

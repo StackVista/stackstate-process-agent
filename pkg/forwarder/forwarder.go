@@ -6,7 +6,6 @@ import (
 	orchcfg "github.com/DataDog/datadog-agent/pkg/orchestrator/config"
 	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	"github.com/StackVista/stackstate-process-agent/config"
-	agentConfig "github.com/StackVista/stackstate-process-agent/pkg/config"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionforwarder"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
@@ -39,7 +38,7 @@ func (pf ProcessForwarder) Start() {
 	}
 
 	transactionforwarder.InitTransactionalForwarder()
-	transactionbatcher.InitTransactionalBatcher(pf.AgentConfig.HostName, "agent", agentConfig.GetMaxCapacity(), false)
+	transactionbatcher.InitTransactionalBatcher(pf.AgentConfig.HostName, "agent", transactionbatcher.DefaultBatcherBufferSize, false)
 	txChannelBufferSize, txTimeoutDuration, txEvictionDuration, txTickerInterval := config.GetTxManagerConfig()
 	transactionmanager.InitTransactionManager(txChannelBufferSize, txTickerInterval, txTimeoutDuration, txEvictionDuration)
 

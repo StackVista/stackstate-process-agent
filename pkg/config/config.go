@@ -31,15 +31,6 @@ func Load() (*ddconfig.Warnings, error) {
 	return ddconfig.Load()
 }
 
-// GetMaxCapacity returns the maximum amount of elements per batch for the transactionbatcher
-func GetMaxCapacity() int {
-	if Datadog.IsSet("batcher_capacity") {
-		return Datadog.GetInt("batcher_capacity")
-	}
-
-	return ddconfig.DefaultBatcherBufferSize
-}
-
 // DetectFeatures runs the feature detection.
 // We guarantee that Datadog configuration is entirely loaded (env + YAML)
 // before this function is called

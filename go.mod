@@ -45,7 +45,7 @@ require (
 	github.com/DataDog/zstd v1.5.2
 	github.com/StackExchange/wmi v1.2.1
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
-	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230313154051-094922726cdb
+	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230314144856-5cd59beb9fbb
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/go-ini/ini v1.67.0

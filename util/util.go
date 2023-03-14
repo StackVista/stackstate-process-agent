@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/StackVista/stackstate-agent/pkg/util/docker"
+	"github.com/DataDog/datadog-agent/pkg/util/docker"
 )
 
 // ErrNotImplemented is the "not implemented" error given by `gopsutil` when an

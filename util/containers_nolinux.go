@@ -4,7 +4,7 @@
 package util
 
 import (
-	"github.com/StackVista/stackstate-agent/pkg/util/containers"
+	"github.com/DataDog/datadog-agent/pkg/util/containers"
 )
 
 // SetContainerSource is only implemented on Linux

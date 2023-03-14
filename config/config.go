@@ -18,8 +18,8 @@ import (
 
 	tracerconfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
-	agentutil "github.com/StackVista/stackstate-agent/pkg/util"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
+	agentutil "github.com/DataDog/datadog-agent/pkg/util"
 
 	ddconfig "github.com/StackVista/stackstate-process-agent/pkg/config"
 	log "github.com/cihub/seelog"

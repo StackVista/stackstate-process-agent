@@ -5,14 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
-	"github.com/StackVista/stackstate-agent/pkg/ebpf"
-	"github.com/StackVista/stackstate-agent/pkg/network"
-	"github.com/StackVista/stackstate-agent/pkg/network/http"
-	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
-	"github.com/StackVista/stackstate-agent/pkg/util/kubernetes/kubelet"
+	"github.com/DataDog/datadog-agent/pkg/ebpf"
+	"github.com/DataDog/datadog-agent/pkg/network"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
+	"github.com/DataDog/datadog-agent/pkg/network/tracer"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"sync"
@@ -62,11 +62,6 @@ func (c *ConnectionsCheck) Endpoint() string { return "/api/v1/connections" }
 // RealTime indicates if this check only runs in real-time mode.
 func (c *ConnectionsCheck) RealTime() bool { return false }
 
-// Sender returns an instance of the check sender
-func (c *ConnectionsCheck) Sender() aggregator.Sender {
-	return GetSender(c.Name())
-}
-
 // Run runs the ConnectionsCheck to collect the live TCP connections on the
 // system. Currently only linux systems are supported as eBPF is used to gather
 // this information. For each connection we'll return a `model.Connection`
@@ -108,7 +103,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats, containerToPod)
 	c.prevCheckTime = currentTime
 
-	c.reportMetrics(cfg.HostName, conns, formattedConnections, conns.HTTPTelemetry)
+	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections, nil /*conns.HTTPTelemetry*/)
 
 	log.Debugf("collected %d connections in %s", len(formattedConnections), time.Since(start))
 	for _, conn := range formattedConnections {
@@ -127,7 +122,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 		log.Debugf("%v", pod)
 	}
 
-	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, connsPods, aggregatedInterval)}, nil
+	return &CheckResult{CollectorMessages: batchConnections(cfg, groupID, formattedConnections, connsPods, aggregatedInterval), Metrics: metrics}, nil
 }
 
 func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
@@ -669,8 +664,10 @@ func (rp *reportedProps) Tags() []string {
 	return result
 }
 
-func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, telemetry *http.TelemetryStats) {
-	c.Sender().Gauge("stackstate.process_agent.connections.total", float64(len(allConnections.Conns)), hostname, []string{})
+func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, telemetry_stats *http.TelemetryStats) []telemetry.RawMetric {
+	metrics := make([]telemetry.RawMetric, 0)
+
+	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.total", hostname, float64(len(allConnections.Conns)), []string{}))
 
 	reportedBreakdown := map[reportedProps]int{}
 	for _, conn := range reportedConnections {
@@ -685,17 +682,17 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 		reportedBreakdown[props] = count + 1
 	}
 	for props, count := range reportedBreakdown {
-		c.Sender().Gauge("stackstate.process_agent.connections.reported",
-			float64(count), hostname, props.Tags(),
-		)
+		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.reported", hostname, float64(count), props.Tags()))
 	}
 
-	if telemetry != nil {
+	if telemetry_stats != nil {
 		//Misses   int64 // this happens when we can't cope with the rate of events
 		//Dropped  int64 // this happens when httpStatKeeper reaches capacity
 		//Rejected int64 // this happens when a user-defined reject-filter matches a request
-		c.Sender().Gauge("stackstate.process_agent.connections.http.misses", float64(telemetry.Misses), hostname, []string{})
-		c.Sender().Gauge("stackstate.process_agent.connections.http.dropped", float64(telemetry.Dropped), hostname, []string{})
-		c.Sender().Gauge("stackstate.process_agent.connections.http.rejected", float64(telemetry.Rejected), hostname, []string{})
+		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.misses", hostname, float64(telemetry_stats.Misses), []string{}))
+		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.dropped", hostname, float64(telemetry_stats.Dropped), []string{}))
+		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.rejected", hostname, float64(telemetry_stats.Rejected), []string{}))
 	}
+
+	return metrics
 }

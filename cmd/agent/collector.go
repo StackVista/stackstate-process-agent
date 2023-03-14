@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
-	"github.com/StackVista/stackstate-agent/pkg/batcher"
-	"github.com/StackVista/stackstate-agent/pkg/collector/check"
-	"github.com/StackVista/stackstate-agent/pkg/telemetry"
-	"github.com/StackVista/stackstate-agent/pkg/topology"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/check"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/topology"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
+	"github.com/gofrs/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"io"
@@ -41,7 +41,7 @@ type checkResult struct {
 
 type checkPayload struct {
 	messages  []model.MessageBody
-	metrics   []telemetry.RawMetrics
+	metrics   []telemetry.RawMetric
 	endpoint  string
 	timestamp time.Time
 }
@@ -110,8 +110,6 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 	updateLastCollectTime(currentTime)
 	result, err := c.Run(l.cfg, features, atomic.AddInt32(&l.groupID, 1), currentTime)
 	checkRunDuration.WithLabelValues(c.Name()).Observe(time.Since(currentTime).Seconds())
-	// defer commit to after check run
-	defer c.Sender().Commit()
 
 	if err != nil && result == nil {
 		l.send <- checkResult{check: c, err: err}
@@ -153,16 +151,8 @@ func (l *Collector) run(exit chan bool) {
 	log.Infof("Starting process-agent for host=%s, endpoints=%s, enabled checks=%v", l.cfg.HostName, eps, l.cfg.EnabledChecks)
 
 	go handleSignals(exit)
-	heartbeat := time.NewTicker(15 * time.Second)
 	queueSizeTicker := time.NewTicker(10 * time.Second)
 	featuresTicker := time.NewTicker(5 * time.Second)
-
-	s, err := aggregator.GetSender("process-agent")
-	if err != nil {
-		_ = log.Error("No default sender available: ", err)
-
-	}
-	defer s.Commit()
 
 	// Channel to announce new features detected
 	featuresCh := make(chan features.Features, 1)
@@ -179,8 +169,18 @@ func (l *Collector) run(exit chan bool) {
 					<-l.send
 				}
 
-				btch := batcher.GetBatcher()
-				checkID := check.ID(result.check.Name())
+				btch := transactionbatcher.GetTransactionalBatcher()
+				checkID := check.CheckID(result.check.Name())
+				transactionUid, err := uuid.NewV4()
+
+				if err != nil {
+					log.Errorf("Error creating transaction id: %s", err.Error())
+					break
+				}
+
+				transactionId := transactionUid.String()
+
+				btch.StartTransaction(checkID, transactionId)
 
 				if result.payload != nil {
 					payload := result.payload
@@ -189,7 +189,7 @@ func (l *Collector) run(exit chan bool) {
 					}
 
 					for _, metric := range payload.metrics {
-						btch.SubmitRawMetricsData(checkID, metric)
+						btch.SubmitRawMetricsData(checkID, transactionId, metric)
 					}
 				}
 
@@ -198,22 +198,19 @@ func (l *Collector) run(exit chan bool) {
 
 					components, relations := l.integrationTopology(result.check)
 					for _, component := range components {
-						btch.SubmitComponent(checkID, agentTopologyInstance, component)
+						btch.SubmitComponent(checkID, transactionId, agentTopologyInstance, component)
 					}
 					for _, relation := range relations {
-						btch.SubmitRelation(checkID, agentTopologyInstance, relation)
+						btch.SubmitRelation(checkID, transactionId, agentTopologyInstance, relation)
 					}
 
 					repeatInterval := int(l.cfg.CheckInterval(result.check.Name()).Seconds())
-					btch.SubmitHealthStartSnapshot(checkID, healthStream, repeatInterval, repeatInterval*2)
-					btch.SubmitHealthCheckData(checkID, healthStream, healthData)
-					btch.SubmitHealthStopSnapshot(checkID, healthStream)
+					btch.SubmitHealthStartSnapshot(checkID, transactionId, healthStream, repeatInterval, repeatInterval*2)
+					btch.SubmitHealthCheckData(checkID, transactionId, healthStream, healthData)
+					btch.SubmitHealthStopSnapshot(checkID, transactionId, healthStream)
 				}
 
-				btch.SubmitComplete(checkID)
-			case <-heartbeat.C:
-				log.Tracef("got heartbeat.C message. (Ignored)")
-				s.Gauge("stackstate.process_agent.running", 1, l.cfg.HostName, []string{"version:" + versionString()})
+				btch.SubmitCompleteTransaction(checkID, transactionId)
 			case <-queueSizeTicker.C:
 				updateQueueSize(l.send)
 			case <-featuresTicker.C:

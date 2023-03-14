@@ -1,7 +1,7 @@
 package forwarder
 
 import (
-	"github.com/StackVista/stackstate-agent/pkg/util/flavor"
+	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/stretchr/testify/assert"
 	"net/url"

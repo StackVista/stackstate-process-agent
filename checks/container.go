@@ -5,21 +5,20 @@ package checks
 
 import (
 	"fmt"
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
-	"github.com/StackVista/stackstate-agent/pkg/telemetry"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/StackVista/stackstate-agent/pkg/tagger/collectors"
+	"github.com/DataDog/datadog-agent/pkg/tagger/collectors"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 
-	"github.com/StackVista/stackstate-agent/pkg/tagger"
-	"github.com/StackVista/stackstate-agent/pkg/util/containers"
+	"github.com/DataDog/datadog-agent/pkg/tagger"
+	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	log "github.com/cihub/seelog"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
-	"github.com/StackVista/stackstate-agent/pkg/util/containers/metrics"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 )
@@ -48,11 +47,6 @@ func (c *ContainerCheck) Endpoint() string { return "/api/v1/container" }
 // RealTime indicates if this check only runs in real-time mode.
 func (c *ContainerCheck) RealTime() bool { return false }
 
-// Sender returns an instance of the check sender
-func (c *ContainerCheck) Sender() aggregator.Sender {
-	return GetSender(c.Name())
-}
-
 // Run runs the ContainerCheck to collect a list of running ctrList and the
 // stats for each container.
 func (c *ContainerCheck) Run(cfg *config.AgentConfig, featureSet features.Features, groupID int32, currentTime time.Time) (*CheckResult, error) {
@@ -61,12 +55,6 @@ func (c *ContainerCheck) Run(cfg *config.AgentConfig, featureSet features.Featur
 	if err != nil {
 		return nil, err
 	}
-
-	s, err := aggregator.GetSender("process-agent")
-	if err != nil {
-		_ = log.Error("No default sender available: ", err)
-	}
-	defer s.Commit()
 
 	// End check early if this is our first run.
 	if c.lastRates == nil {
@@ -115,10 +103,10 @@ func fmtContainers(
 	lastRates map[string]util.ContainerRateMetrics,
 	lastRun time.Time,
 	multiMetricsEnabled bool,
-) ([]*model.Container, []telemetry.RawMetrics) {
+) ([]*model.Container, []telemetry.RawMetric) {
 
 	containers := make([]*model.Container, 0, len(ctrList))
-	multiMetrics := make([]telemetry.RawMetrics, 0)
+	multiMetrics := make([]telemetry.RawMetric, 0)
 
 	for _, ctr := range ctrList {
 		lastCtr, ok := lastRates[ctr.ID]
@@ -156,8 +144,8 @@ func fmtContainers(
 
 		metricTags := []string{fmt.Sprintf("containerId:%s", ctr.ID)}
 		timestamp := time.Now().Unix()
-		makeMetric := func(name string, value float64) telemetry.RawMetrics {
-			return telemetry.RawMetrics{
+		makeMetric := func(name string, value float64) telemetry.RawMetric {
+			return telemetry.RawMetric{
 				Name: name, Timestamp: timestamp, HostName: cfg.HostName, Value: value, Tags: metricTags,
 			}
 		}

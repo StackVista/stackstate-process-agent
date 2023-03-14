@@ -5,8 +5,8 @@ package checks
 
 import (
 	"bytes"
-	tracerConfig "github.com/StackVista/stackstate-agent/pkg/network/config"
-	"github.com/StackVista/stackstate-agent/pkg/network/tracer"
+	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
+	"github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	"os"
 	"time"

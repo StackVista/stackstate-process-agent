@@ -1,7 +1,7 @@
 package config
 
 import (
-	ddconfig "github.com/StackVista/stackstate-agent/pkg/config"
+	ddconfig "github.com/DataDog/datadog-agent/pkg/config"
 	"os"
 )
 

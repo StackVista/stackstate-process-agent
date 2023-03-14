@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/pkg/forwarder"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -13,11 +12,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/StackVista/stackstate-agent/pkg/pidfile"
+	"github.com/DataDog/datadog-agent/pkg/pidfile"
 	log "github.com/cihub/seelog"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
-	"github.com/StackVista/stackstate-agent/pkg/tagger"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/tagger"
 	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
 )
@@ -142,17 +141,6 @@ func runAgent(exit chan bool) {
 
 	fwd := forwarder.MakeProcessForwarder(cfg)
 	fwd.Start()
-
-	// sts send metrics
-	snd, err := aggregator.GetSender("process-agent")
-	if err != nil {
-		_ = log.Error("No default sender available: ", err)
-
-	}
-	defer snd.Commit()
-
-	snd.Gauge("stackstate.process_agent.started", 1, cfg.HostName,
-		[]string{fmt.Sprintf("version:%s", versionString())})
 
 	// Exit if agent is not enabled and we're not debugging a check.
 	if !cfg.Enabled && opts.check == "" {

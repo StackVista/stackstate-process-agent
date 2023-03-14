@@ -4,15 +4,14 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"runtime"
 	"time"
 
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 
-	"github.com/StackVista/stackstate-agent/pkg/util/containers"
+	"github.com/DataDog/datadog-agent/pkg/util/containers"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 )
@@ -40,11 +39,6 @@ func (r *RTContainerCheck) Endpoint() string { return "/api/v1/container" }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (r *RTContainerCheck) RealTime() bool { return true }
-
-// Sender returns an instance of the check sender
-func (r *RTContainerCheck) Sender() aggregator.Sender {
-	return GetSender(r.Name())
-}
 
 // Run runs the real-time container check getting container-level stats from the Cgroups and Docker APIs.
 func (r *RTContainerCheck) Run(cfg *config.AgentConfig, features features.Features, groupID int32, currentTime time.Time) (*CheckResult, error) {

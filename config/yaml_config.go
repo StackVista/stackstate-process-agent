@@ -9,10 +9,10 @@ import (
 	log "github.com/cihub/seelog"
 	"gopkg.in/yaml.v2"
 
-	httputils "github.com/StackVista/stackstate-agent/pkg/util/http"
+	httputils "github.com/DataDog/datadog-agent/pkg/util/http"
 	ddconfig "github.com/StackVista/stackstate-process-agent/pkg/config"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration

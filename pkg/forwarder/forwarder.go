@@ -1,15 +1,15 @@
 package forwarder
 
 import (
-	"github.com/StackVista/stackstate-agent/cmd/agent/common"
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
-	"github.com/StackVista/stackstate-agent/pkg/batcher"
-	"github.com/StackVista/stackstate-agent/pkg/forwarder"
-	orchcfg "github.com/StackVista/stackstate-agent/pkg/orchestrator/config"
-	"github.com/StackVista/stackstate-agent/pkg/serializer"
-	"github.com/StackVista/stackstate-agent/pkg/util/flavor"
+	"github.com/DataDog/datadog-agent/cmd/agent/common"
+	"github.com/DataDog/datadog-agent/pkg/forwarder"
+	orchcfg "github.com/DataDog/datadog-agent/pkg/orchestrator/config"
+	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	"github.com/StackVista/stackstate-process-agent/config"
 	agentConfig "github.com/StackVista/stackstate-process-agent/pkg/config"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionforwarder"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
 	log "github.com/cihub/seelog"
 )
 
@@ -26,7 +26,7 @@ func MakeProcessForwarder(cfg *config.AgentConfig) *ProcessForwarder {
 	return &ProcessForwarder{common.Forwarder, cfg}
 }
 
-// Start begins running the forwarder, registers the seriliazer and initializes the aggregator.
+// Start begins running the forwarder
 func (pf ProcessForwarder) Start() {
 	log.Debugf("Starting forwarder")
 	pf.Forwarder.Start() //nolint:errcheck
@@ -38,20 +38,17 @@ func (pf ProcessForwarder) Start() {
 		orchestratorForwarder.Start() //nolint:errcheck
 	}
 
-	// setup the aggregator
-	s := serializer.NewSerializer(common.Forwarder, orchestratorForwarder)
-	agg := aggregator.InitAggregator(s, nil, pf.AgentConfig.HostName)
-	agg.MetricPrefix = "stackstate"
-	// [sts] init the batcher for topology production
-	batcher.InitBatcher(s, pf.AgentConfig.HostName, "agent", agentConfig.GetMaxCapacity())
+	transactionforwarder.InitTransactionalForwarder()
+	transactionbatcher.InitTransactionalBatcher(pf.AgentConfig.HostName, "agent", agentConfig.GetMaxCapacity(), false)
+	txChannelBufferSize, txTimeoutDuration, txEvictionDuration, txTickerInterval := config.GetTxManagerConfig()
+	transactionmanager.InitTransactionManager(txChannelBufferSize, txTickerInterval, txTimeoutDuration, txEvictionDuration)
+
 }
 
 // Stop stops the running forwarder, and clears the common.Forwarder global var.
 func (pf ProcessForwarder) Stop() {
 	log.Debugf("Starting forwarder")
-	pf.Forwarder.Stop() //nolint:errcheck
-	common.Forwarder.Stop()
-	common.Forwarder = nil
+	transactionbatcher.Stop()
 	log.Debugf("Forwarder started")
 }
 

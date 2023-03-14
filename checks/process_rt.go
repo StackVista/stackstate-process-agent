@@ -3,15 +3,14 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/patrickmn/go-cache"
 	"time"
 
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
-	"github.com/StackVista/stackstate-agent/pkg/util/containers"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 )
@@ -46,11 +45,6 @@ func (r *RTProcessCheck) Endpoint() string { return "/api/v1/collector" }
 
 // RealTime indicates if this check only runs in real-time mode.
 func (r *RTProcessCheck) RealTime() bool { return true }
-
-// Sender returns an instance of the check sender
-func (r *RTProcessCheck) Sender() aggregator.Sender {
-	return GetSender(r.Name())
-}
 
 // Run runs the RTProcessCheck to collect statistics about the running processes.
 // On most POSIX systems these statistics are collected from procfs. The bulk

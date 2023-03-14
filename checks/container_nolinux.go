@@ -4,14 +4,13 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
-	"github.com/StackVista/stackstate-agent/pkg/telemetry"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"time"
 
-	"github.com/StackVista/stackstate-agent/pkg/util/containers"
+	"github.com/DataDog/datadog-agent/pkg/util/containers"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 )
@@ -30,11 +29,6 @@ func (c *ContainerCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
 	c.sysInfo = info
 }
 
-// Sender returns an instance of the check sender
-func (r *ContainerCheck) Sender() aggregator.Sender {
-	return GetSender(r.Name())
-}
-
 // Name returns the name of the ProcessCheck.
 func (c *ContainerCheck) Name() string { return "container" }
 
@@ -51,6 +45,6 @@ func (c *ContainerCheck) Run(cfg *config.AgentConfig, features features.Features
 	return nil, nil
 }
 
-func fmtContainers(cfg *config.AgentConfig, ctrList []*containers.Container, lastRates map[string]util.ContainerRateMetrics, lastRun time.Time, multiMetricsEnabled bool) ([]*model.Container, []telemetry.RawMetrics) {
-	return make([]*model.Container, 0, len(ctrList)), make([]telemetry.RawMetrics, 0)
+func fmtContainers(cfg *config.AgentConfig, ctrList []*containers.Container, lastRates map[string]util.ContainerRateMetrics, lastRun time.Time, multiMetricsEnabled bool) ([]*model.Container, []telemetry.RawMetric) {
+	return make([]*model.Container, 0, len(ctrList)), make([]telemetry.RawMetric, 0)
 }

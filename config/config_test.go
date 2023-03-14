@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 
 	"github.com/DataDog/gopsutil/process"

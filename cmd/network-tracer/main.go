@@ -12,7 +12,7 @@ import (
 
 	log "github.com/cihub/seelog"
 
-	"github.com/StackVista/stackstate-agent/pkg/pidfile"
+	"github.com/DataDog/datadog-agent/pkg/pidfile"
 	"github.com/StackVista/stackstate-process-agent/config"
 )
 

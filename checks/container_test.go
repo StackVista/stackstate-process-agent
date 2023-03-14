@@ -4,17 +4,17 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-agent/pkg/telemetry"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"testing"
 	"time"
 
 	"github.com/StackVista/stackstate-process-agent/config"
 
-	"github.com/StackVista/stackstate-agent/pkg/util/containers"
-	"github.com/StackVista/stackstate-agent/pkg/util/containers/metrics"
+	"github.com/DataDog/datadog-agent/pkg/util/containers"
+	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
 func makeContainer(id string) *containers.Container {
@@ -75,7 +75,7 @@ func TestContainerNewMetricsFeatureFlag(t *testing.T) {
 	}
 	lastRun := time.Now().Add(-5 * time.Second)
 
-	findMetric := func(metrics []telemetry.RawMetrics, name string) *telemetry.RawMetrics {
+	findMetric := func(metrics []telemetry.RawMetric, name string) *telemetry.RawMetric {
 		for _, metric := range metrics {
 			if metric.Name == name {
 				return &metric

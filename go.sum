@@ -160,9 +160,6 @@ github.com/DataDog/mmh3 v0.0.0-20210722141835-012dc69a9e49 h1:EbzDX8HPk5uE2FsJYx
 github.com/DataDog/mmh3 v0.0.0-20210722141835-012dc69a9e49/go.mod h1:SvsjzyJlSg0rKsqYgdcFxeEVflx3ZNAyFfkUHP0TxXg=
 github.com/DataDog/nikos v1.10.0 h1:6LaTJja+06hn93TKv+PBywxazJbkXqYBzrHNdLO8QPA=
 github.com/DataDog/nikos v1.10.0/go.mod h1:Akd6ZjhqCE5wkpy+r2vLzrOyZNrPg+APYr+i+DnHJFM=
-github.com/DataDog/sketches-go v1.0.0/go.mod h1:O+XkJHWk9w4hDwY2ZUDU31ZC9sNYlYo8DiFsxjYeo1k=
-github.com/DataDog/sketches-go v1.4.1 h1:j5G6as+9FASM2qC36lvpvQAj9qsv/jUs3FtO8CwZNAY=
-github.com/DataDog/sketches-go v1.4.1/go.mod h1:xJIXldczJyyjnbDop7ZZcLxJdV3+7Kra7H1KMgpgkLk=
 github.com/DataDog/viper v1.7.1 h1:yyn+WujSB5rnBXHm7VzilXK8gN7qB4TLN1KU90RZVd8=
 github.com/DataDog/viper v1.7.1/go.mod h1:Gx7+/WONkbQIh3ac52KqcFTzipQ1OYHhCQGWAgHlzpc=
 github.com/DataDog/viper v1.12.0 h1:FufyZpZPxyszafSV5B8Q8it75IhhuJwH0T7QpT6HnD0=
@@ -243,6 +240,8 @@ github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0
 github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20230309153711-2ce9a9612c03/go.mod h1:ok77PxD8Z0TKMaBBGL4+AQFP1GbND4OvOveSLyAy+fw=
 github.com/StackVista/gobpf v0.1.2 h1:A7u+WTC0OLar/5LvcgoI4iK6F22vRbBUXxOYHHj64yI=
 github.com/StackVista/gobpf v0.1.2/go.mod h1:oNzyvRglZNW//1GU+8+FxFk/EBGzXcYtf8UTI4QIk5U=
+github.com/StackVista/sketches-go v1.2.0-pre h1:04QAbYurRVq5LY6VK0KbFPUi4YhJcpEi5AansGdLdMw=
+github.com/StackVista/sketches-go v1.2.0-pre/go.mod h1:xerTHIkY3XGMCqOy9PwIlCwHNiaqCJE854wvOvlSjyc=
 github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350 h1:wF77lRo/HAWngkaDO8g0crLm7+0AHbS2VFpsepQ0DDE=
 github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350/go.mod h1:HK9WZMZBvVwiCUOHBe2Fmr81efRxz25dXn0/LZBvrbI=
 github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230313154051-094922726cdb h1:OkTPHugdUOrzd6XKx70nBm4b/Lw3ho/UWDyKnXgMGR8=

@@ -16,7 +16,7 @@ replace (
 // Internal deps fix version
 replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
-	github.com/DataDog/sketches-go v1.2.1 => github.com/StackVista/sketches-go v1.2.0-pre
+	github.com/DataDog/sketches-go => github.com/StackVista/sketches-go v1.2.0-pre
 	github.com/cihub/seelog => github.com/cihub/seelog v0.0.0-20151216151435-d2c6e5aa9fbf // v2.6
 	github.com/docker/distribution => github.com/docker/distribution v2.7.1-0.20190104202606-0ac367fd6bee+incompatible
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1

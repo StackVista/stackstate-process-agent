@@ -33,3 +33,7 @@ derived.gen.go
 
 # Go modules CI cache
 /.go/
+
+# EBPF generation
+prebuild_artifacts
+

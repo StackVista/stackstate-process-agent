@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/DataDog/gopsutil/cpu"
-	"github.com/DataDog/gopsutil/process"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/containers"
+	"github.com/DataDog/gopsutil/cpu"
+	"github.com/DataDog/gopsutil/process"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	log "github.com/cihub/seelog"

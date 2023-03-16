@@ -395,8 +395,8 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 		cfg.MaxProcFDs = agentIni.GetIntDefault(ns, "max_proc_fds", cfg.MaxProcFDs)
 		cfg.AllowRealTime = agentIni.GetBool(ns, "allow_real_time", cfg.AllowRealTime)
 		cfg.LogFile = agentIni.GetDefault(ns, "log_file", cfg.LogFile)
-		cfg.DDAgentPy = agentIni.GetDefault(ns, "dd_agent_py", cfg.DDAgentPy)
-		cfg.DDAgentPyEnv = agentIni.GetStrArrayDefault(ns, "dd_agent_py_env", ",", cfg.DDAgentPyEnv)
+		cfg.DDAgentPy = agentIni.GetDefault(ns, "sts_agent_py", cfg.DDAgentPy)
+		cfg.DDAgentPyEnv = agentIni.GetStrArrayDefault(ns, "sts_agent_py_env", ",", cfg.DDAgentPyEnv)
 
 		blacklistPats := agentIni.GetStrArrayDefault(ns, "blacklist", ",", []string{})
 		blacklist := make([]*regexp.Regexp, 0, len(blacklistPats))
@@ -552,14 +552,14 @@ func NewNetworkAgentConfig(networkYaml *YamlAgentConfig) (*AgentConfig, error) {
 // mergeEnvironmentVariables applies overrides from environment variables to the process agent configuration
 func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	var err error
-	if enabled, err := isAffirmative(os.Getenv("DD_PROCESS_AGENT_ENABLED")); enabled {
+	if enabled, err := isAffirmative(os.Getenv("STS_PROCESS_AGENT_ENABLED")); enabled {
 		c.Enabled = true
 		c.EnabledChecks = processChecks
 	} else if !enabled && err == nil {
 		c.Enabled = false
 	}
 
-	if v := os.Getenv("DD_HOSTNAME"); v != "" {
+	if v := os.Getenv("STS_HOSTNAME"); v != "" {
 		log.Info("overriding hostname from env DD_HOSTNAME value")
 		c.HostName = v
 	}
@@ -570,7 +570,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		apiKey = v
 		log.Info("overriding API key from env API_KEY value")
 	}
-	if v := os.Getenv("DD_API_KEY"); v != "" {
+	if v := os.Getenv("STS_API_KEY"); v != "" {
 		apiKey = v
 		log.Infof("overriding API key from env DD_API_KEY value %s", apiKey)
 	}
@@ -586,18 +586,18 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if v := os.Getenv("LOG_LEVEL"); v != "" {
 		c.LogLevel = v
 	}
-	if v := os.Getenv("DD_LOG_LEVEL"); v != "" {
+	if v := os.Getenv("STS_LOG_LEVEL"); v != "" {
 		c.LogLevel = v
 	}
 
 	// Logging to console
-	if enabled, err := isAffirmative(os.Getenv("DD_LOGS_STDOUT")); err == nil {
+	if enabled, err := isAffirmative(os.Getenv("STS_LOGS_STDOUT")); err == nil {
 		c.LogToConsole = enabled
 	}
 	if enabled, err := isAffirmative(os.Getenv("LOG_TO_CONSOLE")); err == nil {
 		c.LogToConsole = enabled
 	}
-	if enabled, err := isAffirmative(os.Getenv("DD_LOG_TO_CONSOLE")); err == nil {
+	if enabled, err := isAffirmative(os.Getenv("STS_LOG_TO_CONSOLE")); err == nil {
 		c.LogToConsole = enabled
 	}
 
@@ -607,15 +607,15 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	}
 
 	// STS
-	if v := os.Getenv("DD_PROCESS_AGENT_URL"); v != "" {
+	if v := os.Getenv("STS_PROCESS_AGENT_URL"); v != "" {
 		u, err := url.Parse(v)
 		if err != nil {
-			log.Warnf("DD_PROCESS_AGENT_URL is invalid: %s", err)
+			log.Warnf("STS_PROCESS_AGENT_URL is invalid: %s", err)
 		} else {
 			log.Infof("overriding API endpoint from env")
 			c.APIEndpoints[0].Endpoint = u
 		}
-		if site := os.Getenv("DD_SITE"); site != "" {
+		if site := os.Getenv("STS_SITE"); site != "" {
 			log.Infof("Using 'process_dd_url' (%s) and ignoring 'site' (%s)", v, site)
 		}
 		log.Infof("Overriding process api endpoint with environment variable `STS_PROCESS_AGENT_URL`: %s", u)
@@ -633,27 +633,27 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	// /STS
 
 	// Process Arguments Scrubbing
-	if enabled, err := isAffirmative(os.Getenv("DD_SCRUB_ARGS")); enabled {
+	if enabled, err := isAffirmative(os.Getenv("STS_SCRUB_ARGS")); enabled {
 		c.Scrubber.Enabled = true
 	} else if !enabled && err == nil {
 		c.Scrubber.Enabled = false
 	}
 
-	if v := os.Getenv("DD_CUSTOM_SENSITIVE_WORDS"); v != "" {
+	if v := os.Getenv("STS_CUSTOM_SENSITIVE_WORDS"); v != "" {
 		c.Scrubber.AddCustomSensitiveWords(strings.Split(v, ","))
 	}
-	if ok, _ := isAffirmative(os.Getenv("DD_STRIP_PROCESS_ARGS")); ok {
+	if ok, _ := isAffirmative(os.Getenv("STS_STRIP_PROCESS_ARGS")); ok {
 		c.Scrubber.StripAllArguments = true
 	}
 
-	if v := os.Getenv("DD_AGENT_PY"); v != "" {
+	if v := os.Getenv("STS_AGENT_PY"); v != "" {
 		c.DDAgentPy = v
 	}
-	if v := os.Getenv("DD_AGENT_PY_ENV"); v != "" {
+	if v := os.Getenv("STS_AGENT_PY_ENV"); v != "" {
 		c.DDAgentPyEnv = strings.Split(v, ",")
 	}
 
-	if v := os.Getenv("DD_DOGSTATSD_PORT"); v != "" {
+	if v := os.Getenv("STS_DOGSTATSD_PORT"); v != "" {
 		port, err := strconv.Atoi(v)
 		if err != nil {
 			log.Info("Failed to parse DD_DOGSTATSD_PORT: it should be a port number")
@@ -662,21 +662,21 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		}
 	}
 
-	if v := os.Getenv("DD_BIND_HOST"); v != "" {
+	if v := os.Getenv("STS_BIND_HOST"); v != "" {
 		c.StatsdHost = v
 	}
 
 	// Docker config
-	if v := os.Getenv("DD_COLLECT_DOCKER_NETWORK"); v == "false" {
+	if v := os.Getenv("STS_COLLECT_DOCKER_NETWORK"); v == "false" {
 		c.CollectDockerNetwork = false
 	}
-	if v := os.Getenv("DD_CONTAINER_BLACKLIST"); v != "" {
+	if v := os.Getenv("STS_CONTAINER_BLACKLIST"); v != "" {
 		c.ContainerBlacklist = strings.Split(v, ",")
 	}
-	if v := os.Getenv("DD_CONTAINER_WHITELIST"); v != "" {
+	if v := os.Getenv("STS_CONTAINER_WHITELIST"); v != "" {
 		c.ContainerWhitelist = strings.Split(v, ",")
 	}
-	if v := os.Getenv("DD_CONTAINER_CACHE_DURATION"); v != "" {
+	if v := os.Getenv("STS_CONTAINER_CACHE_DURATION"); v != "" {
 		durationS, _ := strconv.Atoi(v)
 		c.ContainerCacheDuration = time.Duration(durationS) * time.Second
 	}
@@ -690,11 +690,11 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	// Note: this feature is in development and should not be used in production environments
 	// STS: ignore DD notes, this will enable our tcptracer-ebpf and that is production ready
-	if ok, _ := isAffirmative(os.Getenv("DD_NETWORK_TRACING_ENABLED")); ok {
+	if ok, _ := isAffirmative(os.Getenv("STS_NETWORK_TRACING_ENABLED")); ok {
 		c.EnabledChecks = append(c.EnabledChecks, "connections")
 		c.EnableNetworkTracing = ok
 	}
-	if v := os.Getenv("DD_NETTRACER_SOCKET"); v != "" {
+	if v := os.Getenv("STS_NETTRACER_SOCKET"); v != "" {
 		c.NetworkTracerSocketPath = v
 	}
 

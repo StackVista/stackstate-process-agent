@@ -3,11 +3,11 @@ package checks
 import (
 	"bytes"
 	"fmt"
-	"github.com/DataDog/sketches-go/ddsketch"
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
+	"github.com/DataDog/sketches-go/ddsketch"
 	"sort"
 	"strings"
 	"testing"

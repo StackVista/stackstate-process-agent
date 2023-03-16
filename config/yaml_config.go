@@ -101,9 +101,9 @@ type YamlAgentConfig struct {
 		// Only change if the defaults are causing issues.
 		MaxConnectionsPerMessage int `yaml:"max_connections_per_message"`
 		// Overrides the path to the Agent bin used for getting the hostname. The default is usually fine.
-		DDAgentBin string `yaml:"dd_agent_bin"`
+		DDAgentBin string `yaml:"sts_agent_bin"`
 		// Overrides of the environment we pass to fetch the hostname. The default is usually fine.
-		DDAgentEnv []string `yaml:"dd_agent_env"`
+		DDAgentEnv []string `yaml:"sts_agent_env"`
 		// Optional additional pairs of endpoint_url => []apiKeys to submit to other locations.
 		AdditionalEndpoints map[string][]string `yaml:"additional_endpoints"`
 		// Windows-specific configuration goes in this section.
@@ -198,9 +198,9 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		return nil, err
 	}
 
-	parsedURL, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "process_config.process_dd_url"))
+	parsedURL, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "process_config.process_sts_url"))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing process_dd_url: %s", err)
+		return nil, fmt.Errorf("error parsing process_sts_url: %s", err)
 	}
 	// STS custom
 	if yc.Process.ProcessDDURL != "" {

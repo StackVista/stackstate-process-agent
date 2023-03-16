@@ -31,13 +31,13 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Datadog, Inc."
-            VALUE "FileDescription", "Datadog Process Agent"
+            VALUE "CompanyName", "StackState, Inc."
+            VALUE "FileDescription", "StackState Process Agent"
             VALUE "FileVersion", FILE_VERSION_STRING
             VALUE "InternalName", "process-agent"
             VALUE "LegalCopyright", "Copyright (C) 2017"
             VALUE "OriginalFilename", "process-agent.exe"
-            VALUE "ProductName", "Datadog Process Agent"
+            VALUE "ProductName", "StackState Process Agent"
             VALUE "ProductVersion", FILE_VERSION_STRING
         END
     END

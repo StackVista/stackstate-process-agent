@@ -4,14 +4,14 @@
 package config
 
 const (
-	defaultLogFilePath = "/var/log/datadog/process-agent.log"
+	defaultLogFilePath = "/var/log/stackstate-agent/process-agent.log"
 
 	// Agent 5
-	defaultDDAgentPy    = "/opt/datadog-agent/embedded/bin/python"
-	defaultDDAgentPyEnv = "PYTHONPATH=/opt/datadog-agent/agent"
+	defaultDDAgentPy    = "/opt/stackstate-agent/embedded/bin/python"
+	defaultDDAgentPyEnv = "PYTHONPATH=/opt/stackstate-agent/agent"
 
 	// Agent 6
-	defaultDDAgentBin = "/opt/datadog-agent/bin/agent/agent"
+	defaultDDAgentBin = "/opt/stackstate-agent/bin/agent/agent"
 )
 
 // Process blacklist

@@ -373,16 +373,16 @@ func TestSetNetworkTracerInitRetryFromEnv(t *testing.T) {
 
 func TestOnlyEnvConfig(t *testing.T) {
 	// setting an API Key should be enough to generate valid config
-	os.Setenv("DD_API_KEY", "apikey_from_env")
+	os.Setenv("STS_API_KEY", "apikey_from_env")
 
 	agentConfig, _ := NewAgentConfig(nil, nil, nil)
 	assert.Equal(t, "apikey_from_env", agentConfig.APIEndpoints[0].APIKey)
 
-	os.Setenv("DD_API_KEY", "")
+	os.Setenv("STS_API_KEY", "")
 }
 
 func TestOnlyEnvConfigArgsScrubbingEnabled(t *testing.T) {
-	os.Setenv("DD_CUSTOM_SENSITIVE_WORDS", "*password*,consul_token,*api_key")
+	os.Setenv("STS_CUSTOM_SENSITIVE_WORDS", "*password*,consul_token,*api_key")
 
 	agentConfig, _ := NewAgentConfig(nil, nil, nil)
 	assert.Equal(t, true, agentConfig.Scrubber.Enabled)
@@ -402,12 +402,12 @@ func TestOnlyEnvConfigArgsScrubbingEnabled(t *testing.T) {
 		assert.Equal(t, cases[i].parsedCmdline, cases[i].cmdline)
 	}
 
-	os.Setenv("DD_CUSTOM_SENSITIVE_WORDS", "")
+	os.Setenv("STS_CUSTOM_SENSITIVE_WORDS", "")
 }
 
 func TestOnlyEnvConfigArgsScrubbingDisabled(t *testing.T) {
-	os.Setenv("DD_SCRUB_ARGS", "false")
-	os.Setenv("DD_CUSTOM_SENSITIVE_WORDS", "*password*,consul_token,*api_key")
+	os.Setenv("STS_SCRUB_ARGS", "false")
+	os.Setenv("STS_CUSTOM_SENSITIVE_WORDS", "*password*,consul_token,*api_key")
 
 	agentConfig, _ := NewAgentConfig(nil, nil, nil)
 	assert.Equal(t, false, agentConfig.Scrubber.Enabled)
@@ -428,8 +428,8 @@ func TestOnlyEnvConfigArgsScrubbingDisabled(t *testing.T) {
 		assert.Equal(t, cases[i].parsedCmdline, cases[i].cmdline)
 	}
 
-	os.Setenv("DD_SCRUB_ARGS", "")
-	os.Setenv("DD_CUSTOM_SENSITIVE_WORDS", "")
+	os.Setenv("STS_SCRUB_ARGS", "")
+	os.Setenv("STS_CUSTOM_SENSITIVE_WORDS", "")
 }
 
 func TestConfigNewIfExists(t *testing.T) {
@@ -486,30 +486,30 @@ func TestDDAgentMultiAPIKeys(t *testing.T) {
 		"[Main]",
 		"api_key=foo,bar",
 		"[process.config]",
-		"endpoint=https://process.datadoghq.com,https://process.datadoghq.eu",
+		"endpoint=http://localhost,http://localhost",
 	}, "\n")))
 	configFile = &File{instance: ddAgentConf, Path: "whatever"}
 	agentConfig, err = NewAgentConfig(configFile, nil, nil)
 	assert.NoError(err)
 	assert.Equal(2, len(agentConfig.APIEndpoints))
 	assert.Equal("foo", agentConfig.APIEndpoints[0].APIKey)
-	assert.Equal("process.datadoghq.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
+	assert.Equal("localhost", agentConfig.APIEndpoints[0].Endpoint.Hostname())
 	assert.Equal("bar", agentConfig.APIEndpoints[1].APIKey)
-	assert.Equal("process.datadoghq.eu", agentConfig.APIEndpoints[1].Endpoint.Hostname())
+	assert.Equal("localhost", agentConfig.APIEndpoints[1].Endpoint.Hostname())
 
 	// if endpoint count is greater than api_key count, drop additional endpoints
 	ddAgentConf, _ = ini.Load([]byte(strings.Join([]string{
 		"[Main]",
 		"api_key=foo",
 		"[process.config]",
-		"endpoint=https://process.datadoghq.com,https://process.datadoghq.eu",
+		"endpoint=http://localhost,http://localhost",
 	}, "\n")))
 	configFile = &File{instance: ddAgentConf, Path: "whatever"}
 	agentConfig, err = NewAgentConfig(configFile, nil, nil)
 	assert.NoError(err)
 	assert.Equal(1, len(agentConfig.APIEndpoints))
 	assert.Equal("foo", agentConfig.APIEndpoints[0].APIKey)
-	assert.Equal("process.datadoghq.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
+	assert.Equal("localhost", agentConfig.APIEndpoints[0].Endpoint.Hostname())
 }
 
 func TestDefaultConfig(t *testing.T) {
@@ -522,7 +522,7 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
-	os.Setenv("DOCKER_DD_AGENT", "yes")
+	os.Setenv("DOCKER_STS_AGENT", "yes")
 	agentConfig = NewDefaultAgentConfig()
 	if util.PathExists("/host") {
 		assert.Equal(os.Getenv("HOST_PROC"), "/host/proc")
@@ -531,7 +531,7 @@ func TestDefaultConfig(t *testing.T) {
 		assert.Equal(os.Getenv("HOST_PROC"), "")
 		assert.Equal(os.Getenv("HOST_SYS"), "")
 	}
-	os.Setenv("DOCKER_DD_AGENT", "no")
+	os.Setenv("DOCKER_STS_AGENT", "no")
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 }
 
@@ -576,7 +576,7 @@ func TestDDAgentConfigBothVersions(t *testing.T) {
 
 	var ddy *YamlAgentConfig
 	processDDURL := "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_dd_url", processDDURL)
+	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
 		"process_config:",
@@ -605,7 +605,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert := assert.New(t)
 	var ddy YamlAgentConfig
 	processDDURL := "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_dd_url", processDDURL)
+	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
@@ -642,7 +642,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 
 	ddy = YamlAgentConfig{}
 	processDDURL = "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_dd_url", processDDURL)
+	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
@@ -676,7 +676,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 
 	ddy = YamlAgentConfig{}
 	processDDURL = "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_dd_url", processDDURL)
+	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
@@ -702,14 +702,14 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 
 	ddy = YamlAgentConfig{}
 	processDDURL = "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_dd_url", processDDURL)
+	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'disabled'",
 		"  additional_endpoints:",
-		"    https://process.datadoghq.eu:",
+		"    http://localhost:",
 		"      - foo",
 		"      - bar",
 		"  queue_size: 10",
@@ -726,9 +726,9 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("apikey_20", eps[0].APIKey)
 	assert.Equal("my-process-app.datadoghq.com", eps[0].Endpoint.Hostname())
 	assert.Equal("foo", eps[1].APIKey)
-	assert.Equal("process.datadoghq.eu", eps[1].Endpoint.Hostname())
+	assert.Equal("localhost", eps[1].Endpoint.Hostname())
 	assert.Equal("bar", eps[2].APIKey)
-	assert.Equal("process.datadoghq.eu", eps[2].Endpoint.Hostname())
+	assert.Equal("localhost", eps[2].Endpoint.Hostname())
 	assert.Equal(false, agentConfig.Enabled)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(15, agentConfig.Windows.ArgsRefreshInterval)
@@ -738,7 +738,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	ddy = YamlAgentConfig{}
 	site := "datadoghq.eu"
 	processDDURL = "http://test-process.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_dd_url", processDDURL)
+	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	ddconfig.Datadog.Set("site", site)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
@@ -758,7 +758,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 
 	ddy = YamlAgentConfig{}
 	site = "datacathq.eu"
-	ddconfig.Datadog.Set("process_config.process_dd_url", "")
+	ddconfig.Datadog.Set("process_config.process_sts_url", "")
 	ddconfig.Datadog.Set("site", site)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
@@ -776,7 +776,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("process.datacathq.eu", agentConfig.APIEndpoints[0].Endpoint.Hostname())
 	assert.Equal(true, agentConfig.Enabled)
 
-	ddconfig.Datadog.Set("process_config.process_dd_url", "")
+	ddconfig.Datadog.Set("process_config.process_sts_url", "")
 	ddconfig.Datadog.Set("site", "")
 }
 
@@ -784,7 +784,7 @@ func TestDDAgentConfigYamlAndNetworkConfig(t *testing.T) {
 	assert := assert.New(t)
 	var ddy YamlAgentConfig
 	processDDURL := "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_dd_url", processDDURL)
+	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
@@ -845,7 +845,7 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert := assert.New(t)
 	var ddy YamlAgentConfig
 	processDDURL := "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_dd_url", processDDURL)
+	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
@@ -1010,7 +1010,7 @@ func TestEnvOverrides(t *testing.T) {
 	os.Setenv("STS_MAX_PROCESSES_PER_MESSAGE", "501")
 	os.Setenv("STS_MAX_CONNECTIONS_PER_MESSAGE", "502")
 	os.Setenv("STS_PROTOCOL_INSPECTION_ENABLED", "false")
-	os.Setenv("DD_NETWORK_TRACING_ENABLED", "true")
+	os.Setenv("STS_NETWORK_TRACING_ENABLED", "true")
 	os.Setenv("STS_EBPF_DEBUG_LOG_ENABLED", "true")
 
 	agentConfig, _ := NewAgentConfig(nil, nil, nil)
@@ -1131,7 +1131,7 @@ func TestGetProxySettings(t *testing.T) {
 }
 
 func TestEnvSiteConfig(t *testing.T) {
-	ddconfig.Datadog.Set("process_config.process_dd_url", "")
+	ddconfig.Datadog.Set("process_config.process_sts_url", "")
 	assert := assert.New(t)
 	for _, tc := range []struct {
 		site     string
@@ -1145,8 +1145,8 @@ func TestEnvSiteConfig(t *testing.T) {
 		},
 		{
 			"",
-			"https://process.datadoghq.eu",
-			"process.datadoghq.eu",
+			"http://localhost",
+			"localhost",
 		},
 		{
 			"datacathq.eu",
@@ -1154,9 +1154,9 @@ func TestEnvSiteConfig(t *testing.T) {
 			"burrito.com",
 		},
 	} {
-		// Fake the os.Setenv("DD_SITE", tc.site)
+		// Fake the os.Setenv("STS_SITE", tc.site)
 		ddconfig.Datadog.Set("site", tc.site)
-		os.Setenv("DD_PROCESS_AGENT_URL", tc.ddURL)
+		os.Setenv("STS_PROCESS_AGENT_URL", tc.ddURL)
 
 		agentConfig, err := NewAgentConfig(nil, &YamlAgentConfig{}, nil)
 		assert.NoError(err)
@@ -1189,7 +1189,7 @@ func TestIsAffirmative(t *testing.T) {
 
 func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
 	assert := assert.New(t)
-	os.Unsetenv("DD_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
@@ -1218,7 +1218,7 @@ func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
 
 func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
 	assert := assert.New(t)
-	os.Unsetenv("DD_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
@@ -1246,7 +1246,7 @@ func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
 
 func TestStackStateFallbackAgentConfigToEnvSTSUrl(t *testing.T) {
 	assert := assert.New(t)
-	os.Unsetenv("DD_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
 	os.Unsetenv("STS_STS_URL")
 	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
 	var ddy YamlAgentConfig
@@ -1275,7 +1275,7 @@ func TestStackStateFallbackAgentConfigToEnvSTSUrl(t *testing.T) {
 
 func TestStackStateFallbackAgentConfigEmptyUrlToEnvSTSUrl(t *testing.T) {
 	assert := assert.New(t)
-	os.Unsetenv("DD_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
 	os.Unsetenv("STS_STS_URL")
 	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
 	var ddy YamlAgentConfig
@@ -1306,10 +1306,10 @@ func TestStackStateFallbackAgentConfigEmptyUrlToEnvSTSUrl(t *testing.T) {
 // case 5: STS_URL as env	PROCESS_AGENT_URL as env
 func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 	assert := assert.New(t)
-	os.Unsetenv("DD_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
 	os.Unsetenv("STS_STS_URL")
 	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
-	os.Setenv("DD_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
+	os.Setenv("STS_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
@@ -1337,7 +1337,7 @@ func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 // case 7: STS_URL as env	PROCESS_AGENT_URL as yaml - STS URL wins, more specific
 func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
 	assert := assert.New(t)
-	os.Unsetenv("DD_PROCESS_AGENT_URL")
+	os.Unsetenv("STS_PROCESS_AGENT_URL")
 	os.Unsetenv("STS_STS_URL")
 	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
 	var ddy YamlAgentConfig
@@ -1370,7 +1370,7 @@ func TestStackStatePreferPROCESS_AGENT_URLOverYamlsts_sts_url(t *testing.T) {
 	assert := assert.New(t)
 	os.Unsetenv("STS_PROCESS_AGENT_URL")
 	os.Unsetenv("STS_STS_URL")
-	os.Setenv("DD_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
+	os.Setenv("STS_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",

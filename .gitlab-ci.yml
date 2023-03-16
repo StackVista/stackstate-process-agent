@@ -71,7 +71,6 @@ build_linux:
     - export PROCESS_AGENT_VERSION=$(packaging/version.sh)
     - export EBPF=${EBPF:-true}
     - printenv
-    - (cd packaging; ./apply_branding.sh)
     - rake build
   artifacts:
     paths:
@@ -90,7 +89,6 @@ test:
     - export PROCESS_AGENT_VERSION=$(packaging/version.sh)
     - export EBPF=${EBPF:-true}
     - printenv
-    - (cd packaging; ./apply_branding.sh)
     - rake ci
   retry:
     max: 2
@@ -115,7 +113,6 @@ build_windows:
   needs: []
   script:
     - rake deps windres=true --trace
-    - bash -c "./packaging/apply_branding.sh"
     - .gitlab-scripts/windows_build.cmd
   artifacts:
     expire_in: 2 weeks

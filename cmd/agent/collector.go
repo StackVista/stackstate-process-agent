@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/check"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/topology"
@@ -51,7 +52,6 @@ type Collector struct {
 	send          chan checkResult
 	rtIntervalCh  chan time.Duration
 	cfg           *config.AgentConfig
-	httpClient    http.Client
 	groupID       int32
 	runCounter    int32
 	enabledChecks []checks.Check
@@ -62,10 +62,13 @@ type Collector struct {
 	// Set to 1 if enabled 0 is not. We're using an integer
 	// so we can use the sync/atomic for thread-safe access.
 	realTimeEnabled int32
+
+	batcher transactionbatcher.TransactionalBatcher
+	client  *httpclient.StackStateClient
 }
 
 // NewCollector creates a new Collector
-func NewCollector(cfg *config.AgentConfig) (Collector, error) {
+func NewCollector(cfg *config.AgentConfig, client *httpclient.StackStateClient, batcher transactionbatcher.TransactionalBatcher) (Collector, error) {
 	sysInfo, err := checks.CollectSystemInfo(cfg)
 	if err != nil {
 		return Collector{}, err
@@ -84,13 +87,15 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 		rtIntervalCh:  make(chan time.Duration),
 		cfg:           cfg,
 		groupID:       rand.Int31(),
-		httpClient:    http.Client{Timeout: HTTPTimeout, Transport: cfg.Transport},
 		enabledChecks: enabledChecks,
 		features:      features.Empty(),
 
 		// Defaults for real-time on start
 		realTimeInterval: 2 * time.Second,
 		realTimeEnabled:  0,
+
+		batcher: batcher,
+		client:  client,
 	}, nil
 }
 
@@ -169,7 +174,6 @@ func (l *Collector) run(exit chan bool) {
 					<-l.send
 				}
 
-				btch := transactionbatcher.GetTransactionalBatcher()
 				checkID := check.CheckID(result.check.Name())
 				transactionUid, err := uuid.NewV4()
 
@@ -180,7 +184,7 @@ func (l *Collector) run(exit chan bool) {
 
 				transactionId := transactionUid.String()
 
-				btch.StartTransaction(checkID, transactionId)
+				l.batcher.StartTransaction(checkID, transactionId)
 
 				if result.payload != nil {
 					payload := result.payload
@@ -189,7 +193,7 @@ func (l *Collector) run(exit chan bool) {
 					}
 
 					for _, metric := range payload.metrics {
-						btch.SubmitRawMetricsData(checkID, transactionId, metric)
+						l.batcher.SubmitRawMetricsData(checkID, transactionId, metric)
 					}
 				}
 
@@ -198,19 +202,19 @@ func (l *Collector) run(exit chan bool) {
 
 					components, relations := l.integrationTopology(result.check)
 					for _, component := range components {
-						btch.SubmitComponent(checkID, transactionId, agentTopologyInstance, component)
+						l.batcher.SubmitComponent(checkID, transactionId, agentTopologyInstance, component)
 					}
 					for _, relation := range relations {
-						btch.SubmitRelation(checkID, transactionId, agentTopologyInstance, relation)
+						l.batcher.SubmitRelation(checkID, transactionId, agentTopologyInstance, relation)
 					}
 
 					repeatInterval := int(l.cfg.CheckInterval(result.check.Name()).Seconds())
-					btch.SubmitHealthStartSnapshot(checkID, transactionId, healthStream, repeatInterval, repeatInterval*2)
-					btch.SubmitHealthCheckData(checkID, transactionId, healthStream, healthData)
-					btch.SubmitHealthStopSnapshot(checkID, transactionId, healthStream)
+					l.batcher.SubmitHealthStartSnapshot(checkID, transactionId, healthStream, repeatInterval, repeatInterval*2)
+					l.batcher.SubmitHealthCheckData(checkID, transactionId, healthStream, healthData)
+					l.batcher.SubmitHealthStopSnapshot(checkID, transactionId, healthStream)
 				}
 
-				btch.SubmitCompleteTransaction(checkID, transactionId)
+				l.batcher.SubmitCompleteTransaction(checkID, transactionId)
 			case <-queueSizeTicker.C:
 				updateQueueSize(l.send)
 			case <-featuresTicker.C:
@@ -421,7 +425,7 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 	defer cancel()
 	req.WithContext(ctx)
 
-	resp, err := l.httpClient.Do(req)
+	resp, err := l.client.GetClient().Do(req)
 	if err != nil {
 		if isHTTPTimeout(err) {
 			return nil, fmt.Errorf("Timeout detected on %s, %s", url, err)

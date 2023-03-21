@@ -3,12 +3,13 @@
 package checks
 
 import (
+	ddmodel "github.com/DataDog/agent-payload/v5/process"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"sync"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/process/util"
-	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
 	"github.com/StackVista/stackstate-process-agent/config"
@@ -28,7 +29,7 @@ type ProcessCheck struct {
 
 	sysInfo      *model.SystemInfo
 	lastCPUTime  cpu.TimesStat
-	lastCtrRates map[string]util.ContainerRateMetrics
+	lastCtrRates map[string]*util.ContainerRateMetrics
 	lastRun      time.Time
 
 	// Last time we did a refresh of the published processes/containers
@@ -77,7 +78,18 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 	if err != nil {
 		return nil, err
 	}
-	ctrList, cntError := util.GetContainers()
+
+	// Retrieve containers
+	var ctrList []*ddmodel.Container
+	var lastRates map[string]*util.ContainerRateMetrics
+	var cntError error
+	var pidToCid map[int]string
+	ctrList, lastRates, pidToCid, cntError = util.GetSharedContainerProvider().GetContainers(2*time.Second, p.lastCtrRates)
+	if cntError == nil {
+		p.lastCtrRates = lastRates
+	} else {
+		log.Debugf("Unable to gather stats for containers, err: %v", cntError)
+	}
 
 	// End check early if this is our first run.
 	if p.lastRun.IsZero() {
@@ -87,7 +99,6 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 		}
 
 		p.lastCPUTime = cpuTimes[0]
-		p.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
 		p.lastRun = time.Now()
 		// Put the last refresh WAAY back
 		p.lastRefresh = time.Unix(0, 0)
@@ -98,15 +109,14 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 
 	var messages []model.MessageBody
 
-	processes, topUsage, whiteListedLongLiving := p.fmtProcesses(cfg, procs, ctrList, cpuTimes[0], p.lastCPUTime, p.lastRun)
+	processes, topUsage, whiteListedLongLiving := p.fmtProcesses(cfg, procs, pidToCid, cpuTimes[0], p.lastCPUTime, p.lastRun)
 
 	// In case we skip every process..
 	if len(processes) == 0 {
 		return nil, nil
 	}
 
-	useMultiMetrics := featureFlags.FeatureEnabled(features.UpgradeToMultiMetrics)
-	containers, multiMetrics := fmtContainers(cfg, ctrList, p.lastCtrRates, p.lastRun, useMultiMetrics)
+	containers, multiMetrics := retrieveMetricsAndFormat(cfg, ctrList)
 
 	if cfg.EnableIncrementalPublishing && featureFlags.FeatureEnabled(features.IncrementalTopology) && time.Now().Before(p.lastRefresh.Add(cfg.IncrementalPublishingRefreshInterval)) {
 		log.Debug("Sending process status increment")
@@ -117,20 +127,17 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 		p.lastRefresh = time.Now()
 	}
 
-	// Store the last state for comparison on the next run.
-	// Note: not storing the filtered in case there are new processes that haven't had a chance to show up twice.
-	p.lastCtrRates = util.ExtractContainerRateMetric(ctrList)
 	p.lastCPUTime = cpuTimes[0]
 	p.lastRun = time.Now()
 	p.lastProcState = buildProcState(processes)
 	p.lastCtrState = buildCtrState(containers)
 
 	// sts send metrics
-	p.Sender().Gauge("stackstate.process_agent.containers.total_count", float64(len(containers)), cfg.HostName, []string{})
-	p.Sender().Gauge("stackstate.process_agent.processes.reported_count", float64(len(processes)), cfg.HostName, []string{})
-	p.Sender().Gauge("stackstate.process_agent.processes.total_count", float64(len(procs)), cfg.HostName, []string{})
-	p.Sender().Gauge("stackstate.process_agent.processes.top_usage_count", float64(topUsage), cfg.HostName, []string{})
-	p.Sender().Gauge("stackstate.process_agent.processes.white_listed_count", float64(whiteListedLongLiving), cfg.HostName, []string{})
+	multiMetrics = append(multiMetrics, telemetry.MakeRawMetric("stackstate.process_agent.containers.total_count", cfg.HostName, float64(len(containers)), []string{}))
+	multiMetrics = append(multiMetrics, telemetry.MakeRawMetric("stackstate.process_agent.processes.reported_count", cfg.HostName, float64(len(processes)), []string{}))
+	multiMetrics = append(multiMetrics, telemetry.MakeRawMetric("stackstate.process_agent.processes.total_count", cfg.HostName, float64(len(procs)), []string{}))
+	multiMetrics = append(multiMetrics, telemetry.MakeRawMetric("stackstate.process_agent.processes.top_usage_count", cfg.HostName, float64(topUsage), []string{}))
+	multiMetrics = append(multiMetrics, telemetry.MakeRawMetric("stackstate.process_agent.processes.white_listed_count", cfg.HostName, float64(whiteListedLongLiving), []string{}))
 
 	checkRunDuration := time.Now().Sub(start)
 	log.Debugf("collected processes in %s, processes found: %v", checkRunDuration, processes)
@@ -340,17 +347,10 @@ func enrichProcessWithKubernetesTags(processes []*model.Process, containers []*m
 func (p *ProcessCheck) fmtProcesses(
 	cfg *config.AgentConfig,
 	procs map[int32]*process.FilledProcess,
-	ctrList []*containers.Container,
+	pidToCid map[int]string,
 	syst2, syst1 cpu.TimesStat,
 	lastRun time.Time,
 ) ([]*model.Process, int, int) {
-	cidByPid := make(map[int32]string, len(ctrList))
-	for _, c := range ctrList {
-		for _, p := range c.Pids {
-			cidByPid[p] = c.ID
-		}
-	}
-
 	// Take all process and format them to the model.Process type
 	commonProcesses := make([]*ProcessCommon, 0, cfg.MaxPerMessage)
 	processMap := make(map[int32]*model.Process, cfg.MaxPerMessage)
@@ -397,7 +397,7 @@ func (p *ProcessCheck) fmtProcesses(
 				IoStat:                 ioStat,
 				VoluntaryCtxSwitches:   uint64(fp.CtxSwitches.Voluntary),
 				InvoluntaryCtxSwitches: uint64(fp.CtxSwitches.Involuntary),
-				ContainerId:            cidByPid[fp.Pid],
+				ContainerId:            pidToCid[int(fp.Pid)],
 			}
 
 			totalCPUUsage = totalCPUUsage + cpu.TotalPct

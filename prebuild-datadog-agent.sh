@@ -61,30 +61,40 @@ while [[ $# -gt 0 ]]; do
 done
 
 ALL_ARTIFACTS_DIR="$DIR/prebuild_artifacts"
-GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Replace.Dir }}' -m github.com/DataDog/datadog-agent)
 
-if [ "$GO_MOD_DEPENDENCY_DIR" = "" ]; then
-  echo "No dependency directory found for github.com/DataDog/datadog-agent. Maybe run go get first?"
-  exit 1
-elif [ -d "$GO_MOD_DEPENDENCY_DIR/.git" ]; then
-  echo "Running the data prebuild for a local dependency $DEPENDENCY_VERSION. Be aware that generate will not automatically pickup changes. Be sure to run -clean whenever the generated code would change."
-  # The dependency is a local git repo. No need to pull or pick a version
-  DEPENDENCY_VERSION="local"
-  SOURCE_DIR=$GO_MOD_DEPENDENCY_DIR
+GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Dir }}' -m github.com/DataDog/datadog-agent)
+
+# Check if the dependency was replaced
+if [ "$(go list -f '{{ .Replace }}' -m github.com/DataDog/datadog-agent)" = "<nil>" ]; then
+    DEPENDENCY_VERSION=$(go list -f '{{ .Version }}' -m github.com/DataDog/datadog-agent)
+    REPO_PATH="https://github.com/DataDog/datadog-agent"
+    SOURCE_DIR="$ALL_ARTIFACTS_DIR/$DEPENDENCY_VERSION/checkout"
 else
-  DEPENDENCY_VERSION=$(go list -f '{{ .Replace.Version }}' -m github.com/DataDog/datadog-agent)
-  SOURCE_DIR="$ALL_ARTIFACTS_DIR/$DEPENDENCY_VERSION/checkout"
+  GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Replace.Dir }}' -m github.com/DataDog/datadog-agent)
+
+  if [ -d "$GO_MOD_REPLACE_DEPENDENCY_DIR/.git" ]; then
+    echo "Running the data prebuild for a local dependency $DEPENDENCY_VERSION. Be aware that generate will not automatically pickup changes. Be sure to run -clean whenever the generated code would change."
+    # The dependency is a local git repo. No need to pull or pick a version
+    DEPENDENCY_VERSION="local"
+    SOURCE_DIR=$GO_MOD_REPLACE_DEPENDENCY_DIR
+  else
+    echo "Running for replacement git remote"
+    DEPENDENCY_VERSION=$(go list -f '{{ .Replace.Version }}' -m github.com/DataDog/datadog-agent)
+    REPO_PATH="https://$(go list -f '{{ .Replace.Path }}' -m github.com/DataDog/datadog-agent)"
+    SOURCE_DIR="$ALL_ARTIFACTS_DIR/$DEPENDENCY_VERSION/checkout"
+  fi
 fi
 
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/$DEPENDENCY_VERSION"
+DOCKER_IMAGE=artifactory.tooling.stackstate.io/docker-virtual/stackstate/datadog_build_system-probe_x64:5151a592
 
 function runPrebuild() {
   if [ ! -d "$SOURCE_DIR" ]; then
-    echo "datadog-agent-upstream-for-process-agent was not cloned, cloning"
+    echo "datadog-agent was not cloned, cloning"
     mkdir -p $DEPENDENCY_ARTIFACTS_DIR
     GIT_VERSION=$(echo "$DEPENDENCY_VERSION" | cut -d'-' -f 3)
     (cd $DEPENDENCY_ARTIFACTS_DIR &&
-      git clone https://github.com/StackVista/datadog-agent-upstream-for-process-agent checkout &&
+      git clone "$REPO_PATH" checkout &&
       cd checkout &&
       git checkout "$GIT_VERSION")
   fi
@@ -109,7 +119,7 @@ if [[ "$ACTION" = "generate" ]]; then
   fi
 
   mkdir -p "$DEPENDENCY_ARTIFACTS_DIR"
-  runPrebuild mytest:latest /scripts/run-datadog-agent-prebuild.sh
+  runPrebuild "$DOCKER_IMAGE" /scripts/run-datadog-agent-prebuild.sh
 elif [[ "$ACTION" = "install-go" ]]; then
   echo "Installing go files"
   if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/gofiles" ]; then
@@ -124,7 +134,7 @@ elif [[ "$ACTION" = "clean" ]]; then
   rm -rf "$ALL_ARTIFACTS_DIR"
 elif [[ "$ACTION" = "shell" ]]; then
   echo "Launching generate shell"
-  runPrebuild -it mytest:latest /bin/bash
+  runPrebuild -it "$DOCKER_IMAGE" /bin/bash
 elif [[ -z "$ACTION" ]]; then
   echo "No argument was passed"
   printUsage

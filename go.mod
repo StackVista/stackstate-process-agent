@@ -2,10 +2,12 @@ module github.com/StackVista/stackstate-process-agent
 
 go 1.17
 
-// From datadog-agent-upstream-for-process-agent
+// From datadog-agent-upstream-for-process-agent, replaces done in that go mod file need to be done here too
 replace github.com/pahanini/go-grpc-bidirectional-streaming-example v0.0.0-20211027164128-cc6111af44be => github.com/DataDog/go-grpc-bidirectional-streaming-example v0.0.0-20221024060302-b9cf785c02fe
 
 replace github.com/spdx/tools-golang => github.com/spdx/tools-golang v0.3.0
+
+replace github.com/vishvananda/netlink => github.com/DataDog/netlink v1.0.1-0.20220504230202-f7323aba1f6c
 
 replace (
 	github.com/benesch/cgosymbolizer => github.com/benesch/cgosymbolizer v0.0.0-20190515212042-bec6fe6e597b
@@ -21,34 +23,34 @@ replace (
 	github.com/docker/distribution => github.com/docker/distribution v2.7.1-0.20190104202606-0ac367fd6bee+incompatible
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 	github.com/iovisor/gobpf => github.com/StackVista/gobpf v0.1.2
-	// 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	github.com/spf13/viper => github.com/DataDog/viper v1.7.1
 	golang.org/x/net => golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
-//	google.golang.org/grpc => github.com/grpc/grpc-go v1.28.0
 )
 
 // For local development
 
 // replace github.com/StackVista/stackstate-receiver-go-client => /home/bram/stackvista/agent/src/github.com/StackVista/stackstate-receiver-go-client
+
 // replace github.com/DataDog/datadog-agent => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent
 // replace github.com/DataDog/datadog-agent/pkg/util/log => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log
 
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230309153711-2ce9a9612c03
+// replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230309153711-2ce9a9612c03
 
-replace github.com/DataDog/datadog-agent/pkg/util/log => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20230309153711-2ce9a9612c03
+// replace github.com/DataDog/datadog-agent/pkg/util/log => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20230309153711-2ce9a9612c03
 
 require (
-	github.com/DataDog/datadog-agent v0.43.1
-	github.com/DataDog/datadog-agent/pkg/util/log v0.43.1
+	github.com/DataDog/agent-payload/v5 v5.0.67
+	github.com/DataDog/datadog-agent v0.0.0-20230307121454-9e9c7904ced5
+	github.com/DataDog/datadog-agent/pkg/util/log v0.43.1 // 7.43.1
 	github.com/DataDog/gopsutil v1.2.2
 	github.com/DataDog/sketches-go v1.4.1
 	github.com/DataDog/zstd v1.5.2
 	github.com/StackExchange/wmi v1.2.1
 	github.com/StackVista/stackstate-go v0.0.0-20220302151729-a72c49c07350
-	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230314144856-5cd59beb9fbb
+	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230321125458-686dde7f9732
 	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
-	github.com/go-ini/ini v1.67.0
+	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gogo/protobuf v1.3.2
 	github.com/mailru/easyjson v0.7.7
@@ -236,7 +238,6 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/CycloneDX/cyclonedx-go v0.7.0 // indirect
-	github.com/DataDog/agent-payload/v5 v5.0.67 // indirect
 	github.com/DataDog/aptly v1.5.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.43.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/otlp/model v0.43.1 // indirect

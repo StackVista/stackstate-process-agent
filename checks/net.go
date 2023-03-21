@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/DataDog/datadog-agent/pkg/ebpf"
 	"github.com/DataDog/datadog-agent/pkg/network"
+	"github.com/DataDog/datadog-agent/pkg/network/dns"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
@@ -92,7 +93,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 
 	httpStats := aggregateHTTPStats(conns.HTTP, aggregatedInterval, false)
 
-	dnsMap := map[string][]string{}
+	dnsMap := map[string][]dns.Hostname{}
 	for ip, addrs := range conns.DNS {
 		dnsMap[ip.String()] = addrs
 	}
@@ -103,7 +104,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats, containerToPod)
 	c.prevCheckTime = currentTime
 
-	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections, nil /*conns.HTTPTelemetry*/)
+	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
 
 	log.Debugf("collected %d connections in %s", len(formattedConnections), time.Since(start))
 	for _, conn := range formattedConnections {
@@ -135,12 +136,6 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 	}
 
 	return nil, fmt.Errorf("remote ConnectionTracker is not supported")
-}
-
-type formattingStats struct {
-	NoProcess   int
-	Invalid     int
-	ShortLiving int
 }
 
 var logShortLivingNoticeOnce = &sync.Once{}
@@ -246,13 +241,13 @@ func (c *ConnectionsCheck) formatConnections(
 			continue
 		}
 		var natladdr, natraddr *model.Addr
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP != nil {
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsZero() {
 			natraddr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplSrcIP.String(),
 				Port: int32(conn.IPTranslation.ReplSrcPort),
 			}
 		}
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP != nil {
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP.IsZero() {
 			natladdr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplDstIP.String(),
 				Port: int32(conn.IPTranslation.ReplDstPort),
@@ -284,7 +279,7 @@ func (c *ConnectionsCheck) formatConnections(
 			Tags: make(map[string]string),
 			Value: &model.ConnectionMetricValue{
 				Value: &model.ConnectionMetricValue_Number{
-					Number: float64(conn.LastSentBytes),
+					Number: float64(conn.Last.SentBytes),
 				},
 			},
 		})
@@ -294,7 +289,7 @@ func (c *ConnectionsCheck) formatConnections(
 			Tags: make(map[string]string),
 			Value: &model.ConnectionMetricValue{
 				Value: &model.ConnectionMetricValue_Number{
-					Number: float64(conn.LastRecvBytes),
+					Number: float64(conn.Last.RecvBytes),
 				},
 			},
 		})
@@ -308,8 +303,8 @@ func (c *ConnectionsCheck) formatConnections(
 			Raddr:                  remoteAddr,
 			Natladdr:               natladdr,
 			Natraddr:               natraddr,
-			BytesSentPerSecond:     float32(calculateNormalizedRate(conn.LastSentBytes, prevCheckTimeDiff)),
-			BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.LastRecvBytes, prevCheckTimeDiff)),
+			BytesSentPerSecond:     float32(calculateNormalizedRate(conn.Last.SentBytes, prevCheckTimeDiff)),
+			BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.Last.RecvBytes, prevCheckTimeDiff)),
 			Direction:              calculateDirection(conn.Direction),
 			Namespace:              namespace,
 			ConnectionIdentifier:   relationID,
@@ -436,13 +431,7 @@ func (k aggStatsKey) toMap() map[string]string {
 	return tags
 }
 
-type requestStats struct {
-	Count              int
-	Latencies          *ddsketch.DDSketch
-	FirstLatencySample float64
-}
-
-func aggregateStats(stats []requestStats) (int, *ddsketch.DDSketch) {
+func aggregateStats(stats []http.RequestStat) (int, *ddsketch.DDSketch) {
 	requestCount := 0
 	latencies := emptySketch()
 	for _, stat := range stats {
@@ -456,7 +445,7 @@ func aggregateStats(stats []requestStats) (int, *ddsketch.DDSketch) {
 	return requestCount, latencies
 }
 
-func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.Duration, sendForPath bool) map[connKey][]*model.ConnectionMetric {
+func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time.Duration, sendForPath bool) map[connKey][]*model.ConnectionMetric {
 	result := map[connKey][]*model.ConnectionMetric{}
 
 	// regrouping statistic
@@ -465,33 +454,34 @@ func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.
 	// we need to group all path/method together to have overall statistics
 	// and also to have generic groups regarding status code: any, success
 
-	regroupedStats := map[connKey]map[aggStatsKey][]requestStats{}
+	regroupedStats := map[connKey]map[aggStatsKey][]http.RequestStat{}
 
-	appendStats := func(acc map[aggStatsKey][]requestStats, stats requestStats, tags aggStatsKey) map[aggStatsKey][]requestStats {
+	appendStats := func(acc map[aggStatsKey][]http.RequestStat, stats *http.RequestStat, tags aggStatsKey) map[aggStatsKey][]http.RequestStat {
 		if acc == nil {
-			acc = map[aggStatsKey][]requestStats{}
+			acc = map[aggStatsKey][]http.RequestStat{}
 		}
 		accStat, _ := acc[tags]
-		acc[tags] = append(accStat, stats)
+		acc[tags] = append(accStat, *stats)
 		return acc
 	}
 
-	appendStatsForStatusGroup := func(connStats map[aggStatsKey][]requestStats, statusCodeGroup string, httpKey http.Key, stats requestStats) map[aggStatsKey][]requestStats {
-		connStats = appendStats(connStats, stats, aggStatsKey{
+	appendStatsForStatusGroup := func(connStats map[aggStatsKey][]http.RequestStat, statusCodeGroup string, httpKey http.Key, stat *http.RequestStat) map[aggStatsKey][]http.RequestStat {
+		connStats = appendStats(connStats, stat, aggStatsKey{
 			statusCode: statusCodeGroup,
 		})
 		if sendForPath {
-			connStats = appendStats(connStats, stats, aggStatsKey{
+			connStats = appendStats(connStats, stat, aggStatsKey{
 				statusCode: statusCodeGroup,
 				method:     httpKey.Method.String(),
-				path:       httpKey.Path,
+				path:       httpKey.Path.Content,
 			})
 		}
 		return connStats
 	}
 
 	for statKey, statsByCode := range httpStats {
-		for statusCodeClass, stats := range statsByCode {
+		for statusCodeClass := 0; statusCodeClass < http.NumStatusClasses; statusCodeClass++ {
+			stat := statsByCode.Stats(statusCodeClass)
 			statusCodeGroup := statusCodeClassToString(statusCodeClass)
 			if statusCodeGroup == "" {
 				continue
@@ -499,10 +489,10 @@ func aggregateHTTPStats(httpStats map[http.Key]http.RequestStats, duration time.
 			connKey := getConnectionKeyForStats(statKey)
 			connStats := regroupedStats[connKey]
 
-			connStats = appendStatsForStatusGroup(connStats, statusCodeGroup, statKey, stats)
-			connStats = appendStatsForStatusGroup(connStats, "any", statKey, stats)
+			connStats = appendStatsForStatusGroup(connStats, statusCodeGroup, statKey, stat)
+			connStats = appendStatsForStatusGroup(connStats, "any", statKey, stat)
 			if statusCodeGroup == "1xx" || statusCodeGroup == "2xx" || statusCodeGroup == "3xx" {
-				connStats = appendStatsForStatusGroup(connStats, "success", statKey, stats)
+				connStats = appendStatsForStatusGroup(connStats, "success", statKey, stat)
 			}
 
 			regroupedStats[connKey] = connStats
@@ -664,7 +654,7 @@ func (rp *reportedProps) Tags() []string {
 	return result
 }
 
-func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection, telemetry_stats *http.TelemetryStats) []telemetry.RawMetric {
+func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection /*, telemetry_stats *http.TelemetryStats*/) []telemetry.RawMetric {
 	metrics := make([]telemetry.RawMetric, 0)
 
 	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.total", hostname, float64(len(allConnections.Conns)), []string{}))
@@ -685,14 +675,14 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.reported", hostname, float64(count), props.Tags()))
 	}
 
-	if telemetry_stats != nil {
-		//Misses   int64 // this happens when we can't cope with the rate of events
-		//Dropped  int64 // this happens when httpStatKeeper reaches capacity
-		//Rejected int64 // this happens when a user-defined reject-filter matches a request
-		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.misses", hostname, float64(telemetry_stats.Misses), []string{}))
-		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.dropped", hostname, float64(telemetry_stats.Dropped), []string{}))
-		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.rejected", hostname, float64(telemetry_stats.Rejected), []string{}))
-	}
+	//if telemetry_stats != nil {
+	//	//Misses   int64 // this happens when we can't cope with the rate of events
+	//	//Dropped  int64 // this happens when httpStatKeeper reaches capacity
+	//	//Rejected int64 // this happens when a user-defined reject-filter matches a request
+	//	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.misses", hostname, float64(telemetry_stats.Misses), []string{}))
+	//	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.dropped", hostname, float64(telemetry_stats.Dropped), []string{}))
+	//	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.rejected", hostname, float64(telemetry_stats.Rejected), []string{}))
+	//}
 
 	return metrics
 }

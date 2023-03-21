@@ -144,7 +144,7 @@ func parseConfig() *config.AgentConfig {
 		os.Exit(1)
 	}
 
-	cfg, err := config.NewNetworkAgentConfig(yamlConf)
+	cfg, err := config.NewAgentConfig(yamlConf)
 	if err != nil {
 		log.Criticalf("Failed to create agent config: %s", err)
 		os.Exit(1)

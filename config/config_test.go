@@ -2,13 +2,9 @@ package config
 
 import (
 	"fmt"
-	"net/http"
-	"net/url"
 	"os"
-	"os/user"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -18,7 +14,6 @@ import (
 
 	"github.com/DataDog/gopsutil/process"
 	ddconfig "github.com/StackVista/stackstate-process-agent/pkg/config"
-	"github.com/go-ini/ini"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
@@ -110,7 +105,7 @@ func TestDefaultBlacklist(t *testing.T) {
 	}, "\n")), &cf)
 	assert.NoError(t, err)
 
-	agentConfig, _ := NewAgentConfig(nil, cf, nil)
+	agentConfig, _ := NewAgentConfig(cf)
 	if runtime.GOOS != "windows" {
 		assert.True(t, IsBlacklisted([]string{"/usr/sbin/acpid"}, agentConfig.Blacklist))
 	} else {
@@ -128,7 +123,7 @@ func TestDefaultBlacklistWindows(t *testing.T) {
 		"anything: goes",
 	}, "\n")), &cf)
 	assert.NoError(t, err)
-	agentConfig, _ := NewAgentConfig(nil, cf, nil)
+	agentConfig, _ := NewAgentConfig(cf)
 
 	for _, tc := range []struct {
 		name        string
@@ -208,7 +203,7 @@ func TestDefaultBlacklistNix(t *testing.T) {
 		"anything: goes",
 	}, "\n")), &cf)
 	assert.NoError(t, err)
-	agentConfig, _ := NewAgentConfig(nil, cf, nil)
+	agentConfig, _ := NewAgentConfig(cf)
 
 	for _, tc := range []struct {
 		name        string
@@ -314,7 +309,7 @@ func TestSetFiltersFromEnv(t *testing.T) {
 	os.Setenv("STS_PROCESS_FILTER_SHORT_LIVED_QUALIFIER_SECS", "0")
 	os.Setenv("STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS", "45")
 
-	agentConfig, _ := NewAgentConfig(nil, nil, nil)
+	agentConfig, _ := NewAgentConfig(nil)
 
 	assert.Equal(t, 2*time.Minute, agentConfig.ProcessCacheDurationMin)
 	assert.Equal(t, 4*time.Minute, agentConfig.NetworkRelationCacheDurationMin)
@@ -339,7 +334,7 @@ func TestSetBlacklistFromEnv(t *testing.T) {
 	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_CPU_THRESHOLD", "30")
 	os.Setenv("STS_PROCESS_BLACKLIST_INCLUSIONS_MEM_THRESHOLD", "25")
 
-	agentConfig, _ := NewAgentConfig(nil, nil, nil)
+	agentConfig, _ := NewAgentConfig(nil)
 	assert.Equal(t, len(agentConfig.Blacklist), 2)
 
 	assert.Equal(t, agentConfig.AmountTopCPUPercentageUsage, 2)
@@ -362,7 +357,7 @@ func TestSetNetworkTracerInitRetryFromEnv(t *testing.T) {
 	os.Setenv("STS_NETWORK_TRACER_INIT_RETRY_DURATION_SEC", "30")
 	os.Setenv("STS_NETWORK_TRACER_INIT_RETRY_AMOUNT", "4")
 
-	agentConfig, _ := NewAgentConfig(nil, nil, nil)
+	agentConfig, _ := NewAgentConfig(nil)
 
 	assert.Equal(t, 30*time.Second, agentConfig.NetworkTracerInitRetryDuration)
 	assert.Equal(t, 4, agentConfig.NetworkTracerInitRetryAmount)
@@ -375,7 +370,7 @@ func TestOnlyEnvConfig(t *testing.T) {
 	// setting an API Key should be enough to generate valid config
 	os.Setenv("STS_API_KEY", "apikey_from_env")
 
-	agentConfig, _ := NewAgentConfig(nil, nil, nil)
+	agentConfig, _ := NewAgentConfig(nil)
 	assert.Equal(t, "apikey_from_env", agentConfig.APIEndpoints[0].APIKey)
 
 	os.Setenv("STS_API_KEY", "")
@@ -384,7 +379,7 @@ func TestOnlyEnvConfig(t *testing.T) {
 func TestOnlyEnvConfigArgsScrubbingEnabled(t *testing.T) {
 	os.Setenv("STS_CUSTOM_SENSITIVE_WORDS", "*password*,consul_token,*api_key")
 
-	agentConfig, _ := NewAgentConfig(nil, nil, nil)
+	agentConfig, _ := NewAgentConfig(nil)
 	assert.Equal(t, true, agentConfig.Scrubber.Enabled)
 
 	cases := []struct {
@@ -409,7 +404,7 @@ func TestOnlyEnvConfigArgsScrubbingDisabled(t *testing.T) {
 	os.Setenv("STS_SCRUB_ARGS", "false")
 	os.Setenv("STS_CUSTOM_SENSITIVE_WORDS", "*password*,consul_token,*api_key")
 
-	agentConfig, _ := NewAgentConfig(nil, nil, nil)
+	agentConfig, _ := NewAgentConfig(nil)
 	assert.Equal(t, false, agentConfig.Scrubber.Enabled)
 
 	cases := []struct {
@@ -430,86 +425,6 @@ func TestOnlyEnvConfigArgsScrubbingDisabled(t *testing.T) {
 
 	os.Setenv("STS_SCRUB_ARGS", "")
 	os.Setenv("STS_CUSTOM_SENSITIVE_WORDS", "")
-}
-
-func TestConfigNewIfExists(t *testing.T) {
-	// The file does not exist: no error returned
-	conf, err := NewIfExists("/does-not-exist")
-	assert.Nil(t, err)
-	assert.Nil(t, conf)
-
-	// The file exists but cannot be read for another reason: an error is
-	// returned.
-	var filename string
-	// [BS] This test does not work as root, because root can read everything
-	curUser, err := user.Current()
-	assert.Nil(t, err)
-	if runtime.GOOS != "windows" && curUser.Uid != "0" {
-
-		//go doesn't honor the file permissions, so skip this test on Windows
-
-		filename = "/tmp/process-agent-test-config.ini"
-		os.Remove(filename)
-		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0200) // write only
-		assert.Nil(t, err)
-		f.Close()
-		conf, err = NewIfExists(filename)
-		//  [VS]  &config.File{instance:(*ini.File)(0xc4204013b0), Path:"/tmp/process-agent-test-config.ini"}
-		assert.NotNil(t, err)
-		assert.Nil(t, conf)
-		os.Remove(filename)
-	}
-}
-
-func TestGetHostname(t *testing.T) {
-	cfg := NewDefaultAgentConfig()
-	h, err := getHostname(cfg.DDAgentPy, cfg.DDAgentBin, cfg.DDAgentPyEnv)
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", h)
-}
-
-func TestDDAgentMultiAPIKeys(t *testing.T) {
-	// if no endpoint is given but api_keys are there, match the first api_key
-	// with the default endpoint
-	assert := assert.New(t)
-	ddAgentConf, _ := ini.Load([]byte("[Main]\n\napi_key=foo,bar "))
-	configFile := &File{instance: ddAgentConf, Path: "whatever"}
-	agentConfig, err := NewAgentConfig(configFile, nil, nil)
-	assert.NoError(err)
-	assert.Equal(1, len(agentConfig.APIEndpoints))
-	assert.Equal("foo", agentConfig.APIEndpoints[0].APIKey)
-	de, err := url.Parse(defaultEndpoint)
-	assert.NoError(err)
-	assert.Equal(de.Hostname(), agentConfig.APIEndpoints[0].Endpoint.Hostname())
-
-	ddAgentConf, _ = ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"api_key=foo,bar",
-		"[process.config]",
-		"endpoint=http://localhost,http://localhost",
-	}, "\n")))
-	configFile = &File{instance: ddAgentConf, Path: "whatever"}
-	agentConfig, err = NewAgentConfig(configFile, nil, nil)
-	assert.NoError(err)
-	assert.Equal(2, len(agentConfig.APIEndpoints))
-	assert.Equal("foo", agentConfig.APIEndpoints[0].APIKey)
-	assert.Equal("localhost", agentConfig.APIEndpoints[0].Endpoint.Hostname())
-	assert.Equal("bar", agentConfig.APIEndpoints[1].APIKey)
-	assert.Equal("localhost", agentConfig.APIEndpoints[1].Endpoint.Hostname())
-
-	// if endpoint count is greater than api_key count, drop additional endpoints
-	ddAgentConf, _ = ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"api_key=foo",
-		"[process.config]",
-		"endpoint=http://localhost,http://localhost",
-	}, "\n")))
-	configFile = &File{instance: ddAgentConf, Path: "whatever"}
-	agentConfig, err = NewAgentConfig(configFile, nil, nil)
-	assert.NoError(err)
-	assert.Equal(1, len(agentConfig.APIEndpoints))
-	assert.Equal("foo", agentConfig.APIEndpoints[0].APIKey)
-	assert.Equal("localhost", agentConfig.APIEndpoints[0].Endpoint.Hostname())
 }
 
 func TestDefaultConfig(t *testing.T) {
@@ -535,72 +450,6 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 }
 
-func TestDDAgentConfigWithNewOpts(t *testing.T) {
-	assert := assert.New(t)
-	// Check that providing process.* options in the dd-agent conf file works
-	dd, _ := ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"hostname = thing",
-		"api_key = apikey_12",
-		"[process.config]",
-		"queue_size = 5",
-		"allow_real_time = false",
-		"windows_args_refresh_interval = 20",
-	}, "\n")))
-
-	conf := &File{instance: dd, Path: "whatever"}
-	agentConfig, err := NewAgentConfig(conf, nil, nil)
-	assert.NoError(err)
-
-	assert.Equal("apikey_12", agentConfig.APIEndpoints[0].APIKey)
-	assert.Equal(5, agentConfig.QueueSize)
-	assert.Equal(false, agentConfig.AllowRealTime)
-	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
-	assert.Equal(20, agentConfig.Windows.ArgsRefreshInterval)
-	assert.Equal(true, agentConfig.Windows.AddNewArgs)
-	assert.Equal(true, agentConfig.Scrubber.Enabled)
-}
-
-func TestDDAgentConfigBothVersions(t *testing.T) {
-	assert := assert.New(t)
-	// Check that providing process.* options in the dd-agent conf file works
-	dd, _ := ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"hostname = thing",
-		"api_key = apikey_12",
-		"[process.config]",
-		"queue_size = 5",
-		"allow_real_time = false",
-		"windows_args_refresh_interval = 30",
-	}, "\n")))
-
-	var ddy *YamlAgentConfig
-	processDDURL := "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_20",
-		"process_config:",
-		"  queue_size: 10",
-		"  windows:",
-		"    args_refresh_interval: 40",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	conf := &File{instance: dd, Path: "whatever"}
-	agentConfig, err := NewAgentConfig(conf, ddy, nil)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_20", ep.APIKey)
-	assert.Equal("my-process-app.datadoghq.com", ep.Endpoint.Hostname())
-	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(false, agentConfig.AllowRealTime)
-	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
-	assert.Equal(40, agentConfig.Windows.ArgsRefreshInterval)
-	assert.Equal(true, agentConfig.Windows.AddNewArgs)
-	assert.Equal(true, agentConfig.Scrubber.Enabled)
-}
-
 func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert := assert.New(t)
 	var ddy YamlAgentConfig
@@ -622,7 +471,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -661,7 +510,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err = NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err = NewAgentConfig(&ddy)
 	assert.NoError(err)
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
@@ -689,7 +538,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err = NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err = NewAgentConfig(&ddy)
 	assert.NoError(err)
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
@@ -719,7 +568,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err = NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err = NewAgentConfig(&ddy)
 	assert.NoError(err)
 	eps := agentConfig.APIEndpoints
 	assert.Len(agentConfig.APIEndpoints, 3)
@@ -749,7 +598,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err = NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err = NewAgentConfig(&ddy)
 	assert.NoError(err)
 	assert.Len(agentConfig.APIEndpoints, 1)
 	assert.Equal("apikey_20", agentConfig.APIEndpoints[0].APIKey)
@@ -769,7 +618,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err = NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err = NewAgentConfig(&ddy)
 	assert.NoError(err)
 	assert.Len(agentConfig.APIEndpoints, 1)
 	assert.Equal("apikey_20", agentConfig.APIEndpoints[0].APIKey)
@@ -778,67 +627,6 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 
 	ddconfig.Datadog.Set("process_config.process_sts_url", "")
 	ddconfig.Datadog.Set("site", "")
-}
-
-func TestDDAgentConfigYamlAndNetworkConfig(t *testing.T) {
-	assert := assert.New(t)
-	var ddy YamlAgentConfig
-	processDDURL := "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_20",
-		"process_agent_enabled: true",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"  windows:",
-		"    args_refresh_interval: 100",
-		"    add_new_args: false",
-		"  scrub_args: false",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_20", ep.APIKey)
-	assert.Equal("my-process-app.datadoghq.com", ep.Endpoint.Hostname())
-	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(true, agentConfig.AllowRealTime)
-	assert.Equal(true, agentConfig.Enabled)
-	assert.Equal(processChecks, agentConfig.EnabledChecks)
-	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
-	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
-	assert.Equal(100, agentConfig.Windows.ArgsRefreshInterval)
-	assert.Equal(false, agentConfig.Windows.AddNewArgs)
-	assert.Equal(false, agentConfig.Scrubber.Enabled)
-
-	var netYamlConf YamlAgentConfig
-	err = yaml.Unmarshal([]byte(strings.Join([]string{
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  nettracer_socket: /var/my-location/network-tracer.log",
-	}, "\n")), &netYamlConf)
-	assert.NoError(err)
-
-	agentConfig, err = NewAgentConfig(nil, &ddy, &netYamlConf)
-
-	assert.Equal("apikey_20", ep.APIKey)
-	assert.Equal("my-process-app.datadoghq.com", ep.Endpoint.Hostname())
-	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(true, agentConfig.AllowRealTime)
-	assert.Equal(true, agentConfig.Enabled)
-	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
-	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
-	assert.Equal(100, agentConfig.Windows.ArgsRefreshInterval)
-	assert.Equal(false, agentConfig.Windows.AddNewArgs)
-	assert.Equal(false, agentConfig.Scrubber.Enabled)
-	assert.Equal("/var/my-location/network-tracer.log", agentConfig.NetworkTracerSocketPath)
-	assert.Equal(append(processChecks, "connections"), agentConfig.EnabledChecks)
 }
 
 func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
@@ -870,7 +658,7 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -909,7 +697,7 @@ network_tracer_config:
 `), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	assert.Equal(true, agentConfig.NetworkTracer.EnableProtocolInspection)
@@ -932,7 +720,7 @@ network_tracer_config:
 `), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	assert.Equal(true, agentConfig.NetworkTracer.EnableProtocolInspection)
@@ -950,57 +738,10 @@ network_tracer_config:
 `), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	assert.Equal(false, agentConfig.NetworkTracer.EnableProtocolInspection)
-}
-
-func TestProxyEnv(t *testing.T) {
-	assert := assert.New(t)
-	for i, tc := range []struct {
-		host     string
-		port     int
-		user     string
-		pass     string
-		expected string
-	}{
-		{
-			"example.com",
-			1234,
-			"",
-			"",
-			"http://example.com:1234",
-		},
-		{
-			"https://example.com",
-			4567,
-			"foo",
-			"bar",
-			"https://foo:bar@example.com:4567",
-		},
-		{
-			"example.com",
-			0,
-			"foo",
-			"",
-			"http://foo@example.com:3128",
-		},
-	} {
-		os.Setenv("PROXY_HOST", tc.host)
-		if tc.port > 0 {
-			os.Setenv("PROXY_PORT", strconv.Itoa(tc.port))
-		} else {
-			os.Setenv("PROXY_PORT", "")
-		}
-		os.Setenv("PROXY_USER", tc.user)
-		os.Setenv("PROXY_PASSWORD", tc.pass)
-		pf, err := proxyFromEnv(nil)
-		assert.NoError(err, "proxy case %d had error", i)
-		u, err := pf(&http.Request{})
-		assert.NoError(err)
-		assert.Equal(tc.expected, u.String())
-	}
 }
 
 func TestEnvOverrides(t *testing.T) {
@@ -1013,7 +754,7 @@ func TestEnvOverrides(t *testing.T) {
 	os.Setenv("STS_NETWORK_TRACING_ENABLED", "true")
 	os.Setenv("STS_EBPF_DEBUG_LOG_ENABLED", "true")
 
-	agentConfig, _ := NewAgentConfig(nil, nil, nil)
+	agentConfig, _ := NewAgentConfig(nil)
 
 	assert.Equal(500, agentConfig.NetworkTracerMaxConnections)
 	assert.Equal(501, agentConfig.MaxPerMessage)
@@ -1021,113 +762,6 @@ func TestEnvOverrides(t *testing.T) {
 	assert.Equal(false, agentConfig.NetworkTracer.EnableProtocolInspection)
 	assert.Equal(true, agentConfig.EnableNetworkTracing)
 	assert.Equal(true, agentConfig.NetworkTracer.EbpfDebuglogEnabled)
-}
-
-func getURL(f *ini.File) (*url.URL, error) {
-	conf := File{
-		f,
-		"some/path",
-	}
-	m, _ := conf.GetSection("Main")
-	pf, err := getProxySettings(m)
-	if err != nil {
-		return nil, err
-	}
-	return pf(&http.Request{})
-}
-
-func TestGetProxySettings(t *testing.T) {
-	assert := assert.New(t)
-
-	f, _ := ini.Load([]byte("[Main]\n\nproxy_host = myhost"))
-
-	s, err := getURL(f)
-	assert.NoError(err)
-	assert.Equal("http://myhost:3128", s.String())
-
-	f, _ = ini.Load([]byte("[Main]\n\nproxy_host = http://myhost"))
-
-	s, err = getURL(f)
-	assert.NoError(err)
-	assert.Equal("http://myhost:3128", s.String())
-
-	f, _ = ini.Load([]byte("[Main]\n\nproxy_host = https://myhost"))
-
-	s, err = getURL(f)
-	assert.NoError(err)
-	assert.Equal("https://myhost:3128", s.String())
-
-	// generic user name
-	f, _ = ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"proxy_host = https://myhost",
-		"proxy_port = 3129",
-		"proxy_user = aaditya",
-	}, "\n")))
-
-	s, err = getURL(f)
-	assert.NoError(err)
-
-	assert.Equal("https://aaditya@myhost:3129", s.String())
-
-	// special char in user name <3
-	f, _ = ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"proxy_host = myhost",
-		"proxy_port = 3129",
-		"proxy_user = léo",
-	}, "\n")))
-
-	s, err = getURL(f)
-	assert.NoError(err)
-
-	// user is url-encoded and decodes to original string
-	assert.Equal("http://l%C3%A9o@myhost:3129", s.String())
-	assert.Equal("léo", s.User.Username())
-
-	// generic  user-pass
-	f, _ = ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"proxy_host = myhost",
-		"proxy_port = 3129",
-		"proxy_user = aaditya",
-		"proxy_password = password_12",
-	}, "\n")))
-
-	s, err = getURL(f)
-	assert.NoError(err)
-	assert.Equal("http://aaditya:password_12@myhost:3129", s.String())
-
-	// user-pass with schemed host
-	f, _ = ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"proxy_host = https://myhost",
-		"proxy_port = 3129",
-		"proxy_user = aaditya",
-		"proxy_password = password_12",
-	}, "\n")))
-
-	s, err = getURL(f)
-	assert.NoError(err)
-	assert.Equal("https://aaditya:password_12@myhost:3129", s.String())
-
-	// special characters in password
-	f, _ = ini.Load([]byte(strings.Join([]string{
-		"[Main]",
-		"proxy_host = https://myhost",
-		"proxy_port = 3129",
-		"proxy_user = aaditya",
-		"proxy_password = /:!?&=@éÔγλῶσσα",
-	}, "\n")))
-
-	s, err = getURL(f)
-	assert.NoError(err)
-
-	// password is url-encoded and decodes to the original string
-	assert.Equal("https://aaditya:%2F%3A%21%3F&=%40%C3%A9%C3%94%CE%B3%CE%BB%E1%BF%B6%CF%83%CF%83%CE%B1@myhost:3129", s.String())
-
-	pass, _ := s.User.Password()
-	assert.Equal("/:!?&=@éÔγλῶσσα", pass)
 }
 
 func TestEnvSiteConfig(t *testing.T) {
@@ -1158,7 +792,7 @@ func TestEnvSiteConfig(t *testing.T) {
 		ddconfig.Datadog.Set("site", tc.site)
 		os.Setenv("STS_PROCESS_AGENT_URL", tc.ddURL)
 
-		agentConfig, err := NewAgentConfig(nil, &YamlAgentConfig{}, nil)
+		agentConfig, err := NewAgentConfig(&YamlAgentConfig{})
 		assert.NoError(err)
 		assert.Equal(tc.expected, agentConfig.APIEndpoints[0].Endpoint.Hostname())
 	}
@@ -1208,7 +842,7 @@ func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -1236,7 +870,7 @@ func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -1265,7 +899,7 @@ func TestStackStateFallbackAgentConfigToEnvSTSUrl(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -1295,7 +929,7 @@ func TestStackStateFallbackAgentConfigEmptyUrlToEnvSTSUrl(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -1326,7 +960,7 @@ func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -1357,7 +991,7 @@ func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -1388,7 +1022,7 @@ func TestStackStatePreferPROCESS_AGENT_URLOverYamlsts_sts_url(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
 	ep := agentConfig.APIEndpoints[0]
@@ -1405,7 +1039,7 @@ func TestNetworkTracerInitRetry_FromYaml(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(t, err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 10, agentConfig.NetworkTracerInitRetryAmount)
@@ -1413,7 +1047,7 @@ func TestNetworkTracerInitRetry_FromYaml(t *testing.T) {
 }
 
 func TestCheckIntervalCodeDefaults(t *testing.T) {
-	agentConfig, err := NewAgentConfig(nil, nil, nil)
+	agentConfig, err := NewAgentConfig(nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, time.Duration(30)*time.Second, agentConfig.CheckIntervals["container"])
@@ -1432,7 +1066,7 @@ func TestCheckIntervalCodeDefaults_FromYaml(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(t, err)
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
 	assert.Equal(t, time.Duration(10)*time.Second, agentConfig.CheckIntervals["container"])
@@ -1445,7 +1079,7 @@ func TestCheckIntervalCodeDefaults_FromEnv(t *testing.T) {
 	os.Setenv("STS_PROCESS_CHECK_INTERVAL", "15")
 	os.Setenv("STS_CONNECTION_CHECK_INTERVAL", "15")
 
-	agentConfig, err := NewAgentConfig(nil, nil, nil)
+	agentConfig, err := NewAgentConfig(nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, time.Duration(15)*time.Second, agentConfig.CheckIntervals["container"])
@@ -1458,7 +1092,6 @@ func TestCheckIntervalCodeDefaults_FromEnvOverridesYaml(t *testing.T) {
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"process_config:",
 		"  intervals:",
-		"    container: 10",
 		"    process: 10",
 		"    connections: 10",
 	}, "\n")), &ddy)
@@ -1468,17 +1101,16 @@ func TestCheckIntervalCodeDefaults_FromEnvOverridesYaml(t *testing.T) {
 	os.Setenv("STS_PROCESS_CHECK_INTERVAL", "20")
 	os.Setenv("STS_CONNECTION_CHECK_INTERVAL", "20")
 
-	agentConfig, err := NewAgentConfig(nil, &ddy, nil)
+	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
-	assert.Equal(t, time.Duration(20)*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(t, time.Duration(20)*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(t, time.Duration(20)*time.Second, agentConfig.CheckIntervals["connections"])
 }
 
 func TestSkipSSLValidation_Default(t *testing.T) {
 	var ddy YamlAgentConfig
-	_, err := NewAgentConfig(nil, &ddy, nil)
+	_, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
 	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
@@ -1492,7 +1124,7 @@ func TestSkipSSLValidation_FromYaml(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(t, err)
 
-	_, err = NewAgentConfig(nil, &ddy, nil)
+	_, err = NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
 	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
@@ -1502,7 +1134,7 @@ func TestSkipSSLValidation_FromYaml(t *testing.T) {
 func TestSkipSSLValidation_FromEnv(t *testing.T) {
 	os.Setenv("STS_SKIP_SSL_VALIDATION", "true")
 
-	_, err := NewAgentConfig(nil, nil, nil)
+	_, err := NewAgentConfig(nil)
 	assert.NoError(t, err)
 
 	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
@@ -1520,7 +1152,7 @@ func TestSkipSSLValidation_FromEnvOverridesYaml(t *testing.T) {
 
 	os.Setenv("STS_SKIP_SSL_VALIDATION", "true")
 
-	_, err = NewAgentConfig(nil, &ddy, nil)
+	_, err = NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
 	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")

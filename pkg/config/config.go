@@ -13,6 +13,7 @@ func init() {
 	// branding is applied. eg, The forwarder uses the config in the main agent repo where no branding has been applied.
 	Datadog = ddconfig.Datadog
 	Datadog.SetEnvPrefix("STS")
+
 	ddconfig.InitConfig(Datadog)
 }
 
@@ -36,4 +37,8 @@ func Load() (*ddconfig.Warnings, error) {
 // before this function is called
 func DetectFeatures() {
 	ddconfig.DetectFeatures()
+}
+
+func IsAnyContainerFeaturePresent() bool {
+	return ddconfig.IsAnyContainerFeaturePresent()
 }

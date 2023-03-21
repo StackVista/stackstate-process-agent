@@ -4,33 +4,26 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
-	"testing"
-	"time"
-
 	"github.com/StackVista/stackstate-process-agent/config"
+	"testing"
 
-	"github.com/DataDog/datadog-agent/pkg/util/containers"
-	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
-func makeContainer(id string) *containers.Container {
-	ctn := &containers.Container{
-		ID: id,
-		ContainerMetrics: metrics.ContainerMetrics{
-			CPU:    &metrics.ContainerCPUStats{},
-			Memory: &metrics.ContainerMemStats{},
-			IO:     &metrics.ContainerIOStats{},
-		},
-		Limits:  metrics.ContainerLimits{},
-		Network: metrics.ContainerNetStats{},
-	}
-
-	return ctn
-}
+//func makeContainer(id string) *containers.Container {
+//	ctn := &containers.Container{
+//		ID: id,
+//		ContainerMetrics: metrics.ContainerMetrics{
+//			CPU:    &metrics.ContainerCPUStats{},
+//			Memory: &metrics.ContainerMemStats{},
+//			IO:     &metrics.ContainerIOStats{},
+//		},
+//		Limits:  metrics.ContainerLimits{},
+//		Network: metrics.ContainerNetStats{},
+//	}
+//
+//	return ctn
+//}
 
 func TestTransformKubernetesTags(t *testing.T) {
 	for _, tc := range []struct {
@@ -65,125 +58,125 @@ func TestTransformKubernetesTags(t *testing.T) {
 
 }
 
-func TestContainerNewMetricsFeatureFlag(t *testing.T) {
-	cfg := config.NewDefaultAgentConfig()
-	ctrs := []*containers.Container{
-		makeContainer("foo"),
-	}
-	prevCtrs := []*containers.Container{
-		makeContainer("foo"),
-	}
-	lastRun := time.Now().Add(-5 * time.Second)
-
-	findMetric := func(metrics []telemetry.RawMetric, name string) *telemetry.RawMetric {
-		for _, metric := range metrics {
-			if metric.Name == name {
-				return &metric
-			}
-		}
-		return nil
-	}
-
-	prevCtrs[0].CPU.ThrottledTime = 500
-	ctrs[0].CPU.ThrottledTime = 1000
-
-	prevCtrs[0].CPU.NrThrottled = 0
-	ctrs[0].CPU.NrThrottled = 100
-
-	prevCtrs[0].CPU.System = 0
-	ctrs[0].CPU.System = 20
-
-	cnts, metrics := fmtContainers(cfg, ctrs, util.ExtractContainerRateMetric(prevCtrs), lastRun, false)
-	assert.Equal(t, cnts[0].SystemPct, float32(20/5))
-	assert.Len(t, metrics, 3, "Only new metrics are expected to appear when feature-flag is disabled")
-	assert.Equal(t, float64((1000-500)/5), findMetric(metrics, "cpuThrottledTime").Value)
-	assert.Equal(t, float64(100/5), findMetric(metrics, "cpuNrThrottled").Value)
-	assert.Equal(t, float64(0), findMetric(metrics, "cpuThreadCount").Value)
-
-	cnts2, metrics2 := fmtContainers(cfg, ctrs, util.ExtractContainerRateMetric(prevCtrs), lastRun, true)
-	assert.Equal(t, cnts2[0].SystemPct, float32(0), "When multimetrics enabled, collector's structures metrics should be 0")
-	assert.Len(t, metrics2, 11+3)
-	assert.Equal(t, float64(1000-500)/5, findMetric(metrics2, "cpuThrottledTime").Value)
-	assert.Equal(t, float64(100)/5, findMetric(metrics2, "cpuNrThrottled").Value)
-	assert.Equal(t, float64(0), findMetric(metrics2, "cpuThreadCount").Value)
-	assert.Equal(t, float64(20)/5, findMetric(metrics2, "systemPct").Value)
-}
-
-func TestContainerChunking(t *testing.T) {
-	cfg := config.NewDefaultAgentConfig()
-	ctrs := []*containers.Container{
-		makeContainer("foo"),
-		makeContainer("bar"),
-		makeContainer("bim"),
-	}
-	lastRun := time.Now().Add(-5 * time.Second)
-
-	for i, tc := range []struct {
-		cur      []*containers.Container
-		last     map[string]util.ContainerRateMetrics
-		chunks   int
-		expected int
-	}{
-		{
-			cur:      []*containers.Container{ctrs[0], ctrs[1], ctrs[2]},
-			last:     util.ExtractContainerRateMetric([]*containers.Container{ctrs[0], ctrs[1], ctrs[2]}),
-			chunks:   2,
-			expected: 3,
-		},
-		{
-			cur:      []*containers.Container{ctrs[0], ctrs[1], ctrs[2]},
-			last:     util.ExtractContainerRateMetric([]*containers.Container{ctrs[0], ctrs[2]}),
-			chunks:   2,
-			expected: 3,
-		},
-		{
-			cur:      []*containers.Container{ctrs[0], ctrs[2]},
-			last:     util.ExtractContainerRateMetric([]*containers.Container{ctrs[0], ctrs[1], ctrs[2]}),
-			chunks:   20,
-			expected: 2,
-		},
-	} {
-		containers, _ := fmtContainers(cfg, tc.cur, tc.last, lastRun, true)
-		chunked := chunkedContainers(containers, tc.chunks)
-		assert.Len(t, chunked, tc.chunks, "len test %d", i)
-		total := 0
-		for _, c := range chunked {
-			total += len(c)
-		}
-		assert.Equal(t, tc.expected, total, "total test %d", i)
-
-		chunkedStat := fmtContainerStats(tc.cur, tc.last, lastRun, tc.chunks)
-		assert.Len(t, chunkedStat, tc.chunks, "len stat test %d", i)
-		total = 0
-		for _, c := range chunked {
-			total += len(c)
-		}
-		assert.Equal(t, tc.expected, total, "total test %d", i)
-
-	}
-}
-
-func TestContainerNils(t *testing.T) {
-	cfg := config.NewDefaultAgentConfig()
-	// Make sure formatting doesn't crash with nils
-	cur := []*containers.Container{{}}
-	last := map[string]util.ContainerRateMetrics{}
-	fmtContainers(cfg, cur, last, time.Now(), true)
-	fmtContainerStats(cur, last, time.Now(), 10)
-	// Make sure we get values when we have nils in last.
-	cur = []*containers.Container{
-		{
-			ID: "1",
-			ContainerMetrics: metrics.ContainerMetrics{
-				CPU: &metrics.ContainerCPUStats{},
-			},
-		},
-	}
-	last = map[string]util.ContainerRateMetrics{
-		"1": {
-			CPU: &metrics.ContainerCPUStats{},
-		},
-	}
-	fmtContainers(cfg, cur, last, time.Now(), true)
-	fmtContainerStats(cur, last, time.Now(), 10)
-}
+//func TestContainerNewMetricsFeatureFlag(t *testing.T) {
+//	cfg := config.NewDefaultAgentConfig()
+//	ctrs := []*containers.Container{
+//		makeContainer("foo"),
+//	}
+//	prevCtrs := []*containers.Container{
+//		makeContainer("foo"),
+//	}
+//	lastRun := time.Now().Add(-5 * time.Second)
+//
+//	findMetric := func(metrics []telemetry.RawMetric, name string) *telemetry.RawMetric {
+//		for _, metric := range metrics {
+//			if metric.Name == name {
+//				return &metric
+//			}
+//		}
+//		return nil
+//	}
+//
+//	prevCtrs[0].CPU.ThrottledTime = 500
+//	ctrs[0].CPU.ThrottledTime = 1000
+//
+//	prevCtrs[0].CPU.NrThrottled = 0
+//	ctrs[0].CPU.NrThrottled = 100
+//
+//	prevCtrs[0].CPU.System = 0
+//	ctrs[0].CPU.System = 20
+//
+//	cnts, metrics := fmtContainers(cfg, ctrs, util.ExtractContainerRateMetric(prevCtrs), lastRun, false)
+//	assert.Equal(t, cnts[0].SystemPct, float32(20/5))
+//	assert.Len(t, metrics, 3, "Only new metrics are expected to appear when feature-flag is disabled")
+//	assert.Equal(t, float64((1000-500)/5), findMetric(metrics, "cpuThrottledTime").Value)
+//	assert.Equal(t, float64(100/5), findMetric(metrics, "cpuNrThrottled").Value)
+//	assert.Equal(t, float64(0), findMetric(metrics, "cpuThreadCount").Value)
+//
+//	cnts2, metrics2 := fmtContainers(cfg, ctrs, util.ExtractContainerRateMetric(prevCtrs), lastRun, true)
+//	assert.Equal(t, cnts2[0].SystemPct, float32(0), "When multimetrics enabled, collector's structures metrics should be 0")
+//	assert.Len(t, metrics2, 11+3)
+//	assert.Equal(t, float64(1000-500)/5, findMetric(metrics2, "cpuThrottledTime").Value)
+//	assert.Equal(t, float64(100)/5, findMetric(metrics2, "cpuNrThrottled").Value)
+//	assert.Equal(t, float64(0), findMetric(metrics2, "cpuThreadCount").Value)
+//	assert.Equal(t, float64(20)/5, findMetric(metrics2, "systemPct").Value)
+//}
+//
+//func TestContainerChunking(t *testing.T) {
+//	cfg := config.NewDefaultAgentConfig()
+//	ctrs := []*containers.Container{
+//		makeContainer("foo"),
+//		makeContainer("bar"),
+//		makeContainer("bim"),
+//	}
+//	lastRun := time.Now().Add(-5 * time.Second)
+//
+//	for i, tc := range []struct {
+//		cur      []*containers.Container
+//		last     map[string]util.ContainerRateMetrics
+//		chunks   int
+//		expected int
+//	}{
+//		{
+//			cur:      []*containers.Container{ctrs[0], ctrs[1], ctrs[2]},
+//			last:     util.ExtractContainerRateMetric([]*containers.Container{ctrs[0], ctrs[1], ctrs[2]}),
+//			chunks:   2,
+//			expected: 3,
+//		},
+//		{
+//			cur:      []*containers.Container{ctrs[0], ctrs[1], ctrs[2]},
+//			last:     util.ExtractContainerRateMetric([]*containers.Container{ctrs[0], ctrs[2]}),
+//			chunks:   2,
+//			expected: 3,
+//		},
+//		{
+//			cur:      []*containers.Container{ctrs[0], ctrs[2]},
+//			last:     util.ExtractContainerRateMetric([]*containers.Container{ctrs[0], ctrs[1], ctrs[2]}),
+//			chunks:   20,
+//			expected: 2,
+//		},
+//	} {
+//		containers, _ := fmtContainers(cfg, tc.cur, tc.last, lastRun, true)
+//		chunked := chunkedContainers(containers, tc.chunks)
+//		assert.Len(t, chunked, tc.chunks, "len test %d", i)
+//		total := 0
+//		for _, c := range chunked {
+//			total += len(c)
+//		}
+//		assert.Equal(t, tc.expected, total, "total test %d", i)
+//
+//		chunkedStat := fmtContainerStats(tc.cur, tc.last, lastRun, tc.chunks)
+//		assert.Len(t, chunkedStat, tc.chunks, "len stat test %d", i)
+//		total = 0
+//		for _, c := range chunked {
+//			total += len(c)
+//		}
+//		assert.Equal(t, tc.expected, total, "total test %d", i)
+//
+//	}
+//}
+//
+//func TestContainerNils(t *testing.T) {
+//	cfg := config.NewDefaultAgentConfig()
+//	// Make sure formatting doesn't crash with nils
+//	cur := []*containers.Container{{}}
+//	last := map[string]util.ContainerRateMetrics{}
+//	fmtContainers(cfg, cur, last, time.Now(), true)
+//	fmtContainerStats(cur, last, time.Now(), 10)
+//	// Make sure we get values when we have nils in last.
+//	cur = []*containers.Container{
+//		{
+//			ID: "1",
+//			ContainerMetrics: metrics.ContainerMetrics{
+//				CPU: &metrics.ContainerCPUStats{},
+//			},
+//		},
+//	}
+//	last = map[string]util.ContainerRateMetrics{
+//		"1": {
+//			CPU: &metrics.ContainerCPUStats{},
+//		},
+//	}
+//	fmtContainers(cfg, cur, last, time.Now(), true)
+//	fmtContainerStats(cur, last, time.Now(), 10)
+//}

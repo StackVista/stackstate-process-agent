@@ -29,8 +29,5 @@ type CheckResult struct {
 // All is all the singleton check instances.
 var All = []Check{
 	Process,
-	RTProcess,
-	Container,
-	RTContainer,
 	Connections,
 }

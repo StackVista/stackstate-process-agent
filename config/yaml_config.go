@@ -21,9 +21,10 @@ type YamlAgentConfig struct {
 	APIKey            string `yaml:"api_key"`
 	Site              string `yaml:"site"`
 	StsURL            string `yaml:"sts_url"`
-	SkipSSLValidation string `yaml:"skip_ssl_validation"`
-	// Whether or not the process-agent should output logs to console
-	LogToConsole bool `yaml:"log_to_console"`
+	SkipSSLValidation bool   `yaml:"skip_ssl_validation"`
+	// Whether the process-agent should output logs to console
+	LogToConsole bool   `yaml:"log_to_console"`
+	LogLevel     string `yaml:"log_level"`
 	// Incremental publishing: send only changes to server, instead of snapshots
 	IncrementalPublishingEnabled string `yaml:"incremental_publishing_enabled"`
 	// Periodically resend all data to allow downstream to recover from any lost data
@@ -144,6 +145,25 @@ type YamlAgentConfig struct {
 			Accuracy float64 `yaml:"accuracy"`
 		} `yaml:"http_metrics"`
 	} `yaml:"network_tracer_config"`
+	TransactionManager struct {
+		// ChannelBufferSize is the concurrent transactions before the tx manager begins backpressure
+		ChannelBufferSize int `yaml:"channel_buffer_size"`
+		// TimeoutDurationSeconds is the amount of time before a transaction is marked as stale, 5 minutes by default
+		TimeoutDurationSeconds int `yaml:"timeout_duration_seconds"`
+		// EvictionDurationSeconds is the amount of time before a transaction is evicted and rolled back, 10 minutes by default
+		EvictionDurationSeconds int `yaml:"eviction_duration_seconds"`
+		// TickerIntervalSeconds is the ticker interval to mark transactions as stale / timeout.
+		TickerDurationSeconds int `yaml:"ticket_duration_seconds"`
+	} `yaml:"transaction_manager"`
+	Batcher struct {
+		// Amount of data buffered in the batcher
+		MaxBufferSize int  `yaml:"max_buffer_size"`
+		LogPayloads   bool `yaml:"log_payloads"`
+	} `yaml:"batcher"`
+	Proxy struct {
+		Https string `yaml:"https"`
+		Http  string `yaml:"http"`
+	} `yaml:"proxy"`
 }
 
 // NewYamlIfExists returns a new YamlAgentConfig if the given configPath is exists.
@@ -169,10 +189,6 @@ func NewYamlIfExists(configPath string) (*YamlAgentConfig, error) {
 	return nil, nil
 }
 
-func key(pieces ...string) string {
-	return strings.Join(pieces, ".")
-}
-
 func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig, error) {
 	agentConf.APIEndpoints[0].APIKey = yc.APIKey
 
@@ -191,6 +207,9 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	}
 	if yc.Process.LogFile != "" {
 		agentConf.LogFile = yc.Process.LogFile
+	}
+	if yc.LogLevel != "" {
+		agentConf.LogLevel = yc.LogLevel
 	}
 
 	// (Re)configure the logging from our configuration
@@ -306,9 +325,43 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	if yc.Process.MaxConnectionsPerMessage > 0 {
 		agentConf.MaxConnectionsPerMessage = yc.Process.MaxConnectionsPerMessage
 	}
-	agentConf.DDAgentBin = defaultDDAgentBin
-	if yc.Process.DDAgentBin != "" {
-		agentConf.DDAgentBin = yc.Process.DDAgentBin
+
+	if yc.TransactionManager.ChannelBufferSize > 0 {
+		agentConf.TxManagerChannelBufferSize = yc.TransactionManager.ChannelBufferSize
+	}
+
+	if yc.TransactionManager.EvictionDurationSeconds > 0 {
+		agentConf.TxManagerEvictionDurationSeconds = time.Duration(yc.TransactionManager.EvictionDurationSeconds) * time.Second
+	}
+
+	if yc.TransactionManager.TimeoutDurationSeconds > 0 {
+		agentConf.TxManagerTimeoutDurationSeconds = time.Duration(yc.TransactionManager.TimeoutDurationSeconds) * time.Second
+	}
+
+	if yc.TransactionManager.TickerDurationSeconds > 0 {
+		agentConf.TxManagerTickerIntervalSeconds = time.Duration(yc.TransactionManager.TickerDurationSeconds) * time.Second
+	}
+
+	if yc.Batcher.MaxBufferSize > 0 {
+		agentConf.BatcherMaxBufferSize = yc.Batcher.MaxBufferSize
+	}
+
+	if yc.Batcher.LogPayloads {
+		agentConf.BatcherLogPayloads = yc.Batcher.LogPayloads
+	}
+
+	if yc.Proxy.Https != "" {
+		agentConf.HttpsProxy, err = url.Parse(yc.Proxy.Https)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing proxy.https: %s", err)
+		}
+	}
+
+	if yc.Proxy.Http != "" {
+		agentConf.HttpProxy, err = url.Parse(yc.Proxy.Http)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing proxy.http: %s", err)
+		}
 	}
 
 	if yc.Process.Windows.ArgsRefreshInterval != 0 {
@@ -332,23 +385,12 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	}
 
 	// [STS] set the skip_ssl_validation for the process-agent + main-agent config
-	if yc.SkipSSLValidation != "" {
-		ddconfig.Datadog.Set("skip_ssl_validation", yc.SkipSSLValidation)
+	if yc.SkipSSLValidation {
+		agentConf.SkipSSLValidation = true
 		log.Infof("Setting skip_ssl_validation to: %s", yc.SkipSSLValidation)
 	}
 
-	// sts begin
-	// Used to override container source auto-detection
-	// and to enable multiple collector sources if needed.
-	// "docker", "ecs_fargate", "kubelet", "kubelet docker", etc.
-	if sources := ddconfig.Datadog.GetStringSlice(key("process_config", "container_source")); len(sources) > 0 {
-		util.SetContainerSources(sources)
-	}
-	// sts end
-
 	// Pull additional parameters from the global config file.
-	agentConf.LogLevel = ddconfig.Datadog.GetString("log_level")
-	agentConf.StatsdPort = ddconfig.Datadog.GetInt("dogstatsd_port")
 	agentConf.Transport = httputils.CreateHTTPTransport()
 
 	return agentConf, nil

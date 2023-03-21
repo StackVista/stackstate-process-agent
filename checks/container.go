@@ -5,242 +5,131 @@ package checks
 
 import (
 	"fmt"
+	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics/provider"
+	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
-	"runtime"
 	"strings"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/tagger/collectors"
-	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
-
-	"github.com/DataDog/datadog-agent/pkg/tagger"
-	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	log "github.com/cihub/seelog"
 
-	"github.com/DataDog/datadog-agent/pkg/process/util"
-	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics"
+	ddmodel "github.com/DataDog/agent-payload/v5/process"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 )
 
-// Container is a singleton ContainerCheck.
-var Container = &ContainerCheck{}
-
-// ContainerCheck is a check that returns container metadata and stats.
-type ContainerCheck struct {
-	sysInfo   *model.SystemInfo
-	lastRates map[string]util.ContainerRateMetrics
-	lastRun   time.Time
-}
-
-// Init initializes a ContainerCheck instance.
-func (c *ContainerCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
-	c.sysInfo = info
-}
-
-// Name returns the name of the ProcessCheck.
-func (c *ContainerCheck) Name() string { return "container" }
-
-// Endpoint returns the endpoint where this check is submitted.
-func (c *ContainerCheck) Endpoint() string { return "/api/v1/container" }
-
-// RealTime indicates if this check only runs in real-time mode.
-func (c *ContainerCheck) RealTime() bool { return false }
-
-// Run runs the ContainerCheck to collect a list of running ctrList and the
-// stats for each container.
-func (c *ContainerCheck) Run(cfg *config.AgentConfig, featureSet features.Features, groupID int32, currentTime time.Time) (*CheckResult, error) {
-	start := time.Now()
-	ctrList, err := util.GetContainers()
-	if err != nil {
-		return nil, err
-	}
-
-	// End check early if this is our first run.
-	if c.lastRates == nil {
-		c.lastRates = util.ExtractContainerRateMetric(ctrList)
-		c.lastRun = time.Now()
-		return nil, nil
-	}
-
-	groupCount := len(ctrList) / cfg.MaxPerMessage
-	if len(ctrList) != cfg.MaxPerMessage {
-		groupCount++
-	}
-	useMultiMetrics := featureSet.FeatureEnabled(features.UpgradeToMultiMetrics)
-
-	cnts, metrics := fmtContainers(cfg, ctrList, c.lastRates, c.lastRun, useMultiMetrics)
-	chunked := chunkedContainers(cnts, groupCount)
-
-	messages := make([]model.MessageBody, 0, groupCount)
-	totalContainers := float64(0)
-	for i := 0; i < groupCount; i++ {
-		totalContainers += float64(len(chunked[i]))
-		messages = append(messages, &model.CollectorContainer{
-			HostName:   cfg.HostName,
-			Info:       c.sysInfo,
-			Containers: chunked[i],
-			GroupId:    groupID,
-			GroupSize:  int32(groupCount),
-		})
-	}
-
-	c.lastRates = util.ExtractContainerRateMetric(ctrList)
-	c.lastRun = time.Now()
-
-	s.Gauge("stackstate.process_agent.containers.host_count", totalContainers, cfg.HostName, []string{})
-	log.Debugf("collected %d containers in %s", int(totalContainers), time.Now().Sub(start))
-	return &CheckResult{
-		CollectorMessages: messages,
-		Metrics:           metrics,
-	}, nil
-}
-
-// fmtContainers formats the ctrList
-func fmtContainers(
-	cfg *config.AgentConfig,
-	ctrList []*containers.Container,
-	lastRates map[string]util.ContainerRateMetrics,
-	lastRun time.Time,
-	multiMetricsEnabled bool,
-) ([]*model.Container, []telemetry.RawMetric) {
-
-	containers := make([]*model.Container, 0, len(ctrList))
+func retrieveMetricsAndFormat(cfg *config.AgentConfig, ctrList []*ddmodel.Container) ([]*model.Container, []telemetry.RawMetric) {
 	multiMetrics := make([]telemetry.RawMetric, 0)
+	containers := make([]*model.Container, 0)
 
-	for _, ctr := range ctrList {
-		lastCtr, ok := lastRates[ctr.ID]
-		if !ok {
-			// Set to an empty container so rate calculations work and use defaults.
-			lastCtr = util.NullContainerRates
-		}
-
-		// Just in case the container is found, but refs are nil
-		ctr = fillNilContainer(ctr)
-		lastCtr = fillNilRates(lastCtr)
-
-		ifStats := ctr.Network.SumInterfaces()
-		cpus := runtime.NumCPU()
-		sys2, sys1 := float64(ctr.CPU.SystemUsage), float64(lastCtr.CPU.SystemUsage)
-
-		// Retrieves metadata tags
-		tags, err := tagger.Tag(ctr.EntityID, collectors.HighCardinality)
-		if err != nil {
-			log.Errorf("unable to retrieve tags for container: %s", err)
-			tags = []string{}
-		}
-
-		container := &model.Container{
-			Id:          ctr.ID,
-			Type:        ctr.Type,
-			CpuLimit:    float32(ctr.Limits.CPULimit),
-			MemoryLimit: ctr.Limits.MemLimit,
-			Created:     ctr.Created,
-			State:       model.ContainerState(model.ContainerState_value[ctr.State]),
-			Health:      model.ContainerHealth(model.ContainerHealth_value[ctr.Health]),
-			Started:     ctr.StartedAt,
-			Tags:        transformKubernetesTags(tags, cfg.ClusterName),
-		}
-
-		metricTags := []string{fmt.Sprintf("containerId:%s", ctr.ID)}
-		timestamp := time.Now().Unix()
-		makeMetric := func(name string, value float64) telemetry.RawMetric {
-			return telemetry.RawMetric{
-				Name: name, Timestamp: timestamp, HostName: cfg.HostName, Value: value, Tags: metricTags,
-			}
-		}
-
-		// new metrics are sent regardless of feature flag which is needed for migration
-		// cpuThrottledTime & cpuNrThrottled are accumulative values
-		// https://engineering.indeedblog.com/blog/2019/12/unthrottled-fixing-cpu-limits-in-the-cloud/
-		// so that's why rate is calculated
-		multiMetrics = append(multiMetrics,
-			makeMetric("cpuThrottledTime", calculateRateF64(ctr.CPU.ThrottledTime, lastCtr.CPU.ThrottledTime, lastRun)),
-			makeMetric("cpuNrThrottled", float64(calculateRate(ctr.CPU.NrThrottled, lastCtr.CPU.NrThrottled, lastRun))),
-			makeMetric("cpuThreadCount", float64(ctr.CPU.ThreadCount)),
-		)
-
-		if multiMetricsEnabled {
-			log.Debugf("Generating container metrics for intake API (upgrade-to-multi-metrics feature is enabled)")
-			multiMetrics = append(multiMetrics,
-				makeMetric("rbps", float64(calculateRate(ctr.IO.ReadBytes, lastCtr.IO.ReadBytes, lastRun))),
-				makeMetric("wbps", float64(calculateRate(ctr.IO.WriteBytes, lastCtr.IO.WriteBytes, lastRun))),
-				makeMetric("netRcvdPs", float64(calculateRate(ifStats.PacketsRcvd, lastCtr.NetworkSum.PacketsRcvd, lastRun))),
-				makeMetric("netSentPs", float64(calculateRate(ifStats.PacketsSent, lastCtr.NetworkSum.PacketsSent, lastRun))),
-				makeMetric("netRcvdBps", float64(calculateRate(ifStats.BytesRcvd, lastCtr.NetworkSum.BytesRcvd, lastRun))),
-				makeMetric("netSentBps", float64(calculateRate(ifStats.BytesSent, lastCtr.NetworkSum.BytesSent, lastRun))),
-				makeMetric("userPct", calculateCtrPct(ctr.CPU.User, lastCtr.CPU.User, sys2, sys1, cpus, lastRun)),
-				makeMetric("systemPct", calculateCtrPct(ctr.CPU.System, lastCtr.CPU.System, sys2, sys1, cpus, lastRun)),
-				makeMetric("totalPct", calculateCtrPct(ctr.CPU.User+ctr.CPU.System, lastCtr.CPU.User+lastCtr.CPU.System, sys2, sys1, cpus, lastRun)),
-				makeMetric("memRss", float64(ctr.Memory.RSS)),
-				makeMetric("memCache", float64(ctr.Memory.Cache)),
-			)
-		} else {
-			log.Warnf("Generating container metrics for collector API (upgrade-to-multi-metrics feature is disabled)")
-			container.Rbps = calculateRate(ctr.IO.ReadBytes, lastCtr.IO.ReadBytes, lastRun)
-			container.Wbps = calculateRate(ctr.IO.WriteBytes, lastCtr.IO.WriteBytes, lastRun)
-			container.NetRcvdPs = calculateRate(ifStats.PacketsRcvd, lastCtr.NetworkSum.PacketsRcvd, lastRun)
-			container.NetSentPs = calculateRate(ifStats.PacketsSent, lastCtr.NetworkSum.PacketsSent, lastRun)
-			container.NetRcvdBps = calculateRate(ifStats.BytesRcvd, lastCtr.NetworkSum.BytesRcvd, lastRun)
-			container.NetSentBps = calculateRate(ifStats.BytesSent, lastCtr.NetworkSum.BytesSent, lastRun)
-			container.UserPct = float32(calculateCtrPct(ctr.CPU.User, lastCtr.CPU.User, sys2, sys1, cpus, lastRun))
-			container.SystemPct = float32(calculateCtrPct(ctr.CPU.System, lastCtr.CPU.System, sys2, sys1, cpus, lastRun))
-			container.TotalPct = float32(calculateCtrPct(ctr.CPU.User+ctr.CPU.System, lastCtr.CPU.User+lastCtr.CPU.System, sys2, sys1, cpus, lastRun))
-			container.MemRss = ctr.Memory.RSS
-			container.MemCache = ctr.Memory.Cache
-		}
-
+	for _, c := range ctrList {
+		stats := retrieveAdditionalStats(c)
+		container, mm := fmtContainer(cfg, c, stats)
+		multiMetrics = append(multiMetrics, mm...)
 		containers = append(containers, container)
 	}
 
 	return containers, multiMetrics
 }
 
-func calculateCtrPct(cur, prev, sys2, sys1 float64, numCPU int, before time.Time) float64 {
-	now := time.Now()
-	diff := now.Unix() - before.Unix()
-	if before.IsZero() || diff <= 0 {
-		return 0
+// retrieveAdditionalStats gets data on top of the already retrieved data for containers.
+func retrieveAdditionalStats(c *ddmodel.Container) *provider.ContainerStats {
+	// This function is programmed defensively, due to this code being executed outside of the main collection run,
+	// so containers/ids/providers might have changed since collection (hard to prove ootherwise given the global nature of
+	// the data in the datadog dependency).
+
+	// Retrieve the container metadata, to get hold of the namespace
+	containerMeta, err := workloadmeta.GetGlobalStore().GetContainer(c.Id)
+
+	if err != nil {
+		// Question: are there benefits to making the collector not global?
+		collector := provider.GetProvider().GetCollector(string(fromTypeToContainerRuntime(c.Type)))
+		stats, err := collector.GetContainerStats(containerMeta.Namespace, c.Id, 2*time.Second)
+		if err != nil {
+			return stats
+		} else {
+			log.Warnf("Could not get container stats for container: %s", c.Id)
+		}
+	} else {
+		log.Warnf("Could not get container metaData for container: %s", c.Id)
 	}
 
-	// If we have system usage values then we need to calculate against those.
-	// XXX: Right now this only applies to ECS collection
-	if sys1 > 0 && sys2 > 0 {
-		cpuDelta := cur - prev
-		sysDelta := sys2 - sys1
-		return (cpuDelta / sysDelta) * float64(numCPU) * 100
-	}
-	return (cur - prev) / float64(diff)
+	return nil
 }
 
-func fillNilContainer(ctr *containers.Container) *containers.Container {
-	if ctr.CPU == nil {
-		ctr.CPU = util.NullContainerRates.CPU
+// fromTypeToContainerRuntime is essentially the inverse of datad agents' process/util/containgers.go:260 convertContainerRuntime
+func fromTypeToContainerRuntime(runtime string) workloadmeta.ContainerRuntime {
+	// ECSFargate is special and used to be mapped to "ECS"
+	if runtime == "ECS" {
+		return workloadmeta.ContainerRuntimeECSFargate
 	}
-	if ctr.IO == nil {
-		ctr.IO = util.NullContainerRates.IO
-	}
-	if ctr.Network == nil {
-		ctr.Network = util.NullContainerRates.Network
-	}
-	if ctr.Memory == nil {
-		ctr.Memory = &metrics.ContainerMemStats{}
-	}
-	return ctr
+
+	return workloadmeta.ContainerRuntime(runtime)
 }
 
-func fillNilRates(rates util.ContainerRateMetrics) util.ContainerRateMetrics {
-	r := &rates
-	if rates.CPU == nil {
-		r.CPU = util.NullContainerRates.CPU
+// fmtContainers formats a container given raw data to the output values
+func fmtContainer(
+	cfg *config.AgentConfig,
+	ctr *ddmodel.Container,
+	stats *provider.ContainerStats,
+) (*model.Container, []telemetry.RawMetric) {
+
+	multiMetrics := make([]telemetry.RawMetric, 0)
+
+	container := &model.Container{
+		Id:          ctr.Id,
+		Type:        ctr.Type,
+		CpuLimit:    float32(ctr.CpuLimit),
+		MemoryLimit: ctr.MemoryLimit,
+		Created:     ctr.Created,
+		State:       model.ContainerState(model.ContainerState_value[ctr.State.String()]),
+		Health:      model.ContainerHealth(model.ContainerHealth_value[ctr.Health.String()]),
+		Started:     ctr.Started,
+		Tags:        transformKubernetesTags(ctr.Tags, cfg.ClusterName),
 	}
-	if rates.IO == nil {
-		r.IO = util.NullContainerRates.IO
+
+	metricTags := []string{fmt.Sprintf("containerId:%s", ctr.Id)}
+	timestamp := time.Now().Unix()
+	makeMetric := func(name string, value float64) telemetry.RawMetric {
+		return telemetry.RawMetric{
+			Name: name, Timestamp: timestamp, HostName: cfg.HostName, Value: value, Tags: metricTags,
+		}
 	}
-	if rates.NetworkSum == nil {
-		r.NetworkSum = util.NullContainerRates.NetworkSum
+
+	appendIfDefined := func(metrics []telemetry.RawMetric, name string, value *float64) []telemetry.RawMetric {
+		if value == nil {
+			return metrics
+		}
+
+		return append(metrics, makeMetric(name, *value))
 	}
-	return *r
+
+	if stats != nil {
+		if stats.CPU != nil {
+			multiMetrics = appendIfDefined(multiMetrics, "container_cpu_throttled_time_total", stats.CPU.ThrottledTime)
+			multiMetrics = appendIfDefined(multiMetrics, "container_cpu_throttled_periods_total", stats.CPU.ThrottledPeriods)
+		}
+
+		if stats.PID != nil {
+			multiMetrics = appendIfDefined(multiMetrics, "cpuThreadCount", stats.PID.ThreadCount)
+		}
+	}
+
+	multiMetrics = append(multiMetrics,
+		makeMetric("rbps", float64(ctr.Rbps)),
+		makeMetric("wbps", float64(ctr.Wbps)),
+		makeMetric("netRcvdPs", float64(ctr.NetRcvdPs)),
+		makeMetric("netSentPs", float64(ctr.NetSentPs)),
+		makeMetric("netRcvdBps", float64(ctr.NetRcvdBps)),
+		makeMetric("netSentBps", float64(ctr.NetSentBps)),
+		makeMetric("userPct", float64(ctr.UserPct)),
+		makeMetric("systemPct", float64(ctr.SystemPct)),
+		makeMetric("totalPct", float64(ctr.TotalPct)),
+		makeMetric("memRss", float64(ctr.MemRss)),
+		makeMetric("memCache", float64(ctr.MemCache)),
+	)
+
+	return container, multiMetrics
 }
 
 func transformKubernetesTags(tags []string, clusterName string) []string {

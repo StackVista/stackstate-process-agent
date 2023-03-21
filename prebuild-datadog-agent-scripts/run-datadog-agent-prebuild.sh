@@ -4,8 +4,6 @@
 
 set -ex
 
-WORKDIR="/workdir-datadog-agent"
-
 # This command assumes the datadog agent to be mounted at /source-datadog-agent. To avoid outputting to that directory,
 # we make a clone before running any commands
 mkdir $WORKDIR
@@ -14,8 +12,8 @@ chown -R root:root $WORKDIR
 cd $WORKDIR
 
 # Adding a faux tag to make the build pass on the rpo with no tags
-git config --global user.email "you@example.com"
-git config --global user.name "Your Name"
+git config user.email "you@example.com"
+git config user.name "Your Name"
 git tag -a 7.0.0 -m 7.0.0
 
 # This command will create system-probe. Running the go:generate as well as invoking the precompilation of the ebpf files

@@ -15,7 +15,7 @@ def os
 
 desc "Setup dependencies"
 task :deps do
-  system("go install golang.org/x/lint/golint")
+  system("go mod download")
 end
 
 task :default => [:ci]
@@ -28,6 +28,7 @@ task :build do
   else
     bin = "process-agent"
   end
+  sh "./prebuild-datadog-agent.sh -i"
   go_build("github.com/StackVista/stackstate-process-agent/cmd/agent", {
     :cmd => "go build -o #{bin}",
     :race => ENV['GO_RACE'] == 'true',
@@ -41,6 +42,11 @@ end
 desc "Run goderive to generate necessary go code"
 task :derive do
   sh "go run github.com/awalterschulze/goderive@886b66b111a4 ./..."
+end
+
+desc "Run prebuild steps"
+task :prebuild do
+  sh "./prebuild-datadog-agent.sh -g"
 end
 
 desc "Run goderive to generate necessary go code (Windows)"
@@ -135,6 +141,9 @@ end
 
 desc "Process Agent CI script (fmt, vet, etc)"
 task :ci => [:deps, :fmt, :vet, :test, :lint, :build]
+
+desc "Process Agent local build"
+task :local_build => [:deps, :prebuild, :build]
 
 task :err do
   system("go install github.com/kisielk/errcheck")

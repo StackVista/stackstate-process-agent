@@ -35,7 +35,6 @@ replace (
 // replace github.com/DataDog/datadog-agent/pkg/util/log => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log
 
 // replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230309153711-2ce9a9612c03
-
 // replace github.com/DataDog/datadog-agent/pkg/util/log => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20230309153711-2ce9a9612c03
 
 require (

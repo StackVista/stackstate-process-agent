@@ -37,3 +37,4 @@ derived.gen.go
 # Prebuild
 prebuild_artifacts
 ebpf-object-files/
+ebpf-object-files-root/

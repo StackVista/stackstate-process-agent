@@ -57,7 +57,7 @@ prebuild_agent:
   needs: [ dependencies ]
   image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:5151a592
   script:
-    - ./prebuild-datadog-agent --generate-no-docker
+    - ./prebuild-datadog-agent.sh --generate-no-docker
   artifacts:
     paths:
       - prebuild_artifacts/artifacts/*

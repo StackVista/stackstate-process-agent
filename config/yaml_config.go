@@ -9,10 +9,8 @@ import (
 	log "github.com/cihub/seelog"
 	"gopkg.in/yaml.v2"
 
-	httputils "github.com/DataDog/datadog-agent/pkg/util/http"
-	ddconfig "github.com/StackVista/stackstate-process-agent/pkg/config"
-
 	"github.com/DataDog/datadog-agent/pkg/process/util"
+	httputils "github.com/DataDog/datadog-agent/pkg/util/http"
 )
 
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration
@@ -41,8 +39,7 @@ type YamlAgentConfig struct {
 		// The interval, in seconds, at which we will run each check. If you want consistent
 		// behavior between real-time you may set the Container/ProcessRT intervals to 10.
 		// Defaults to 10s for normal checks and 2s for others.
-		ProcessDDURL string `yaml:"process_sts_url"`
-		Intervals    struct {
+		Intervals struct {
 			Container         int `yaml:"container"`
 			ContainerRealTime int `yaml:"container_realtime"`
 			Process           int `yaml:"process"`
@@ -134,6 +131,8 @@ type YamlAgentConfig struct {
 		NetworkTracerInitRetryAmount int `yaml:"network_tracer_retry_init_amount"`
 		// Whenever debugging statements of eBPF code of network tracer should be redirected to the agent log
 		EBPFDebuglogEnabled string `yaml:"ebpf_debuglog_enabled"`
+		// Location of the ebpf code
+		EBPFArtifactDir string `yaml:"ebpf_artifact_dir"`
 		// A string indicating the enabled state of the protocol inspection.
 		ProtocolInspectionEnabled string `yaml:"protocol_inspection_enabled"`
 		HTTPMetrics               struct {
@@ -190,6 +189,8 @@ func NewYamlIfExists(configPath string) (*YamlAgentConfig, error) {
 }
 
 func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig, error) {
+	var err error
+
 	agentConf.APIEndpoints[0].APIKey = yc.APIKey
 
 	if enabled, err := isAffirmative(yc.Process.Enabled); enabled {
@@ -217,26 +218,13 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		return nil, err
 	}
 
-	parsedURL, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "process_config.process_sts_url"))
-	if err != nil {
-		return nil, fmt.Errorf("error parsing process_sts_url: %s", err)
-	}
-	// STS custom
-	if yc.Process.ProcessDDURL != "" {
-		specificURL, err := url.Parse(yc.Process.ProcessDDURL)
-		if err == nil {
-			parsedURL = specificURL
-		}
-		log.Infof("Setting process api endpoint from config using `process_config.process_sts_url`: %s", specificURL)
-	} else if yc.StsURL != "" {
+	if yc.StsURL != "" {
 		defaultURL, err := url.Parse(yc.StsURL)
 		if err == nil {
-			parsedURL = defaultURL
+			agentConf.APIEndpoints[0].Endpoint = defaultURL
 		}
 		log.Infof("Setting process api endpoint from config using `sts_url`: %s", defaultURL)
 	}
-	// /STS custom
-	agentConf.APIEndpoints[0].Endpoint = parsedURL
 
 	if enabled, err := isAffirmative(yc.IncrementalPublishingEnabled); err == nil {
 		log.Infof("Overriding incremental publishing with %ds", yc.IncrementalPublishingEnabled)
@@ -426,25 +414,10 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 		agentConf.NetworkTracer.EnableProtocolInspection = protMetrEnabled
 	}
 	if networkConf.Network.NetworkMaxConnections != 0 {
-		agentConf.NetworkTracerMaxConnections = networkConf.Network.NetworkMaxConnections
+		agentConf.NetworkTracerMaxConnections = uint(networkConf.Network.NetworkMaxConnections)
 	}
-
+	if networkConf.Network.EBPFArtifactDir != "" {
+		agentConf.NetworkTracer.EbpfArtifactDir = networkConf.Network.EBPFArtifactDir
+	}
 	return agentConf, nil
-}
-
-// SetupDDAgentConfig initializes the datadog-agent config with a YAML file.
-// This is required for configuration to be available for container listeners.
-func SetupDDAgentConfig(configPath string) error {
-	ddconfig.Datadog.AddConfigPath(configPath)
-	// If they set a config file directly, let's try to honor that
-	if strings.HasSuffix(configPath, ".yaml") {
-		ddconfig.Datadog.SetConfigFile(configPath)
-	}
-
-	// load the configuration
-	if _, err := ddconfig.Load(); err != nil {
-		return fmt.Errorf("unable to load Datadog config file: %s", err)
-	}
-
-	return nil
 }

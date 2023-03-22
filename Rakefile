@@ -80,19 +80,6 @@ task :cmdtest do
   sh cmd
 end
 
-desc "Build Stackstate network-tracer agent"
-task 'build-network-tracer' do
-  bin = "network-tracer"
-  go_build("github.com/StackVista/stackstate-process-agent/cmd/network-tracer", {
-    :cmd => "go build -o #{bin}",
-    :add_build_vars => true,
-    :static => ENV['NETWORK_AGENT_STATIC'] == 'true',
-    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
-    :os => os,
-    :bpf => true
-  })
-end
-
 task :vet do
   go_vet("./...", {
     :bpf => true,

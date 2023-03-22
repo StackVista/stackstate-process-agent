@@ -37,3 +37,4 @@ network_tracer_config:
   initial_connections_from_proc: 'true'
   ebpf_debuglog_enabled: 'true'
   protocol_inspection_enabled: 'true'
+  ebpf_artifact_dir: './ebpf-object-files-root'

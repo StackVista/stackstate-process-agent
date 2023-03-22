@@ -20,7 +20,6 @@ import (
 	tracerconfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 
 	"github.com/DataDog/datadog-agent/pkg/process/util"
-	ddconfig "github.com/StackVista/stackstate-process-agent/pkg/config"
 	log "github.com/cihub/seelog"
 )
 
@@ -59,6 +58,8 @@ type NetworkTracerConfig struct {
 	EnableProtocolInspection bool
 	// Enables redirection of ebpf code debug messages as logs of the process agent
 	EbpfDebuglogEnabled bool
+	// Location of the ebpf
+	EbpfArtifactDir string
 	// Settings related to gathering & aggregation of http metrics
 	HTTPMetrics *tracerconfig.HttpMetricConfig
 }
@@ -128,7 +129,7 @@ type AgentConfig struct {
 	NetworkTracerInitRetryAmount      int
 	NetworkTracer                     *NetworkTracerConfig
 	// Maximum connections the network tracer keeps track of
-	NetworkTracerMaxConnections int
+	NetworkTracerMaxConnections uint
 
 	// Check config
 	EnabledChecks                []string
@@ -203,13 +204,8 @@ func NewDefaultAgentConfig() *AgentConfig {
 		panic(err)
 	}
 
-	// TODO: not sure this is correct. Process agent config changed a lot.
-	ddconfig.DetectFeatures()
-
-	canAccessContainers := ddconfig.IsAnyContainerFeaturePresent()
-
 	ac := &AgentConfig{
-		Enabled:                  canAccessContainers, // We'll always run inside of a container.
+		Enabled:                  true, // We'll always run inside of a container.
 		APIEndpoints:             []APIEndpoint{{Endpoint: u}},
 		SkipSSLValidation:        false,
 		LogFile:                  defaultLogFilePath,
@@ -260,6 +256,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		NetworkTracer: &NetworkTracerConfig{
 			EnableProtocolInspection: true,
 			EbpfDebuglogEnabled:      false,
+			EbpfArtifactDir:          "/opt/stackstate-agent/ebpf",
 			HTTPMetrics: &tracerconfig.HttpMetricConfig{
 				SketchType: tracerconfig.CollapsingLowest,
 				MaxNumBins: 1024,
@@ -307,7 +304,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 	// Set default values for proc/sys paths if unset.
 	// Don't set this is /host is not mounted to use context within container.
 	// Generally only applicable for container-only cases like Fargate.
-	if ddconfig.IsContainerized() && util.PathExists("/host") {
+	if IsContainerized() && util.PathExists("/host") {
 		if v := os.Getenv("HOST_PROC"); v == "" {
 			os.Setenv("HOST_PROC", "/host/proc")
 		}
@@ -354,15 +351,6 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 	if err := NewLoggerLevel(cfg.LogLevel, cfg.LogFile, cfg.LogToConsole); err != nil {
 		return nil, err
 	}
-
-	// Get hostname from agent util since the process-agent image doesn't include the main agent
-	if cfg.HostName == "" {
-		if hostname, err := hostname.Get(context.TODO()); err == nil {
-			cfg.HostName = hostname
-			log.Debugf("Got hostname from agent util")
-		}
-	}
-	log.Infof("Hostname is: %s", cfg.HostName)
 
 	// sanity check. This element is used with the modulo operator (%), so it can't be zero.
 	// if it is, log the error, and assume the config was attempting to disable
@@ -537,6 +525,10 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.NetworkTracerSocketPath = v
 	}
 
+	if v := os.Getenv("STS_NETTRACER_EBPF_ARTIFACTS_DIR"); v != "" {
+		c.NetworkTracer.EbpfArtifactDir = v
+	}
+
 	if ok, _ := isAffirmative(os.Getenv("STS_INCREMENTAL_PUBLISHING")); ok {
 		c.EnableIncrementalPublishing = ok
 	}
@@ -603,7 +595,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if v := os.Getenv("STS_NETWORK_TRACER_MAX_CONNECTIONS"); v != "" {
 		maxConnections, _ := strconv.Atoi(v)
-		c.NetworkTracerMaxConnections = maxConnections
+		c.NetworkTracerMaxConnections = uint(maxConnections)
 	}
 
 	if v := os.Getenv("STS_MAX_PROCESSES_PER_MESSAGE"); v != "" {
@@ -671,7 +663,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	// STS
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
-		ddconfig.Datadog.Set("skip_ssl_validation", v)
+		c.SkipSSLValidation = true
 		log.Infof("Overriding skip_ssl_validation to: %s", v)
 	}
 
@@ -793,4 +785,20 @@ func getSketchType(value string) (tracerconfig.MetricSketchType, error) {
 	default:
 		return "", fmt.Errorf("unknown sketch type")
 	}
+}
+
+func ConfigureHostname(cfg *AgentConfig) {
+	// Get hostname from agent util since the process-agent image doesn't include the main agent
+	if cfg.HostName == "" {
+		if hostname, err := hostname.Get(context.TODO()); err == nil {
+			cfg.HostName = hostname
+			log.Debugf("Got hostname from agent util")
+		}
+	}
+	log.Infof("Hostname is: %s", cfg.HostName)
+}
+
+// IsContainerized returns whether the Agent is running on a Docker container
+func IsContainerized() bool {
+	return os.Getenv("DOCKER_STS_AGENT") != ""
 }

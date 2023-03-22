@@ -102,10 +102,6 @@ func runAgent(exit chan bool) {
 	if err != nil {
 		log.Criticalf("Error reading stackstate.yaml: %s", err)
 		os.Exit(1)
-	} else if yamlConf != nil {
-		log.Debugf("Setting up agent config for config path: %s", opts.configPath)
-		// TODO: Figure out what to do with this
-		config.SetupDDAgentConfig(opts.configPath)
 	}
 
 	cfg, err := config.NewAgentConfig(yamlConf)
@@ -118,6 +114,12 @@ func runAgent(exit chan bool) {
 		log.Criticalf("Error initializing info: %s", err)
 		os.Exit(1)
 	}
+
+	// Setup config for the datadog agent
+	config.SetupDDAgentConfig(cfg)
+
+	// Configuring hostname after datadog is configured, because it uses datadog logic
+	config.ConfigureHostname(cfg)
 
 	// Setting up the tagger (must be done after config is setup)
 	store := workloadmeta.CreateGlobalStore(workloadmeta.NodeAgentCatalog)

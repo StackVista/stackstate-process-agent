@@ -5,15 +5,12 @@ package checks
 
 import (
 	"bytes"
-	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
-	"os"
 	"time"
 
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
-	"github.com/StackVista/stackstate-process-agent/net"
 	log "github.com/cihub/seelog"
 )
 
@@ -31,17 +28,7 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 			return
 		}
 
-		conf := tracerConfig.New()
-		// This is what the process check uses to get /proc aswell, "github.com/DataDog/gopsutil/internal/common/common.go"
-		// Unfortunately that is internal so i cannot use that here and we did not yet put stackstate-agent as a dependency
-		if proc := os.Getenv("HOST_PROC"); proc != "" {
-			conf.ProcRoot = proc
-		}
-		conf.MaxTrackedConnections = uint(cfg.NetworkTracerMaxConnections) // TODO make sure it is the same
-		conf.EnableConntrack = true
-		conf.ServiceMonitoringEnabled = cfg.NetworkTracer.EnableProtocolInspection
-		conf.EnableHTTPMonitoring = cfg.NetworkTracer.EnableProtocolInspection
-		conf.EnableHTTPSMonitoring = cfg.NetworkTracer.EnableProtocolInspection
+		conf := config.TracerConfig(cfg)
 
 		t, err := retryTracerInit(cfg.NetworkTracerInitRetryDuration, cfg.NetworkTracerInitRetryAmount, conf, tracer.NewTracer)
 		if err != nil {
@@ -52,9 +39,8 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemIn
 		c.podsCache = pods.MakeCachedPods(60 * time.Second)
 		c.localTracer = t
 	} else {
-		// Calling the remote tracer will cause it to initialize and check connectivity
-		net.SetNetworkTracerSocketPath(cfg.NetworkTracerSocketPath)
-		net.GetRemoteNetworkTracerUtil()
+		log.Error("Remote tracer is not supported")
+		return
 	}
 
 	c.cache = NewNetworkRelationCache(cfg.NetworkRelationCacheDurationMin)

@@ -23,7 +23,8 @@ This script run the prebuild steps for the datadog agent dependency. Those steps
   --generate-no-docker -- Generate the prebuild files without spinning pu a separate docker container (in the current environment)
   -c/--clean      -- Clean the generated files
   -i/--install-go -- Install the prebuild go files
-  --install-ebpf -- Install the prebuild ebpf files to ./ebpf-object-files
+  --install-ebpf  -- Install the prebuild ebpf files to ./ebpf-object-files for further processing
+  --install-ebpf-root -- Install the prebuild ebpf files to ./ebpf-object-files-root for use in the process-agent binary
   -s/--shell      -- Launch into a shell in which the prebuild files are built
   -h/--help       -- Print this help page
 
@@ -50,6 +51,10 @@ while [[ $# -gt 0 ]]; do
       ACTION="install-ebpf"
       shift
     ;;
+    --install-ebpf-root)
+        ACTION="install-ebpf-root"
+        shift
+      ;;
     -s|--shell)
       ACTION="shell"
       shift
@@ -173,10 +178,25 @@ elif [[ "$ACTION" = "install-ebpf" ]]; then
 
   mkdir -p $DIR/ebpf-object-files
   cp -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files/"
+elif [[ "$ACTION" = "install-ebpf-root" ]]; then
+  echo "Installing ebpf files as root"
+  if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/ebpf" ]; then
+    echo "No generated files found at $DEPENDENCY_ARTIFACTS_DIR/ebpf, please run --generate first"
+    exit 1
+  fi
+
+  mkdir -p $DIR/ebpf-object-files-root
+  cp -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files-root/"
+  # chmod -R 0022 "$DIR/ebpf-object-files-root/"/*
+  sudo chown -R root:root "$DIR/ebpf-object-files-root/"
 elif [[ "$ACTION" = "clean" ]]; then
   echo "Cleaning prebuild files from $PREBUILD_ARTIFACTS_DIR"
   rm -rf "$ALL_ARTIFACTS_DIR"
   rm -rf ebpf-object-files
+
+  if [ -d "$DIR/ebpf-object-files-root/" ]; then
+    sudo rm -rf ebpf-object-files-root
+  fi
 elif [[ "$ACTION" = "shell" ]]; then
   echo "Launching generate shell"
   runPrebuildInDocker -it "$DOCKER_IMAGE" /bin/bash

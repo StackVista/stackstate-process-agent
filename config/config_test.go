@@ -1050,7 +1050,6 @@ func TestCheckIntervalCodeDefaults(t *testing.T) {
 	agentConfig, err := NewAgentConfig(nil)
 	assert.NoError(t, err)
 
-	assert.Equal(t, time.Duration(30)*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(t, time.Duration(30)*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(t, time.Duration(30)*time.Second, agentConfig.CheckIntervals["connections"])
 }
@@ -1124,11 +1123,10 @@ func TestSkipSSLValidation_FromYaml(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(t, err)
 
-	_, err = NewAgentConfig(&ddy)
+	conf, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
-	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
-	assert.Equal(t, true, skipSSLConfig)
+	assert.Equal(t, true, conf.SkipSSLValidation)
 }
 
 func TestSkipSSLValidation_FromEnv(t *testing.T) {

@@ -2,12 +2,13 @@ package pods
 
 import (
 	"context"
-	"github.com/DataDog/datadog-agent/pkg/util/containers"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/DataDog/datadog-agent/pkg/util/retry"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	kubeletv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 
 var pod1 = &kubelet.Pod{
@@ -97,6 +98,11 @@ func (k *kubeutilMock) GetLocalPodList(ctx context.Context) ([]*kubelet.Pod, err
 	return k.pods, nil
 }
 
+func (k *kubeutilMock) GetLocalStatsSummary(ctx context.Context) (*kubeletv1alpha1.Summary, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (k *kubeutilMock) GetNodeInfo(ctx context.Context) (string, string, error) {
 
 	//TODO implement me
@@ -159,16 +165,6 @@ func (k *kubeutilMock) GetRawMetrics(ctx context.Context) ([]byte, error) {
 }
 
 func (k *kubeutilMock) IsAgentHostNetwork(ctx context.Context) (bool, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (k *kubeutilMock) ListContainers(ctx context.Context) ([]*containers.Container, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (k *kubeutilMock) UpdateContainerMetrics(ctrList []*containers.Container) error {
 	//TODO implement me
 	panic("implement me")
 }

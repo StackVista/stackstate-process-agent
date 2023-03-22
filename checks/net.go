@@ -365,15 +365,15 @@ func getConnectionKeyForStats(key http.Key) connKey {
 
 func statusCodeClassToString(class int) string {
 	switch class {
-	case 0:
+	case 100:
 		return "1xx"
-	case 1:
+	case 200:
 		return "2xx"
-	case 2:
+	case 300:
 		return "3xx"
-	case 3:
+	case 400:
 		return "4xx"
-	case 4:
+	case 500:
 		return "5xx"
 	default:
 		return ""
@@ -480,8 +480,13 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time
 	}
 
 	for statKey, statsByCode := range httpStats {
-		for statusCodeClass := 0; statusCodeClass < http.NumStatusClasses; statusCodeClass++ {
+		for statusCodeClass := 100; statusCodeClass <= 500; statusCodeClass += 100 {
 			stat := statsByCode.Stats(statusCodeClass)
+			// Okay here it goes. When there is not data, we still want to produce a '0' line, so we produce the empty data.
+			if stat == nil {
+				stat = &http.RequestStat{}
+			}
+
 			statusCodeGroup := statusCodeClassToString(statusCodeClass)
 			if statusCodeGroup == "" {
 				continue

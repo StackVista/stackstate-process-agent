@@ -105,8 +105,8 @@ func makeProcessConnection(pid uint32, local, remote string, localPort, remotePo
 }
 
 func amendConnectionStats(stats network.ConnectionStats, sent, received uint64) network.ConnectionStats {
-	stats.LastSentBytes = sent - stats.LastSentBytes
-	stats.LastRecvBytes = received - stats.LastRecvBytes
+	stats.Last.SentBytes = sent - stats.Last.SentBytes
+	stats.Last.RecvBytes = received - stats.Last.RecvBytes
 	return stats
 }
 
@@ -664,24 +664,19 @@ func TestHTTPAggregation_SingleReq(t *testing.T) {
 
 	conn1req1 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", http.MethodGet)
+		"/page", true, http.MethodGet)
 
 	conn1Key := getConnectionKeyForStats(conn1req1)
 
-	metrics := aggregateHTTPStats(map[http.Key]http.RequestStats{
-		conn1req1: {
-			{},
-			{
-				Count:              1,
-				FirstLatencySample: 100,
-			},
-			{},
-			{
-				Count:     4,
-				Latencies: makeDDSketch(2, 4, 6, 8),
-			},
-			{},
-		},
+	var stats http.RequestStats
+	stats.AddRequest(200, 100.0, 0, nil)
+	stats.AddRequest(400, 2.0, 0, nil)
+	stats.AddRequest(400, 4.0, 0, nil)
+	stats.AddRequest(400, 6.0, 0, nil)
+	stats.AddRequest(400, 8.0, 0, nil)
+
+	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
+		conn1req1: &stats,
 	}, 2*time.Second, true)
 
 	assert.Len(t, metrics, 1)
@@ -742,19 +737,19 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 
 	conn1req1 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", http.MethodGet)
+		"/page", true, http.MethodGet)
 	conn1req2 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", http.MethodPost)
+		"/page", true, http.MethodPost)
 	conn1req3 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/otherpath", http.MethodGet)
+		"/otherpath", true, http.MethodGet)
 	conn2req4 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
-		"/page", http.MethodGet)
+		"/page", true, http.MethodGet)
 	conn2req5 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
-		"/page", http.MethodPost)
+		"/page", true, http.MethodPost)
 
 	conn1Key := getConnectionKeyForStats(conn1req1)
 	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req2))
@@ -763,68 +758,42 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 	assert.Equal(t, conn2Key, getConnectionKeyForStats(conn2req5))
 	assert.NotEqual(t, conn1Key, conn2Key)
 
-	metrics := aggregateHTTPStats(map[http.Key]http.RequestStats{
-		conn1req2: { // post /page
-			{},
-			{},
-			{
-				Count:              1,
-				FirstLatencySample: 90000,
-			},
-			{},
-			{
-				Count:     4,
-				Latencies: makeDDSketch(60000, 90000, 120000, 60000),
-			},
-		},
-		conn1req3: { // get /otherpath
-			{
-				Count:              1,
-				FirstLatencySample: 60000,
-			},
-			{
-				Count:     2,
-				Latencies: makeDDSketch(90000, 120000),
-			},
-			{
-				Count:     4,
-				Latencies: makeDDSketch(12000, 90000, 120000, 60000),
-			},
-			{
-				Count:     5,
-				Latencies: makeDDSketch(60000, 90000, 120000, 60000, 90000),
-			},
-			{
-				Count:              1,
-				FirstLatencySample: 180000,
-			},
-		},
-		conn1req1: { // get /page
-			{},
-			{
-				Count:              1,
-				FirstLatencySample: 120000,
-			},
-			{},
-			{
-				Count:     3,
-				Latencies: makeDDSketch(120000, 60000, 90000),
-			},
-			{},
-		},
-		conn2req4: { // get /page
-			{},
-			{
-				Count:              1,
-				FirstLatencySample: 6000,
-			},
-			{},
-			{
-				Count:     2,
-				Latencies: makeDDSketch(12000, 24000),
-			},
-			{},
-		},
+	var conn1req2Stats, conn1req3Stats, conn1req1Stats, conn2req4Stats http.RequestStats
+
+	conn1req2Stats.AddRequest(300, 90000, 0, nil)
+	conn1req2Stats.AddRequest(500, 60000, 0, nil)
+	conn1req2Stats.AddRequest(500, 90000, 0, nil)
+	conn1req2Stats.AddRequest(500, 120000, 0, nil)
+	conn1req2Stats.AddRequest(500, 60000, 0, nil)
+
+	conn1req3Stats.AddRequest(100, 60000, 0, nil)
+	conn1req3Stats.AddRequest(200, 90000, 0, nil)
+	conn1req3Stats.AddRequest(200, 120000, 0, nil)
+	conn1req3Stats.AddRequest(300, 12000, 0, nil)
+	conn1req3Stats.AddRequest(300, 90000, 0, nil)
+	conn1req3Stats.AddRequest(300, 120000, 0, nil)
+	conn1req3Stats.AddRequest(300, 60000, 0, nil)
+	conn1req3Stats.AddRequest(400, 60000, 0, nil)
+	conn1req3Stats.AddRequest(400, 90000, 0, nil)
+	conn1req3Stats.AddRequest(400, 120000, 0, nil)
+	conn1req3Stats.AddRequest(400, 60000, 0, nil)
+	conn1req3Stats.AddRequest(400, 90000, 0, nil)
+	conn1req3Stats.AddRequest(500, 180000, 0, nil)
+
+	conn1req1Stats.AddRequest(200, 120000, 0, nil)
+	conn1req1Stats.AddRequest(400, 120000, 0, nil)
+	conn1req1Stats.AddRequest(400, 60000, 0, nil)
+	conn1req1Stats.AddRequest(400, 90000, 0, nil)
+
+	conn2req4Stats.AddRequest(200, 6000, 0, nil)
+	conn2req4Stats.AddRequest(400, 12000, 0, nil)
+	conn2req4Stats.AddRequest(400, 24000, 0, nil)
+
+	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
+		conn1req2: &conn1req2Stats,
+		conn1req3: &conn1req3Stats,
+		conn1req1: &conn1req1Stats,
+		conn2req4: &conn2req4Stats,
 	}, 2*time.Second, true)
 
 	assert.Equal(t, len(metrics), 2)
@@ -945,24 +914,19 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 
 	conn1req1 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", http.MethodGet)
+		"/page", true, http.MethodGet)
 
 	conn1Key := getConnectionKeyForStats(conn1req1)
 
-	metrics := aggregateHTTPStats(map[http.Key]http.RequestStats{
-		conn1req1: {
-			{},
-			{
-				Count:              1,
-				FirstLatencySample: 100,
-			},
-			{},
-			{
-				Count:     4,
-				Latencies: makeDDSketch(2, 4, 6, 8),
-			},
-			{},
-		},
+	var conn1req1Stats http.RequestStats
+	conn1req1Stats.AddRequest(200, 100, 0, nil)
+	conn1req1Stats.AddRequest(400, 2, 0, nil)
+	conn1req1Stats.AddRequest(400, 4, 0, nil)
+	conn1req1Stats.AddRequest(400, 6, 0, nil)
+	conn1req1Stats.AddRequest(400, 8, 0, nil)
+
+	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
+		conn1req1: &conn1req1Stats,
 	}, 2*time.Second, false)
 
 	assert.Len(t, metrics, 1)
@@ -1055,12 +1019,4 @@ func assertHTTPRequestsBaseMetric(t *testing.T, expectedMetric string, formatted
 
 func assertHTTPRequestsDeltaMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedDelta float64) {
 	assertHTTPRequestsBaseMetric(t, "http_requests_delta", formattedMetric, statusCode, method, path, expectedDelta)
-}
-
-func makeDDSketch(responseTimes ...float64) *ddsketch.DDSketch {
-	testDDSketch, _ := ddsketch.NewDefaultDDSketch(0.01)
-	for _, rt := range responseTimes {
-		_ = testDDSketch.Add(rt)
-	}
-	return testDDSketch
 }

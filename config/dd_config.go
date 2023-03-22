@@ -12,13 +12,7 @@ import (
 // SetupDDAgentConfig initializes the datadog-agent config with a YAML file.
 // This is required for configuration to be available for container listeners.
 func SetupDDAgentConfig(cfg *AgentConfig) error {
-	//ddconfig.Datadog.AddConfigPath(configPath)
-	//// If they set a config file directly, let's try to honor that
-	//if strings.HasSuffix(configPath, ".yaml") {
-	//	ddconfig.Datadog.SetConfigFile(configPath)
-	//}
-
-	// load the configuration
+	// load the configuration, this basically initializes everything with defaults
 	if _, err := ddconfig.Load(); err != nil {
 		return fmt.Errorf("unable to load Datadog config file: %s", err)
 	}

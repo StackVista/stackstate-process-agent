@@ -414,7 +414,7 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 		agentConf.NetworkTracer.EnableProtocolInspection = protMetrEnabled
 	}
 	if networkConf.Network.NetworkMaxConnections != 0 {
-		agentConf.NetworkTracerMaxConnections = uint(networkConf.Network.NetworkMaxConnections)
+		agentConf.NetworkTracerMaxConnections = networkConf.Network.NetworkMaxConnections
 	}
 	if networkConf.Network.EBPFArtifactDir != "" {
 		agentConf.NetworkTracer.EbpfArtifactDir = networkConf.Network.EBPFArtifactDir

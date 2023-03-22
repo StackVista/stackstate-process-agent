@@ -13,7 +13,6 @@ import (
 	"github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 
 	"github.com/DataDog/gopsutil/process"
-	ddconfig "github.com/StackVista/stackstate-process-agent/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 )
@@ -450,12 +449,11 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 }
 
-func TestDDAgentConfigYamlOnly(t *testing.T) {
+func TestAgentConfigYamlOnly(t *testing.T) {
 	assert := assert.New(t)
 	var ddy YamlAgentConfig
-	processDDURL := "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
 		"process_config:",
@@ -476,7 +474,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 
 	ep := agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
-	assert.Equal("my-process-app.datadoghq.com", ep.Endpoint.Hostname())
+	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
 	assert.Equal(true, agentConfig.AllowRealTime)
 	assert.Equal(true, agentConfig.Enabled)
@@ -490,9 +488,8 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal(false, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
-	processDDURL = "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
+		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
 		"incremental_publishing_enabled: false",
@@ -514,7 +511,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.NoError(err)
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
-	assert.Equal("my-process-app.datadoghq.com", ep.Endpoint.Hostname())
+	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(true, agentConfig.Enabled)
 	assert.Equal(false, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(2*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
@@ -524,9 +521,8 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
-	processDDURL = "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
+		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
 		"process_config:",
@@ -542,7 +538,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.NoError(err)
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
-	assert.Equal("my-process-app.datadoghq.com", ep.Endpoint.Hostname())
+	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(false, agentConfig.Enabled)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(15, agentConfig.Windows.ArgsRefreshInterval)
@@ -550,9 +546,8 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
-	processDDURL = "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
+		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
 		"process_config:",
@@ -573,7 +568,7 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	eps := agentConfig.APIEndpoints
 	assert.Len(agentConfig.APIEndpoints, 3)
 	assert.Equal("apikey_20", eps[0].APIKey)
-	assert.Equal("my-process-app.datadoghq.com", eps[0].Endpoint.Hostname())
+	assert.Equal("stackstate.com", eps[0].Endpoint.Hostname())
 	assert.Equal("foo", eps[1].APIKey)
 	assert.Equal("localhost", eps[1].Endpoint.Hostname())
 	assert.Equal("bar", eps[2].APIKey)
@@ -586,10 +581,8 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 
 	ddy = YamlAgentConfig{}
 	site := "datadoghq.eu"
-	processDDURL = "http://test-process.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
-	ddconfig.Datadog.Set("site", site)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
+		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
 		"site: " + site,
@@ -602,14 +595,13 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.NoError(err)
 	assert.Len(agentConfig.APIEndpoints, 1)
 	assert.Equal("apikey_20", agentConfig.APIEndpoints[0].APIKey)
-	assert.Equal("test-process.datadoghq.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
+	assert.Equal("stackstate.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
 	assert.Equal(true, agentConfig.Enabled)
 
 	ddy = YamlAgentConfig{}
 	site = "datacathq.eu"
-	ddconfig.Datadog.Set("process_config.process_sts_url", "")
-	ddconfig.Datadog.Set("site", site)
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
+		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
 		"site: " + site,
@@ -622,19 +614,16 @@ func TestDDAgentConfigYamlOnly(t *testing.T) {
 	assert.NoError(err)
 	assert.Len(agentConfig.APIEndpoints, 1)
 	assert.Equal("apikey_20", agentConfig.APIEndpoints[0].APIKey)
-	assert.Equal("process.datacathq.eu", agentConfig.APIEndpoints[0].Endpoint.Hostname())
+	assert.Equal("stackstate.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
 	assert.Equal(true, agentConfig.Enabled)
 
-	ddconfig.Datadog.Set("process_config.process_sts_url", "")
-	ddconfig.Datadog.Set("site", "")
 }
 
 func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert := assert.New(t)
 	var ddy YamlAgentConfig
-	processDDURL := "http://my-process-app.datadoghq.com"
-	ddconfig.Datadog.Set("process_config.process_sts_url", processDDURL)
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
+		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
 		"process_agent_enabled: true",
 		"process_config:",
@@ -663,7 +652,7 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 
 	ep := agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
-	assert.Equal("my-process-app.datadoghq.com", ep.Endpoint.Hostname())
+	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
 	assert.Equal(true, agentConfig.AllowRealTime)
 	assert.Equal(true, agentConfig.Enabled)
@@ -765,32 +754,22 @@ func TestEnvOverrides(t *testing.T) {
 }
 
 func TestEnvSiteConfig(t *testing.T) {
-	ddconfig.Datadog.Set("process_config.process_sts_url", "")
 	assert := assert.New(t)
 	for _, tc := range []struct {
-		site     string
-		ddURL    string
+		stsURL   string
 		expected string
 	}{
 		{
-			"datadoghq.io",
-			"",
-			"process.datadoghq.io",
-		},
-		{
-			"",
 			"http://localhost",
 			"localhost",
 		},
 		{
-			"datacathq.eu",
 			"https://burrito.com",
 			"burrito.com",
 		},
 	} {
 		// Fake the os.Setenv("STS_SITE", tc.site)
-		ddconfig.Datadog.Set("site", tc.site)
-		os.Setenv("STS_PROCESS_AGENT_URL", tc.ddURL)
+		os.Setenv("STS_PROCESS_AGENT_URL", tc.stsURL)
 
 		agentConfig, err := NewAgentConfig(&YamlAgentConfig{})
 		assert.NoError(err)
@@ -817,37 +796,6 @@ func TestIsAffirmative(t *testing.T) {
 	value, err = isAffirmative("ok")
 	assert.Nil(t, err)
 	assert.False(t, value)
-}
-
-//custom tests
-
-func TestStackStateFallbackAgentConfigToProcessSTSUrl(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"sts_url: http://default-endpoint.test.stackstate.com",
-		"process_agent_enabled: true",
-		"process_config:",
-		"  enabled: 'true'",
-		"  process_sts_url: http://process-endpoint.test.stackstate.com",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
 func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
@@ -917,7 +865,6 @@ func TestStackStateFallbackAgentConfigEmptyUrlToEnvSTSUrl(t *testing.T) {
 		"api_key: apikey_30",
 		"process_agent_enabled: true",
 		"process_config:",
-		"  process_sts_url: ",
 		"  enabled: 'true'",
 		"  queue_size: 10",
 		"  intervals:",
@@ -980,7 +927,6 @@ func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
 		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
-		"  process_sts_url: http://process-endpoint.test.stackstate.com",
 		"  queue_size: 10",
 		"  intervals:",
 		"    container: 8",
@@ -1109,11 +1055,10 @@ func TestCheckIntervalCodeDefaults_FromEnvOverridesYaml(t *testing.T) {
 
 func TestSkipSSLValidation_Default(t *testing.T) {
 	var ddy YamlAgentConfig
-	_, err := NewAgentConfig(&ddy)
+	conf, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
-	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
-	assert.Equal(t, false, skipSSLConfig)
+	assert.Equal(t, false, conf.SkipSSLValidation)
 }
 
 func TestSkipSSLValidation_FromYaml(t *testing.T) {
@@ -1132,29 +1077,10 @@ func TestSkipSSLValidation_FromYaml(t *testing.T) {
 func TestSkipSSLValidation_FromEnv(t *testing.T) {
 	os.Setenv("STS_SKIP_SSL_VALIDATION", "true")
 
-	_, err := NewAgentConfig(nil)
+	conf, err := NewAgentConfig(nil)
 	assert.NoError(t, err)
 
-	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
-	assert.Equal(t, true, skipSSLConfig)
-
-	os.Unsetenv("STS_SKIP_SSL_VALIDATION")
-}
-
-func TestSkipSSLValidation_FromEnvOverridesYaml(t *testing.T) {
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"skip_ssl_validation: false",
-	}, "\n")), &ddy)
-	assert.NoError(t, err)
-
-	os.Setenv("STS_SKIP_SSL_VALIDATION", "true")
-
-	_, err = NewAgentConfig(&ddy)
-	assert.NoError(t, err)
-
-	skipSSLConfig := ddconfig.Datadog.Get("skip_ssl_validation")
-	assert.Equal(t, true, skipSSLConfig)
+	assert.Equal(t, true, conf.SkipSSLValidation)
 
 	os.Unsetenv("STS_SKIP_SSL_VALIDATION")
 }

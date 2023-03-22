@@ -35,8 +35,8 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		ExcludedSourceConnections:      map[string][]string{},
 		ExcludedDestinationConnections: map[string][]string{},
 
-		MaxTrackedConnections:          cfg.NetworkTracerMaxConnections,
-		MaxClosedConnectionsBuffered:   int(cfg.NetworkTracerMaxConnections),
+		MaxTrackedConnections:          uint(cfg.NetworkTracerMaxConnections),
+		MaxClosedConnectionsBuffered:   cfg.NetworkTracerMaxConnections,
 		ClosedConnectionFlushThreshold: 0,
 		ClosedChannelSize:              500,
 		MaxConnectionsStateBuffered:    75000,

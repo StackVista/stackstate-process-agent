@@ -129,7 +129,7 @@ type AgentConfig struct {
 	NetworkTracerInitRetryAmount      int
 	NetworkTracer                     *NetworkTracerConfig
 	// Maximum connections the network tracer keeps track of
-	NetworkTracerMaxConnections uint
+	NetworkTracerMaxConnections int
 
 	// Check config
 	EnabledChecks                []string
@@ -595,7 +595,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if v := os.Getenv("STS_NETWORK_TRACER_MAX_CONNECTIONS"); v != "" {
 		maxConnections, _ := strconv.Atoi(v)
-		c.NetworkTracerMaxConnections = uint(maxConnections)
+		c.NetworkTracerMaxConnections = maxConnections
 	}
 
 	if v := os.Getenv("STS_MAX_PROCESSES_PER_MESSAGE"); v != "" {
@@ -679,7 +679,7 @@ func setProcessBlacklist(agentConf *AgentConfig,
 		log.Infof("Overriding processes blacklist to %v", patterns)
 		agentConf.Blacklist = deriveFmapConstructRegex(constructRegex, patterns)
 	} else {
-		log.Infof("Using default processes blacklist %v", agentConf.Blacklist)
+		log.Infof("Using default processes blacklist.", agentConf.Blacklist)
 	}
 	if amountTopCPUPercentageUsage >= 0 {
 		log.Infof("Overriding top CPU percentage using processes inclusions to %d", amountTopCPUPercentageUsage)

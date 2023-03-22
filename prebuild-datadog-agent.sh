@@ -121,7 +121,7 @@ function runPrebuildNoDocker() {
   SOURCEDIR="$SOURCE_DIR" \
    OUTPUTDIR="$DEPENDENCY_ARTIFACTS_DIR" \
    WORKDIR="$DIR/datadog-agent-workdir" \
-   /prebuild-datadog-agent-scripts/run-datadog-agent-prebuild.sh
+   $DIR/prebuild-datadog-agent-scripts/run-datadog-agent-prebuild.sh
   set +x
 }
 

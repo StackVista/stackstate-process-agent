@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// New creates a config for the network tracer
+// TracerConfig creates a config for the network tracer
 func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 	// Defaults taken from datadog
 	const defaultUDPTimeoutSeconds = 30
@@ -120,7 +120,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 	return c
 }
 
-// NewConfig creates a config with ebpf-related settings
+// EBPFConfig creates a config with ebpf-related settings
 func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 	return ebpf.Config{
 		BPFDebug:                 cfg.NetworkTracer.EbpfDebuglogEnabled,

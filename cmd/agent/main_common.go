@@ -224,13 +224,13 @@ func makeClientHost(cfg *config.AgentConfig) *httpclient.ClientHost {
 	}
 
 	if cfg.APIEndpoints[0].Endpoint.Scheme == "https" {
-		if cfg.HttpsProxy != nil {
-			host.ProxyURL = cfg.HttpsProxy
+		if cfg.HTTPSProxy != nil {
+			host.ProxyURL = cfg.HTTPSProxy
 			host.NoProxy = false
 		}
 	} else {
-		if cfg.HttpProxy != nil {
-			host.ProxyURL = cfg.HttpProxy
+		if cfg.HTTPProxy != nil {
+			host.ProxyURL = cfg.HTTPProxy
 			host.NoProxy = false
 		}
 	}

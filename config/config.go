@@ -158,8 +158,8 @@ type AgentConfig struct {
 	KubernetesKubeletHost string
 
 	// Proxy
-	HttpsProxy *url.URL
-	HttpProxy  *url.URL
+	HTTPSProxy *url.URL
+	HTTPProxy  *url.URL
 
 	// Windows-specific config
 	Windows WindowsConfig
@@ -295,8 +295,8 @@ func NewDefaultAgentConfig() *AgentConfig {
 		Scrubber: NewDefaultDataScrubber(),
 
 		// Proxy
-		HttpsProxy: nil,
-		HttpProxy:  nil,
+		HTTPSProxy: nil,
+		HTTPProxy:  nil,
 
 		// Windows process config
 		Windows: WindowsConfig{
@@ -437,29 +437,29 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.LogToConsole = enabled
 	}
 
-	if proxyUrl := os.Getenv("HTTPS_PROXY"); proxyUrl != "" {
-		c.HttpsProxy, err = url.Parse(proxyUrl)
+	if proxyURL := os.Getenv("HTTPS_PROXY"); proxyURL != "" {
+		c.HTTPSProxy, err = url.Parse(proxyURL)
 		if err != nil {
 			log.Errorf("error parsing HTTPS_PROXY, not using a proxy: %s", err)
 		}
 	}
 
-	if proxyUrl := os.Getenv("STS_HTTPS_PROXY"); proxyUrl != "" {
-		c.HttpsProxy, err = url.Parse(proxyUrl)
+	if proxyURL := os.Getenv("STS_HTTPS_PROXY"); proxyURL != "" {
+		c.HTTPSProxy, err = url.Parse(proxyURL)
 		if err != nil {
 			log.Errorf("error parsing STS_HTTPS_PROXY, not using a proxy: %s", err)
 		}
 	}
 
-	if proxyUrl := os.Getenv("HTTP_PROXY"); proxyUrl != "" {
-		c.HttpProxy, err = url.Parse(proxyUrl)
+	if proxyURL := os.Getenv("HTTP_PROXY"); proxyURL != "" {
+		c.HTTPProxy, err = url.Parse(proxyURL)
 		if err != nil {
 			log.Errorf("error parsing HTTP_PROXY, not using a proxy: %s", err)
 		}
 	}
 
-	if proxyUrl := os.Getenv("STS_HTTP_PROXY"); proxyUrl != "" {
-		c.HttpProxy, err = url.Parse(proxyUrl)
+	if proxyURL := os.Getenv("STS_HTTP_PROXY"); proxyURL != "" {
+		c.HTTPProxy, err = url.Parse(proxyURL)
 		if err != nil {
 			log.Errorf("error parsing STS_HTTP_PROXY, not using a proxy: %s", err)
 		}
@@ -798,6 +798,7 @@ func getSketchType(value string) (tracerconfig.MetricSketchType, error) {
 	}
 }
 
+// ConfigureHostname puts the hostname into the config. This has been separateded to allow the rest of the config to be processed before finding the hostname
 func ConfigureHostname(cfg *AgentConfig) {
 	// Get hostname from agent util since the process-agent image doesn't include the main agent
 	if cfg.HostName == "" {

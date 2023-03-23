@@ -166,8 +166,8 @@ type YamlAgentConfig struct {
 		CriSocketPath string `yaml:"cri_socket_path"`
 	} `yaml:"containers"`
 	Proxy struct {
-		Https string `yaml:"https"`
-		Http  string `yaml:"http"`
+		HTTPS string `yaml:"https"`
+		HTTP  string `yaml:"http"`
 	} `yaml:"proxy"`
 }
 
@@ -344,15 +344,15 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		agentConf.BatcherLogPayloads = yc.Batcher.LogPayloads
 	}
 
-	if yc.Proxy.Https != "" {
-		agentConf.HttpsProxy, err = url.Parse(yc.Proxy.Https)
+	if yc.Proxy.HTTPS != "" {
+		agentConf.HTTPSProxy, err = url.Parse(yc.Proxy.HTTPS)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing proxy.https: %s", err)
 		}
 	}
 
-	if yc.Proxy.Http != "" {
-		agentConf.HttpProxy, err = url.Parse(yc.Proxy.Http)
+	if yc.Proxy.HTTP != "" {
+		agentConf.HTTPProxy, err = url.Parse(yc.Proxy.HTTP)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing proxy.http: %s", err)
 		}

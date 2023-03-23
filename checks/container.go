@@ -47,9 +47,9 @@ func retrieveAdditionalStats(c *ddmodel.Container) *provider.ContainerStats {
 		stats, err := collector.GetContainerStats(containerMeta.Namespace, c.Id, 2*time.Second)
 		if err != nil {
 			return stats
-		} else {
-			log.Warnf("Could not get container stats for container: %s", c.Id)
 		}
+
+		log.Warnf("Could not get container stats for container: %s", c.Id)
 	} else {
 		log.Warnf("Could not get container metaData for container: %s", c.Id)
 	}

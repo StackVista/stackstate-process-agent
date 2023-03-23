@@ -181,19 +181,19 @@ func (l *Collector) run(exit chan bool) {
 				}
 
 				checkID := check.CheckID(result.check.Name())
-				transactionUid, err := uuid.NewV4()
+				transactionUID, err := uuid.NewV4()
 
 				if err != nil {
 					log.Errorf("Error creating transaction id: %s", err.Error())
 					break
 				}
 
-				transactionId := transactionUid.String()
+				transactionID := transactionUID.String()
 
 				txOut := make(chan interface{})
 
-				l.manager.StartTransaction(checkID, transactionId, txOut)
-				l.batcher.StartTransaction(checkID, transactionId)
+				l.manager.StartTransaction(checkID, transactionID, txOut)
+				l.batcher.StartTransaction(checkID, transactionID)
 
 				// create a new transaction in the transaction manager and wait for responses
 
@@ -204,7 +204,7 @@ func (l *Collector) run(exit chan bool) {
 					}
 
 					for _, metric := range payload.metrics {
-						l.batcher.SubmitRawMetricsData(checkID, transactionId, metric)
+						l.batcher.SubmitRawMetricsData(checkID, transactionID, metric)
 					}
 				}
 
@@ -213,19 +213,19 @@ func (l *Collector) run(exit chan bool) {
 
 					components, relations := l.integrationTopology(result.check)
 					for _, component := range components {
-						l.batcher.SubmitComponent(checkID, transactionId, agentTopologyInstance, component)
+						l.batcher.SubmitComponent(checkID, transactionID, agentTopologyInstance, component)
 					}
 					for _, relation := range relations {
-						l.batcher.SubmitRelation(checkID, transactionId, agentTopologyInstance, relation)
+						l.batcher.SubmitRelation(checkID, transactionID, agentTopologyInstance, relation)
 					}
 
 					repeatInterval := int(l.cfg.CheckInterval(result.check.Name()).Seconds())
-					l.batcher.SubmitHealthStartSnapshot(checkID, transactionId, healthStream, repeatInterval, repeatInterval*2)
-					l.batcher.SubmitHealthCheckData(checkID, transactionId, healthStream, healthData)
-					l.batcher.SubmitHealthStopSnapshot(checkID, transactionId, healthStream)
+					l.batcher.SubmitHealthStartSnapshot(checkID, transactionID, healthStream, repeatInterval, repeatInterval*2)
+					l.batcher.SubmitHealthCheckData(checkID, transactionID, healthStream, healthData)
+					l.batcher.SubmitHealthStopSnapshot(checkID, transactionID, healthStream)
 				}
 
-				l.batcher.SubmitCompleteTransaction(checkID, transactionId)
+				l.batcher.SubmitCompleteTransaction(checkID, transactionID)
 
 				// Wait for the transaction response. We are not too interested in handling transaction errors right now
 				<-txOut

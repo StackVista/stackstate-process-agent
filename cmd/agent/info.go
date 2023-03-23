@@ -49,7 +49,7 @@ const (
   Queue length: {{.Status.QueueSize}}
 
   Logs: {{.Status.Config.LogFile}}{{if .Status.ProxyURL}}
-  HttpProxy: {{.Status.ProxyURL}}{{end}}{{if ne .Status.ContainerID ""}}
+  HTTPProxy: {{.Status.ProxyURL}}{{end}}{{if ne .Status.ContainerID ""}}
   Container ID: {{.Status.ContainerID}}{{end}}
 
 `

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # Okay, here it goes: The process agent depends on the datadog agent, which:
 # - for some modules (EBPF) uses go:generate which needs to be run to even build the dependency.
@@ -8,10 +8,10 @@
 set -e
 
 DIR="${BASH_SOURCE%/*}"
-if [[ ! -d "$DIR" ]]; then DIR="$PWD"; fi
-if [[ "$DIR" = "." ]]; then DIR="$PWD"; fi
+if [ ! -d "$DIR" ]; then DIR="$PWD"; fi
+if [ "$DIR" = "." ]; then DIR="$PWD"; fi
 
-function printUsage() {
+printUsage() {
   cat << USAGE
 
 Usage: ./prebuild-datadog-agent.sh --generate|--clean|--shell|--install-go|--help
@@ -31,7 +31,7 @@ USAGE
 
 ACTION=""
 
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
   case $1 in
     -g|--generate)
       ACTION="generate"
@@ -100,7 +100,7 @@ fi
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/artifacts/$DEPENDENCY_VERSION"
 DOCKER_IMAGE=artifactory.tooling.stackstate.io/docker-virtual/stackstate/datadog_build_system-probe_x64:5151a592
 
-function checkoutSource() {
+checkoutSource() {
   if [ ! -d "$SOURCE_DIR" ]; then
     echo "datadog-agent was not cloned, cloning"
     mkdir -p "$ALL_ARTIFACTS_DIR/checkout"
@@ -112,7 +112,7 @@ function checkoutSource() {
   fi
 }
 
-function runPrebuildNoDocker() {
+runPrebuildNoDocker() {
   set -x
   checkoutSource
 
@@ -123,7 +123,7 @@ function runPrebuildNoDocker() {
   set +x
 }
 
-function runPrebuildInDocker() {
+runPrebuildInDocker() {
   set -x
   checkoutSource
 
@@ -140,7 +140,7 @@ function runPrebuildInDocker() {
   set +x
 }
 
-if [[ "$ACTION" = "generate" ]]; then
+if [ "$ACTION" = "generate" ]; then
   echo "Generating code"
   if [ -d "$DEPENDENCY_ARTIFACTS_DIR" ]; then
     echo "Prebuild artifacts were already generated. Skipping. To regenerate first run with --clean"
@@ -149,7 +149,7 @@ if [[ "$ACTION" = "generate" ]]; then
 
   mkdir -p "$DEPENDENCY_ARTIFACTS_DIR"
   runPrebuildInDocker "$DOCKER_IMAGE" /scripts/run-datadog-agent-prebuild.sh
-elif [[ "$ACTION" = "generate-no-docker" ]]; then
+elif [ "$ACTION" = "generate-no-docker" ]; then
   echo "Generating code in the current environment"
   if [ -d "$DEPENDENCY_ARTIFACTS_DIR" ]; then
     echo "Prebuild artifacts were already generated. Skipping. To regenerate first run with --clean"
@@ -158,7 +158,7 @@ elif [[ "$ACTION" = "generate-no-docker" ]]; then
 
   mkdir -p "$DEPENDENCY_ARTIFACTS_DIR"
   runPrebuildNoDocker
-elif [[ "$ACTION" = "install-go" ]]; then
+elif [ "$ACTION" = "install-go" ]; then
   echo "Installing go files"
   if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/gofiles" ]; then
     echo "No generated files found at $DEPENDENCY_ARTIFACTS_DIR/gofiles, please run --generate first"
@@ -167,7 +167,7 @@ elif [[ "$ACTION" = "install-go" ]]; then
 
   chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR"
   cp -a "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR"
-elif [[ "$ACTION" = "install-ebpf" ]]; then
+elif [ "$ACTION" = "install-ebpf" ]; then
   echo "Installing ebpf files"
   if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/ebpf" ]; then
     echo "No generated files found at $DEPENDENCY_ARTIFACTS_DIR/ebpf, please run --generate first"
@@ -176,7 +176,7 @@ elif [[ "$ACTION" = "install-ebpf" ]]; then
 
   mkdir -p $DIR/ebpf-object-files
   cp -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files/"
-elif [[ "$ACTION" = "install-ebpf-root" ]]; then
+elif [ "$ACTION" = "install-ebpf-root" ]; then
   echo "Installing ebpf files as root"
   if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/ebpf" ]; then
     echo "No generated files found at $DEPENDENCY_ARTIFACTS_DIR/ebpf, please run --generate first"
@@ -187,7 +187,7 @@ elif [[ "$ACTION" = "install-ebpf-root" ]]; then
   cp -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files-root/"
   # chmod -R 0022 "$DIR/ebpf-object-files-root/"/*
   sudo chown -R root:root "$DIR/ebpf-object-files-root/"
-elif [[ "$ACTION" = "clean" ]]; then
+elif [ "$ACTION" = "clean" ]; then
   echo "Cleaning prebuild files from $PREBUILD_ARTIFACTS_DIR"
   rm -rf "$ALL_ARTIFACTS_DIR"
   rm -rf ebpf-object-files
@@ -195,10 +195,10 @@ elif [[ "$ACTION" = "clean" ]]; then
   if [ -d "$DIR/ebpf-object-files-root/" ]; then
     sudo rm -rf ebpf-object-files-root
   fi
-elif [[ "$ACTION" = "shell" ]]; then
+elif [ "$ACTION" = "shell" ]; then
   echo "Launching generate shell"
   runPrebuildInDocker -it "$DOCKER_IMAGE" /bin/bash
-elif [[ -z "$ACTION" ]]; then
+elif [ -z "$ACTION" ]; then
   echo "No argument was passed"
   printUsage
   exit 1

@@ -16,7 +16,7 @@ import (
 func TestHealthStateMessageCut(t *testing.T) {
 	assert := assert.New(t)
 	cfg := config.NewDefaultAgentConfig()
-	c, err := NewCollector(cfg, nil, nil)
+	c, err := NewCollector(cfg, nil, nil, nil)
 	assert.NoError(err)
 
 	_, checkData := c.makeHealth(checkResult{
@@ -31,7 +31,7 @@ func TestHealthStateMessageCut(t *testing.T) {
 func TestUpdateRTStatus(t *testing.T) {
 	assert := assert.New(t)
 	cfg := config.NewDefaultAgentConfig()
-	c, err := NewCollector(cfg, nil, nil)
+	c, err := NewCollector(cfg, nil, nil, nil)
 	assert.NoError(err)
 	// XXX: Give the collector a big channel so it never blocks.
 	c.rtIntervalCh = make(chan time.Duration, 1000)
@@ -67,7 +67,7 @@ func TestUpdateRTStatus(t *testing.T) {
 func TestUpdateRTInterval(t *testing.T) {
 	assert := assert.New(t)
 	cfg := config.NewDefaultAgentConfig()
-	c, err := NewCollector(cfg, nil, nil)
+	c, err := NewCollector(cfg, nil, nil, nil)
 	assert.NoError(err)
 	// XXX: Give the collector a big channel so it never blocks.
 	c.rtIntervalCh = make(chan time.Duration, 1000)

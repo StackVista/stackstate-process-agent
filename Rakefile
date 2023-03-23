@@ -81,7 +81,7 @@ task :cmdtest do
 end
 
 task :vet do
-  go_vet("./...", {
+  go_vet("$(go list ./...)", {
     :bpf => true,
     :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
   })

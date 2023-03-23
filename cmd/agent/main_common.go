@@ -198,7 +198,7 @@ func runAgent(exit chan bool) {
 		http.ListenAndServe("localhost:6063", promServerMux)
 	}()
 
-	cl, err := NewCollector(cfg, client, batcher)
+	cl, err := NewCollector(cfg, client, batcher, manager)
 	if err != nil {
 		log.Criticalf("Error creating collector: %s", err)
 		os.Exit(1)

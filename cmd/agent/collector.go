@@ -11,6 +11,7 @@ import (
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/topology"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
 	"github.com/gofrs/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -64,11 +65,15 @@ type Collector struct {
 	realTimeEnabled int32
 
 	batcher transactionbatcher.TransactionalBatcher
+	manager transactionmanager.TransactionManager
 	client  *httpclient.StackStateClient
 }
 
 // NewCollector creates a new Collector
-func NewCollector(cfg *config.AgentConfig, client *httpclient.StackStateClient, batcher transactionbatcher.TransactionalBatcher) (Collector, error) {
+func NewCollector(cfg *config.AgentConfig,
+	client *httpclient.StackStateClient,
+	batcher transactionbatcher.TransactionalBatcher,
+	manager transactionmanager.TransactionManager) (Collector, error) {
 	sysInfo, err := checks.CollectSystemInfo(cfg)
 	if err != nil {
 		return Collector{}, err
@@ -95,6 +100,7 @@ func NewCollector(cfg *config.AgentConfig, client *httpclient.StackStateClient, 
 		realTimeEnabled:  0,
 
 		batcher: batcher,
+		manager: manager,
 		client:  client,
 	}, nil
 }
@@ -184,7 +190,12 @@ func (l *Collector) run(exit chan bool) {
 
 				transactionId := transactionUid.String()
 
+				txOut := make(chan interface{})
+
+				l.manager.StartTransaction(checkID, transactionId, txOut)
 				l.batcher.StartTransaction(checkID, transactionId)
+
+				// create a new transaction in the transaction manager and wait for responses
 
 				if result.payload != nil {
 					payload := result.payload
@@ -215,6 +226,10 @@ func (l *Collector) run(exit chan bool) {
 				}
 
 				l.batcher.SubmitCompleteTransaction(checkID, transactionId)
+
+				// Wait for the transaction response. We are not too interested in handling transaction errors right now
+				<-txOut
+				close(txOut)
 			case <-queueSizeTicker.C:
 				updateQueueSize(l.send)
 			case <-featuresTicker.C:
@@ -425,6 +440,7 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 	defer cancel()
 	req.WithContext(ctx)
 
+	log.Infof("Sent payload, size: %d bytes.", len(body))
 	resp, err := l.client.GetClient().Do(req)
 	if err != nil {
 		if isHTTPTimeout(err) {

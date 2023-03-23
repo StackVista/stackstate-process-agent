@@ -282,9 +282,9 @@ func NewDefaultAgentConfig() *AgentConfig {
 
 		// Transaction manager
 		TxManagerChannelBufferSize:       transactionmanager.DefaultTxManagerChannelBufferSize,
-		TxManagerTimeoutDurationSeconds:  transactionmanager.DefaultTxManagerTimeoutDurationSeconds,
-		TxManagerEvictionDurationSeconds: transactionmanager.DefaultTxManagerEvictionDurationSeconds,
-		TxManagerTickerIntervalSeconds:   transactionmanager.DefaultTxManagerTickerIntervalSeconds,
+		TxManagerTimeoutDurationSeconds:  transactionmanager.DefaultTxManagerTimeoutDurationSeconds * time.Second,
+		TxManagerEvictionDurationSeconds: transactionmanager.DefaultTxManagerEvictionDurationSeconds * time.Second,
+		TxManagerTickerIntervalSeconds:   transactionmanager.DefaultTxManagerTickerIntervalSeconds * time.Second,
 
 		// Batcher
 		BatcherMaxBufferSize: transactionbatcher.DefaultBatcherBufferSize,

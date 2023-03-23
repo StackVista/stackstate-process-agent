@@ -35,6 +35,8 @@ variables:
   before_script:
     - eval "$(gimme)"
     - source /root/.bashrc
+    - source /etc/profile
+    - source /root/profile
     - conda activate ddpy3
     - export PATH="${GOPATH}/bin:${PATH}"
 
@@ -47,7 +49,6 @@ dependencies:
     - go mod download
 
 prebuild_agent:
-  extends: [ .linux_builder ]
   cache:
     - key:
         files:

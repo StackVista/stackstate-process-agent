@@ -34,6 +34,8 @@ variables:
   image: ${LINUX_BUILDER}
   before_script:
     - eval "$(gimme)"
+    - source /root/.bashrc
+    - conda activate ddpy3
     - export PATH="${GOPATH}/bin:${PATH}"
 
 dependencies:

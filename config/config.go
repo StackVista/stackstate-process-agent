@@ -153,6 +153,9 @@ type AgentConfig struct {
 	BatcherMaxBufferSize int
 	BatcherLogPayloads   bool
 
+	// Kubernetes
+	KubernetesKubeletHost string
+
 	// Proxy
 	HttpsProxy *url.URL
 	HttpProxy  *url.URL
@@ -661,10 +664,13 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.BatcherLogPayloads = enabled
 	}
 
-	// STS
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
 		c.SkipSSLValidation = true
 		log.Infof("Overriding skip_ssl_validation to: %s", v)
+	}
+
+	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {
+		c.KubernetesKubeletHost = v
 	}
 
 	return c

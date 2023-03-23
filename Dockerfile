@@ -3,7 +3,7 @@
 # Actual docker image construction #
 ####################################
 
-FROM ubuntu:focal-20220316
+FROM ubuntu:jammy-20230308
 LABEL maintainer="StackState <info@stackstate.com>"
 ENV DOCKER_STS_AGENT=true \
 	DOCKER_DD_AGENT=true \

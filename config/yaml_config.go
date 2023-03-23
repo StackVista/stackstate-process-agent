@@ -159,6 +159,9 @@ type YamlAgentConfig struct {
 		MaxBufferSize int  `yaml:"max_buffer_size"`
 		LogPayloads   bool `yaml:"log_payloads"`
 	} `yaml:"batcher"`
+	Kubernetes struct {
+		KubeletHost string `yaml:"kubelet_host"`
+	} `yaml:"kubernetes"`
 	Proxy struct {
 		Https string `yaml:"https"`
 		Http  string `yaml:"http"`
@@ -376,6 +379,10 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	if yc.SkipSSLValidation {
 		agentConf.SkipSSLValidation = true
 		log.Infof("Setting skip_ssl_validation to: %s", yc.SkipSSLValidation)
+	}
+
+	if yc.Kubernetes.KubeletHost != "" {
+		agentConf.KubernetesKubeletHost = yc.Kubernetes.KubeletHost
 	}
 
 	// Pull additional parameters from the global config file.

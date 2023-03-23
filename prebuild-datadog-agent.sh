@@ -5,8 +5,6 @@
 # - for some other modules generate EBPF code, which we need but is not part of the regular go build
 # This file makes sure those prebuild steps (go:generate and ebpf files) get built and installed.
 
-#!/bin/bash
-
 set -e
 
 DIR="${BASH_SOURCE%/*}"

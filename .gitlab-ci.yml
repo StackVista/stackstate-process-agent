@@ -19,12 +19,13 @@ variables:
   LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/stackstate-process-agent-runner-gitlab:llvmclang11-x64-20221207-7c6f401
   GOPATH: "$CI_PROJECT_DIR/.go"
 
-.go_cache:
+.go_process_agent_cache:
   cache:
     - key:
         files:
           - go.mod
           - go.sum
+        prefix: process_agent
       paths:
         - .go/
 
@@ -35,7 +36,7 @@ variables:
     - export PATH="${GOPATH}/bin:${PATH}"
 
 dependencies:
-  extends: [ .linux_builder, .go_cache ]
+  extends: [ .linux_builder, .go_process_agent_cache ]
   stage: build
   needs: []
   script:
@@ -43,7 +44,7 @@ dependencies:
     - go mod download
 
 test_protobuf_updated:
-  extends: [ .linux_builder, .go_cache ]
+  extends: [ .linux_builder, .go_process_agent_cache ]
   stage: test
   needs: [ dependencies ]
   script:
@@ -52,7 +53,15 @@ test_protobuf_updated:
     - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
 
 prebuild_agent:
-  extends: [ .linux_builder, .go_cache ]
+  extends: [ .linux_builder ]
+  cache:
+    - key:
+        files:
+          - go.mod
+          - go.sum
+        prefix: prebuild_datadog_agent
+      paths:
+        - prebuild_artifacts/artifacts/*
   stage: build
   needs: [ dependencies ]
   image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:5151a592
@@ -63,7 +72,7 @@ prebuild_agent:
       - prebuild_artifacts/artifacts/*
 
 build_linux:
-  extends: [ .linux_builder, .go_cache ]
+  extends: [ .linux_builder, .go_process_agent_cache ]
   stage: build
   needs: [ dependencies, prebuild_agent ]
   script:
@@ -80,7 +89,7 @@ build_linux:
       - always
 
 test:
-  extends: [ .linux_builder, .go_cache ]
+  extends: [ .linux_builder, .go_process_agent_cache ]
   stage: test
   needs: [ dependencies, prebuild_agent ]
   script:

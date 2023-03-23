@@ -1,4 +1,5 @@
 stages:
+  - prebuild
   - build
   - test
   - publish
@@ -37,20 +38,11 @@ variables:
 
 dependencies:
   extends: [ .linux_builder, .go_process_agent_cache ]
-  stage: build
+  stage: prebuild
   needs: []
   script:
     - mkdir -p .go
     - go mod download
-
-test_protobuf_updated:
-  extends: [ .linux_builder, .go_process_agent_cache ]
-  stage: test
-  needs: [ dependencies ]
-  script:
-    - (cd $(go list -f '{{ .Dir }}' -m github.com/gogo/protobuf); make install)
-    - rake protobuf
-    - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
 
 prebuild_agent:
   extends: [ .linux_builder ]
@@ -62,13 +54,22 @@ prebuild_agent:
         prefix: prebuild_datadog_agent
       paths:
         - prebuild_artifacts/artifacts/*
-  stage: build
+  stage: prebuild
   image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:5151a592
   script:
     - ./prebuild-datadog-agent.sh --generate-no-docker
   artifacts:
     paths:
       - prebuild_artifacts/artifacts/*
+
+test_protobuf_updated:
+  extends: [ .linux_builder, .go_process_agent_cache ]
+  stage: test
+  needs: [ dependencies ]
+  script:
+    - (cd $(go list -f '{{ .Dir }}' -m github.com/gogo/protobuf); make install)
+    - rake protobuf
+    - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
 
 build_linux:
   extends: [ .linux_builder, .go_process_agent_cache ]

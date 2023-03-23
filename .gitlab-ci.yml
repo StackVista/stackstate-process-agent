@@ -17,7 +17,7 @@ variables:
   DOCKER_REGISTRY: docker.io
   RUNNER7_DIR: $CI_PROJECT_DIR/.cd-builders/runner-gitlab-centos7
   VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: ${DOCKER_PROXY_URL}/datadog_build_deb_x64:3e691150
+  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:3e691150
   GOPATH: "$CI_PROJECT_DIR/.go"
 
 .go_process_agent_cache:

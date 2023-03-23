@@ -36,7 +36,7 @@ variables:
     - eval "$(gimme)"
     - source /root/.bashrc
     - source /etc/profile
-    - source /root/profile
+    - source /root/.profile
     - conda activate ddpy3
     - export PATH="${GOPATH}/bin:${PATH}"
 

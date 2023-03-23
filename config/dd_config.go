@@ -13,6 +13,11 @@ import (
 // SetupDDAgentConfig initializes the datadog-agent config with a YAML file.
 // This is required for configuration to be available for container listeners.
 func SetupDDAgentConfig(cfg *AgentConfig) error {
+
+	if cfg.CriSocketPath != "" {
+		os.Setenv("DD_CRI_SOCKET_PATH", cfg.CriSocketPath)
+	}
+
 	os.Setenv("DD_KUBERNETES_KUBELET_HOST", cfg.KubernetesKubeletHost)
 
 	// load the configuration, this basically initializes everything with defaults

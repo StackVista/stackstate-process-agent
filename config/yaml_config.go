@@ -162,6 +162,9 @@ type YamlAgentConfig struct {
 	Kubernetes struct {
 		KubeletHost string `yaml:"kubelet_host"`
 	} `yaml:"kubernetes"`
+	Containers struct {
+		CriSocketPath string `yaml:"cri_socket_path"`
+	} `yaml:"containers"`
 	Proxy struct {
 		Https string `yaml:"https"`
 		Http  string `yaml:"http"`
@@ -383,6 +386,10 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 
 	if yc.Kubernetes.KubeletHost != "" {
 		agentConf.KubernetesKubeletHost = yc.Kubernetes.KubeletHost
+	}
+
+	if yc.Containers.CriSocketPath != "" {
+		agentConf.CriSocketPath = yc.Containers.CriSocketPath
 	}
 
 	// Pull additional parameters from the global config file.

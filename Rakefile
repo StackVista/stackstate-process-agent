@@ -81,6 +81,7 @@ task :cmdtest do
 end
 
 task :vet do
+  sh "./prebuild-datadog-agent.sh -i"
   go_vet("$(go list ./...)", {
     :bpf => true,
     :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
@@ -147,30 +148,3 @@ task 'windows-tag-or-commit-artifact' do
   sh "echo %s" % process_agent_version
   system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end
-
-
-# ========= embedded_path: /opt/stackstate-agent/embedded
-# ========= rtloader_root: None
-# ========= rtloader_lib: ['/opt/stackstate-agent/embedded/lib']
-# {
-# go build -mod=mod  -a -tags "
-#  kubelet secrets orchestrator systemd containerd jetson jmx npm etcd
-# cri linux_bpf apm python docker zlib gce zk consul process netcgo ec2 kubeapiserver clusterchecks"
-# -o ./bin/system-probe/system-probe -gcflags=""
-# -ldflags="
-#               -X github.com/StackVista/stackstate-agent/pkg/version.Commit=ea4aa0a76
-#               -X github.com/StackVista/stackstate-agent/pkg/version.AgentVersion=2.19.1+git.7.ea4aa0a
-#               -X github.com/StackVista/stackstate-agent/pkg/serializer.AgentPayloadVersion=v5.0.4
-#               -X github.com/StackVista/stackstate-agent/pkg/config.ForceDefaultPython=true
-#               -X github.com/StackVista/stackstate-agent/pkg/config.DefaultPython=3
-#               -r /opt/stackstate-agent/embedded/lib "
-#  github.com/StackVista/stackstate-agent/cmd/system-probe
-
-# cmdgo build -o process-agent -tags 'docker kubelet kubeapiserver linux cri containerd linux_bpf'
-# -ldflags "
-#             -X 'main.GitCommit=b49885de'
-#             -X 'main.Version=0.99.0'
-#             -X 'main.BuildDate=2022-12-06T19:41:18+0000'
-#             -X 'main.GitBranch=upstream-connections'
-#             -X 'main.GoVersion=go version go1.17.13 linux/amd64'"
-# github.com/StackVista/stackstate-process-agent/cmd/agent

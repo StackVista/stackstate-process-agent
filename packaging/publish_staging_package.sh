@@ -13,7 +13,7 @@ fi
 echo $PROCESS_AGENT_VERSION
 FILENAME="process-agent-amd64-$PROCESS_AGENT_VERSION"
 EBPF_FILENAME="process-agent-amd64-$PROCESS_AGENT_VERSION-ebpf.tar.gz"
-WORKSPACE=${WORKSPACE:-$PWD/../}
+WORKSPACE=${WORKSPACE:-$PWD/..}
 agent_path="$WORKSPACE"
 
 echo "Uploading agent binary"

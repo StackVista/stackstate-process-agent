@@ -167,7 +167,7 @@ elif [ "$ACTION" = "install-go" ]; then
 
   set -x
   chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR"
-  cp -a "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR"
+  cp -v -a "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR"
   set +x
 elif [ "$ACTION" = "install-ebpf" ]; then
   echo "Installing ebpf files"
@@ -178,7 +178,7 @@ elif [ "$ACTION" = "install-ebpf" ]; then
 
   set -x
   mkdir -p $DIR/ebpf-object-files
-  cp -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files/"
+  cp -v -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files/"
   set +x
 elif [ "$ACTION" = "install-ebpf-root" ]; then
   echo "Installing ebpf files as root"
@@ -189,8 +189,7 @@ elif [ "$ACTION" = "install-ebpf-root" ]; then
 
   set -x
   mkdir -p $DIR/ebpf-object-files-root
-  cp -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files-root/"
-  # chmod -R 0022 "$DIR/ebpf-object-files-root/"/*
+  cp -v -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files-root/"
   sudo chown -R root:root "$DIR/ebpf-object-files-root/"
   set +x
 elif [ "$ACTION" = "clean" ]; then

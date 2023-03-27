@@ -106,7 +106,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, features features.Featur
 
 	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
 
-	log.Debugf("collected %d connections in %s", len(formattedConnections), time.Since(start))
+	log.Infof("collected %d connections in %s", len(formattedConnections), time.Since(start))
 	for _, conn := range formattedConnections {
 		log.Debugf("%v", conn)
 	}
@@ -437,9 +437,12 @@ func aggregateStats(stats []http.RequestStat) (int, *ddsketch.DDSketch) {
 	for _, stat := range stats {
 		requestCount += stat.Count
 		if stat.Latencies != nil {
-			latencies.MergeWith(stat.Latencies)
+			// Latencies need to be scaled. We get the in ns and need to go to s
+			var scaled = emptySketch()
+			scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), 0.000000001)
+			latencies.MergeWith(scaled)
 		} else if stat.Count > 0 {
-			latencies.Add(stat.FirstLatencySample)
+			latencies.Add(stat.FirstLatencySample * 0.000000001)
 		}
 	}
 	return requestCount, latencies

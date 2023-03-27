@@ -41,11 +41,11 @@ func retrieveAdditionalStats(c *ddmodel.Container) *provider.ContainerStats {
 	// Retrieve the container metadata, to get hold of the namespace
 	containerMeta, err := workloadmeta.GetGlobalStore().GetContainer(c.Id)
 
-	if err != nil {
+	if err == nil {
 		// Question: are there benefits to making the collector not global?
 		collector := provider.GetProvider().GetCollector(string(fromTypeToContainerRuntime(c.Type)))
 		stats, err := collector.GetContainerStats(containerMeta.Namespace, c.Id, 2*time.Second)
-		if err != nil {
+		if err == nil {
 			return stats
 		}
 

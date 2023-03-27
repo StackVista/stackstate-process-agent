@@ -6,6 +6,8 @@ import (
 	ddmodel "github.com/DataDog/agent-payload/v5/process"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"sync"
 	"time"
 
@@ -58,6 +60,34 @@ func (p *ProcessCheck) Endpoint() string { return "/api/v1/collector" }
 // RealTime indicates if this check only runs in real-time mode.
 func (p *ProcessCheck) RealTime() bool { return false }
 
+var retrievedProcessCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Namespace: "stackstate_process_agent",
+	Subsystem: "process_check",
+	Name:      "retrieved_process_count",
+	Help:      "Number of processes retrieved",
+})
+
+var reportedProcessCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Namespace: "stackstate_process_agent",
+	Subsystem: "process_check",
+	Name:      "reported_process_count",
+	Help:      "Number of processes produced downstream",
+})
+
+var retrievedContainerCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Namespace: "stackstate_process_agent",
+	Subsystem: "process_check",
+	Name:      "retrieved_container_count",
+	Help:      "Number of containers retrieved",
+})
+
+var reportedContainerCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+	Namespace: "stackstate_process_agent",
+	Subsystem: "process_check",
+	Name:      "reported_container_count",
+	Help:      "Number of containers produced downstream",
+})
+
 // Run runs the ProcessCheck to collect a list of running processes and relevant
 // stats for each. On most POSIX systems this will use a mix of procfs and other
 // OS-specific APIs to collect this information. The bulk of this collection is
@@ -78,6 +108,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 	if err != nil {
 		return nil, err
 	}
+	retrievedProcessCountGauge.Set(float64(len(procs)))
 
 	// Retrieve containers
 	var ctrList []*ddmodel.Container
@@ -90,6 +121,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 	} else {
 		log.Debugf("Unable to gather stats for containers, err: %v", cntError)
 	}
+	retrievedContainerCountGauge.Set(float64(len(ctrList)))
 
 	// End check early if this is our first run.
 	if p.lastRun.IsZero() {
@@ -138,10 +170,11 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 	multiMetrics = append(multiMetrics, telemetry.MakeRawMetric("stackstate.process_agent.processes.total_count", cfg.HostName, float64(len(procs)), []string{}))
 	multiMetrics = append(multiMetrics, telemetry.MakeRawMetric("stackstate.process_agent.processes.top_usage_count", cfg.HostName, float64(topUsage), []string{}))
 	multiMetrics = append(multiMetrics, telemetry.MakeRawMetric("stackstate.process_agent.processes.white_listed_count", cfg.HostName, float64(whiteListedLongLiving), []string{}))
+	reportedContainerCountGauge.Set(float64(len(containers)))
+	reportedProcessCountGauge.Set(float64(len(processes)))
 
 	checkRunDuration := time.Now().Sub(start)
-	log.Debugf("collected processes in %s, processes found: %v", checkRunDuration, processes)
-	log.Debugf("collected containers in %s, containers found: %v", checkRunDuration, containers)
+	log.Infof("collected %v processes and %v containers in %s", len(processes), len(containers), checkRunDuration)
 	return &CheckResult{CollectorMessages: messages, Metrics: multiMetrics}, cntError
 }
 

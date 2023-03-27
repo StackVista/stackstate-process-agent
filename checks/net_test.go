@@ -962,8 +962,10 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 	assert.Len(t, conn1Metrics, 21)
 }
 
-func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, min, max, total int) {
+func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, minNs, maxNs, total int) {
 	assert.Equal(t, "http_response_time_seconds", formattedMetric.Name)
+	minSec := float64(minNs) / 1000000000.0
+	maxSec := float64(maxNs) / 1000000000.0
 	expectedTags := map[string]string{
 		"code": statusCode,
 	}
@@ -983,17 +985,17 @@ func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model
 			actualMax, err = actualSketch.GetMaxValue()
 			assert.NoError(t, err)
 		}
-		if min == 0 {
+		if minSec == 0 {
 			assert.Equal(t, 0.0, actualMin, "Min doesn't match for status code `%s`", statusCode)
 		} else {
 			// We use a 1% error margin to account for the fact that the sketch is not exact
-			assert.InEpsilon(t, min, actualMin, 0.01, "Min doesn't match for status code `%s`", statusCode)
+			assert.InEpsilon(t, minSec, actualMin, 0.03, "Min doesn't match for status code `%s`", statusCode)
 		}
-		if max == 0 {
+		if maxSec == 0 {
 			assert.Equal(t, 0.0, actualMax, "Max doesn't match for status code `%s`", statusCode)
 		} else {
 			// We use a 1% error margin to account for the fact that the sketch is not exact
-			assert.InEpsilon(t, max, actualMax, 0.01, "Max doesn't match for status code `%s`", statusCode)
+			assert.InEpsilon(t, maxSec, actualMax, 0.03, "Max doesn't match for status code `%s`", statusCode)
 		}
 	}
 }

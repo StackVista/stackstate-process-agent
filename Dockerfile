@@ -45,9 +45,6 @@ RUN  adduser --system --no-create-home --disabled-password --ingroup root stacks
  && chmod g+r,g+w,g+X -R /etc/stackstate-agent/ /var/log/stackstate-agent/ \
  && chmod 755 /probe.sh /init-process.sh
 
-# Copy agent
-COPY process-agent /opt/stackstate-agent/bin/agent/
-WORKDIR /opt/stackstate-agent/bin/agent
 
 # Copy eBPF probes
 COPY ebpf-object-files /opt/stackstate-agent/ebpf
@@ -57,6 +54,10 @@ ENV DD_SYSTEM_PROBE_BPF_DIR /opt/stackstate-agent/ebpf
 #   - copy default config files
 COPY DockerFiles/agent/stackstate*.yaml /etc/stackstate-agent/
 
+# Copy agent
+COPY process-agent /opt/stackstate-agent/bin/agent/
+
+WORKDIR /opt/stackstate-agent/bin/agent
 
 HEALTHCHECK --interval=2m --timeout=5s --retries=2 \
   CMD ["/probe.sh"]

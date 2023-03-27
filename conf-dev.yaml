@@ -15,7 +15,6 @@ sts_url: http://localhost:7077/stsAgent
 api_key: API_KEY
 process_agent_enabled: true
 incremental_publishing_enabled: true
-log_level: info
 
 process_config:
   enabled: 'true'

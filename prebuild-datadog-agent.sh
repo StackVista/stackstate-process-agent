@@ -168,6 +168,7 @@ elif [ "$ACTION" = "install-go" ]; then
   set -x
   chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR"
   cp -v -a "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR"
+  ls -la "$GO_MOD_DEPENDENCY_DIR/pkg/ebpf/bytecode/runtime/"
   set +x
 elif [ "$ACTION" = "install-ebpf" ]; then
   echo "Installing ebpf files"

@@ -2505,6 +2505,7 @@ func (m *IOStat) GetWriteBytesRate() float32 {
 
 type ConnectionMetricValue struct {
 	// Types that are valid to be assigned to Value:
+	//
 	//	*ConnectionMetricValue_Histogram
 	//	*ConnectionMetricValue_Number
 	Value isConnectionMetricValue_Value `protobuf_oneof:"value"`

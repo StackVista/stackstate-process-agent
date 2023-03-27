@@ -159,14 +159,16 @@ elif [ "$ACTION" = "generate-no-docker" ]; then
   mkdir -p "$DEPENDENCY_ARTIFACTS_DIR"
   runPrebuildNoDocker
 elif [ "$ACTION" = "install-go" ]; then
-  echo "Installing go files"
+  echo "Installing go files to $GO_MOD_DEPENDENCY_DIR"
   if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/gofiles" ]; then
     echo "No generated files found at $DEPENDENCY_ARTIFACTS_DIR/gofiles, please run --generate first"
     exit 1
   fi
 
+  set -x
   chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR"
   cp -a "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR"
+  set +x
 elif [ "$ACTION" = "install-ebpf" ]; then
   echo "Installing ebpf files"
   if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/ebpf" ]; then
@@ -174,8 +176,10 @@ elif [ "$ACTION" = "install-ebpf" ]; then
     exit 1
   fi
 
+  set -x
   mkdir -p $DIR/ebpf-object-files
   cp -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files/"
+  set +x
 elif [ "$ACTION" = "install-ebpf-root" ]; then
   echo "Installing ebpf files as root"
   if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/ebpf" ]; then
@@ -183,10 +187,12 @@ elif [ "$ACTION" = "install-ebpf-root" ]; then
     exit 1
   fi
 
+  set -x
   mkdir -p $DIR/ebpf-object-files-root
   cp -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files-root/"
   # chmod -R 0022 "$DIR/ebpf-object-files-root/"/*
   sudo chown -R root:root "$DIR/ebpf-object-files-root/"
+  set +x
 elif [ "$ACTION" = "clean" ]; then
   echo "Cleaning prebuild files from $PREBUILD_ARTIFACTS_DIR"
   rm -rf "$ALL_ARTIFACTS_DIR"

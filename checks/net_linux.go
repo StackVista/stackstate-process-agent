@@ -17,31 +17,26 @@ import (
 // Init initializes a ConnectionsCheck instance.
 func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemInfo) {
 
-	if cfg.EnableLocalNetworkTracer {
-		log.Info("starting network tracer locally")
-		c.useLocalTracer = true
+	log.Info("starting network tracer locally")
+	c.useLocalTracer = true
 
-		// Checking whether the current kernel version is supported by the tracer
-		if isSupported, reason := tracer.IsTracerSupportedByOS(nil); !isSupported {
-			// err is always returned when false, so the above catches the !ok case as well
-			c.localTracerErr = log.Errorf("network tracer unsupported by OS: %s. Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", reason)
-			return
-		}
-
-		conf := config.TracerConfig(cfg)
-
-		t, err := retryTracerInit(cfg.NetworkTracerInitRetryDuration, cfg.NetworkTracerInitRetryAmount, conf, tracer.NewTracer)
-		if err != nil {
-			c.localTracerErr = log.Errorf("failed to create network tracer: %s.  Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", err)
-			return
-		}
-
-		c.podsCache = pods.MakeCachedPods(60 * time.Second)
-		c.localTracer = t
-	} else {
-		log.Error("Remote tracer is not supported")
+	// Checking whether the current kernel version is supported by the tracer
+	if isSupported, reason := tracer.IsTracerSupportedByOS(nil); !isSupported {
+		// err is always returned when false, so the above catches the !ok case as well
+		c.localTracerErr = log.Errorf("network tracer unsupported by OS: %s. Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", reason)
 		return
 	}
+
+	conf := config.TracerConfig(cfg)
+
+	t, err := retryTracerInit(cfg.NetworkTracerInitRetryDuration, cfg.NetworkTracerInitRetryAmount, conf, tracer.NewTracer)
+	if err != nil {
+		c.localTracerErr = log.Errorf("failed to create network tracer: %s.  Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", err)
+		return
+	}
+
+	c.podsCache = pods.MakeCachedPods(60 * time.Second)
+	c.localTracer = t
 
 	c.cache = NewNetworkRelationCache(cfg.NetworkRelationCacheDurationMin)
 

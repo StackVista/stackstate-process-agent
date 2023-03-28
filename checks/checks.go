@@ -16,7 +16,6 @@ type Check interface {
 	Init(cfg *config.AgentConfig, info *model.SystemInfo)
 	Name() string
 	Endpoint() string
-	RealTime() bool
 	Run(cfg *config.AgentConfig, features features.Features, groupID int32, currentTime time.Time) (*CheckResult, error)
 }
 

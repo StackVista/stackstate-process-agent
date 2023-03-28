@@ -10,7 +10,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/DataDog/datadog-agent/pkg/process/util"
-	httputils "github.com/DataDog/datadog-agent/pkg/util/http"
 )
 
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration
@@ -358,13 +357,6 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		}
 	}
 
-	if yc.Process.Windows.ArgsRefreshInterval != 0 {
-		agentConf.Windows.ArgsRefreshInterval = yc.Process.Windows.ArgsRefreshInterval
-	}
-	if yc.Process.Windows.AddNewArgs != nil {
-		agentConf.Windows.AddNewArgs = *yc.Process.Windows.AddNewArgs
-	}
-
 	for endpointURL, apiKeys := range yc.Process.AdditionalEndpoints {
 		u, err := url.Parse(endpointURL)
 		if err != nil {
@@ -392,9 +384,6 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		agentConf.CriSocketPath = yc.Containers.CriSocketPath
 	}
 
-	// Pull additional parameters from the global config file.
-	agentConf.Transport = httputils.CreateHTTPTransport()
-
 	return agentConf, nil
 }
 
@@ -403,26 +392,11 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 		agentConf.EnabledChecks = append(agentConf.EnabledChecks, "connections")
 		agentConf.EnableNetworkTracing = enabled
 	}
-	if procEnabled, _ := isAffirmative(networkConf.Network.NetworkInitialConnectionFromProc); procEnabled {
-		agentConf.NetworkInitialConnectionsFromProc = procEnabled
-	}
-	if socketPath := networkConf.Network.UnixSocketPath; socketPath != "" {
-		agentConf.NetworkTracerSocketPath = socketPath
-	}
 	if networkConf.Network.LogFile != "" {
 		agentConf.LogFile = networkConf.Network.LogFile
 	}
 	if enabled, err := isAffirmative(networkConf.Network.EBPFDebuglogEnabled); err == nil {
 		agentConf.NetworkTracer.EbpfDebuglogEnabled = enabled
-	}
-	if networkConf.Network.HTTPMetrics.MaxNumBins != 0 {
-		agentConf.NetworkTracer.HTTPMetrics.MaxNumBins = networkConf.Network.HTTPMetrics.MaxNumBins
-	}
-	if networkConf.Network.HTTPMetrics.Accuracy != 0 {
-		agentConf.NetworkTracer.HTTPMetrics.Accuracy = networkConf.Network.HTTPMetrics.Accuracy
-	}
-	if sketchType, err := getSketchType(networkConf.Network.HTTPMetrics.SketchType); err == nil {
-		agentConf.NetworkTracer.HTTPMetrics.SketchType = sketchType
 	}
 	if protMetrEnabled, err := isAffirmative(networkConf.Network.ProtocolInspectionEnabled); err == nil {
 		agentConf.NetworkTracer.EnableProtocolInspection = protMetrEnabled

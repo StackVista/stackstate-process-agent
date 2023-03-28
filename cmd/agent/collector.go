@@ -51,18 +51,11 @@ type checkPayload struct {
 // Collector will collect metrics from the local system and ship to the backend.
 type Collector struct {
 	send          chan checkResult
-	rtIntervalCh  chan time.Duration
 	cfg           *config.AgentConfig
 	groupID       int32
 	runCounter    int32
 	enabledChecks []checks.Check
 	features      features.Features
-
-	// Controls the real-time interval, can change live.
-	realTimeInterval time.Duration
-	// Set to 1 if enabled 0 is not. We're using an integer
-	// so we can use the sync/atomic for thread-safe access.
-	realTimeEnabled int32
 
 	batcher transactionbatcher.TransactionalBatcher
 	manager transactionmanager.TransactionManager
@@ -89,15 +82,10 @@ func NewCollector(cfg *config.AgentConfig,
 
 	return Collector{
 		send:          make(chan checkResult, cfg.QueueSize),
-		rtIntervalCh:  make(chan time.Duration),
 		cfg:           cfg,
 		groupID:       rand.Int31(),
 		enabledChecks: enabledChecks,
 		features:      features.Empty(),
-
-		// Defaults for real-time on start
-		realTimeInterval: 2 * time.Second,
-		realTimeEnabled:  0,
 
 		batcher: batcher,
 		manager: manager,
@@ -140,16 +128,15 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 		} else {
 			log.Infof("Ignoring empty result of '%s' check", c.Name())
 		}
-		if !c.RealTime() {
-			d := time.Since(currentTime)
-			switch {
-			case runCounter < 5:
-				log.Infof("Finished check #%d in %s", runCounter, d)
-			case runCounter == 5:
-				log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
-			case runCounter%20 == 0:
-				log.Infof("Finish check #%d in %s", runCounter, d)
-			}
+
+		d := time.Since(currentTime)
+		switch {
+		case runCounter < 5:
+			log.Infof("Finished check #%d in %s", runCounter, d)
+		case runCounter == 5:
+			log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
+		case runCounter%20 == 0:
+			log.Infof("Finish check #%d in %s", runCounter, d)
 		}
 	}
 }
@@ -248,24 +235,13 @@ func (l *Collector) run(exit chan bool) {
 		// Assignment here, because iterator value gets altered
 		go func(c checks.Check) {
 			// Run the check the first time to prime the caches.
-			if !c.RealTime() {
-				l.runCheck(c, l.features)
-			}
+			l.runCheck(c, l.features)
 
 			ticker := time.NewTicker(l.cfg.CheckInterval(c.Name()))
 			for {
 				select {
 				case <-ticker.C:
-					realTimeEnabled := atomic.LoadInt32(&l.realTimeEnabled) == 1
-					if !c.RealTime() || realTimeEnabled {
-						l.runCheck(c, l.features)
-					}
-				case d := <-l.rtIntervalCh:
-					// Live-update the ticker.
-					if c.RealTime() {
-						ticker.Stop()
-						ticker = time.NewTicker(d)
-					}
+					l.runCheck(c, l.features)
 				case _, ok := <-exit:
 					if !ok {
 						return
@@ -317,40 +293,15 @@ func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp
 }
 
 func (l *Collector) updateStatus(statuses []*model.CollectorStatus) {
-	curEnabled := atomic.LoadInt32(&l.realTimeEnabled) == 1
-
 	// If any of the endpoints wants real-time we'll do that.
 	// We will pick the maximum interval given since generally this is
 	// only set if we're trying to limit load on the backend.
-	shouldEnableRT := false
 	maxInterval := 0 * time.Second
 	for _, s := range statuses {
-		shouldEnableRT = shouldEnableRT || (s.ActiveClients > 0 && l.cfg.AllowRealTime)
 		interval := time.Duration(s.Interval) * time.Second
 		if interval > maxInterval {
 			maxInterval = interval
 		}
-	}
-
-	if curEnabled && !shouldEnableRT {
-		log.Info("Detected 0 clients, disabling real-time mode")
-		atomic.StoreInt32(&l.realTimeEnabled, 0)
-	} else if !curEnabled && shouldEnableRT {
-		log.Info("Detected active clients, enabling real-time mode")
-		atomic.StoreInt32(&l.realTimeEnabled, 1)
-	}
-
-	if maxInterval != l.realTimeInterval {
-		l.realTimeInterval = maxInterval
-		if l.realTimeInterval <= 0 {
-			l.realTimeInterval = 2 * time.Second
-		}
-		// Pass along the real-time interval, one per check, so that every
-		// check routine will see the new interval.
-		for range l.enabledChecks {
-			l.rtIntervalCh <- l.realTimeInterval
-		}
-		log.Infof("real time interval updated to %s", l.realTimeInterval)
 	}
 }
 

@@ -57,9 +57,6 @@ func (p *ProcessCheck) Name() string { return "process" }
 // Endpoint returns the endpoint where this check is submitted.
 func (p *ProcessCheck) Endpoint() string { return "/api/v1/collector" }
 
-// RealTime indicates if this check only runs in real-time mode.
-func (p *ProcessCheck) RealTime() bool { return false }
-
 var retrievedProcessCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
 	Namespace: "stackstate_process_agent",
 	Subsystem: "process_check",

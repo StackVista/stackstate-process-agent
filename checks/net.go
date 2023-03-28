@@ -60,9 +60,6 @@ func (c *ConnectionsCheck) Name() string { return "connections" }
 // Endpoint returns the endpoint where this check is submitted.
 func (c *ConnectionsCheck) Endpoint() string { return "/api/v1/connections" }
 
-// RealTime indicates if this check only runs in real-time mode.
-func (c *ConnectionsCheck) RealTime() bool { return false }
-
 // Run runs the ConnectionsCheck to collect the live TCP connections on the
 // system. Currently only linux systems are supported as eBPF is used to gather
 // this information. For each connection we'll return a `model.Connection`
@@ -661,7 +658,7 @@ func (rp *reportedProps) Tags() []string {
 	return result
 }
 
-func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection /*, telemetry_stats *http.TelemetryStats*/) []telemetry.RawMetric {
+func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *network.Connections, reportedConnections []*model.Connection) []telemetry.RawMetric {
 	metrics := make([]telemetry.RawMetric, 0)
 
 	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.total", hostname, float64(len(allConnections.Conns)), []string{}))
@@ -678,18 +675,10 @@ func (c *ConnectionsCheck) reportMetrics(hostname string, allConnections *networ
 		count, _ := reportedBreakdown[props]
 		reportedBreakdown[props] = count + 1
 	}
+
 	for props, count := range reportedBreakdown {
 		metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.reported", hostname, float64(count), props.Tags()))
 	}
-
-	//if telemetry_stats != nil {
-	//	//Misses   int64 // this happens when we can't cope with the rate of events
-	//	//Dropped  int64 // this happens when httpStatKeeper reaches capacity
-	//	//Rejected int64 // this happens when a user-defined reject-filter matches a request
-	//	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.misses", hostname, float64(telemetry_stats.Misses), []string{}))
-	//	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.dropped", hostname, float64(telemetry_stats.Dropped), []string{}))
-	//	metrics = append(metrics, telemetry.MakeRawMetric("stackstate.process_agent.connections.http.rejected", hostname, float64(telemetry_stats.Rejected), []string{}))
-	//}
 
 	return metrics
 }

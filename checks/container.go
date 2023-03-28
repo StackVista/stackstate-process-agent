@@ -5,13 +5,9 @@ package checks
 
 import (
 	"fmt"
-	"github.com/DataDog/datadog-agent/pkg/util/containers/metrics/provider"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"strings"
 	"time"
-
-	log "github.com/cihub/seelog"
 
 	ddmodel "github.com/DataDog/agent-payload/v5/process"
 	"github.com/StackVista/stackstate-process-agent/config"
@@ -23,8 +19,7 @@ func retrieveMetricsAndFormat(cfg *config.AgentConfig, ctrList []*ddmodel.Contai
 	containers := make([]*model.Container, 0)
 
 	for _, c := range ctrList {
-		stats := retrieveAdditionalStats(c)
-		container, mm := fmtContainer(cfg, c, stats)
+		container, mm := fmtContainer(cfg, c)
 		multiMetrics = append(multiMetrics, mm...)
 		containers = append(containers, container)
 	}
@@ -32,46 +27,10 @@ func retrieveMetricsAndFormat(cfg *config.AgentConfig, ctrList []*ddmodel.Contai
 	return containers, multiMetrics
 }
 
-// retrieveAdditionalStats gets data on top of the already retrieved data for containers.
-func retrieveAdditionalStats(c *ddmodel.Container) *provider.ContainerStats {
-	// This function is programmed defensively, due to this code being executed outside of the main collection run,
-	// so containers/ids/providers might have changed since collection (hard to prove ootherwise given the global nature of
-	// the data in the datadog dependency).
-
-	// Retrieve the container metadata, to get hold of the namespace
-	containerMeta, err := workloadmeta.GetGlobalStore().GetContainer(c.Id)
-
-	if err == nil {
-		// Question: are there benefits to making the collector not global?
-		collector := provider.GetProvider().GetCollector(string(fromTypeToContainerRuntime(c.Type)))
-		stats, err := collector.GetContainerStats(containerMeta.Namespace, c.Id, 2*time.Second)
-		if err == nil {
-			return stats
-		}
-
-		log.Warnf("Could not get container stats for container: %s", c.Id)
-	} else {
-		log.Warnf("Could not get container metaData for container: %s", c.Id)
-	}
-
-	return nil
-}
-
-// fromTypeToContainerRuntime is essentially the inverse of datad agents' process/util/containgers.go:260 convertContainerRuntime
-func fromTypeToContainerRuntime(runtime string) workloadmeta.ContainerRuntime {
-	// ECSFargate is special and used to be mapped to "ECS"
-	if runtime == "ECS" {
-		return workloadmeta.ContainerRuntimeECSFargate
-	}
-
-	return workloadmeta.ContainerRuntime(runtime)
-}
-
 // fmtContainers formats a container given raw data to the output values
 func fmtContainer(
 	cfg *config.AgentConfig,
 	ctr *ddmodel.Container,
-	stats *provider.ContainerStats,
 ) (*model.Container, []telemetry.RawMetric) {
 
 	multiMetrics := make([]telemetry.RawMetric, 0)
@@ -93,25 +52,6 @@ func fmtContainer(
 	makeMetric := func(name string, value float64) telemetry.RawMetric {
 		return telemetry.RawMetric{
 			Name: name, Timestamp: timestamp, HostName: cfg.HostName, Value: value, Tags: metricTags,
-		}
-	}
-
-	appendIfDefined := func(metrics []telemetry.RawMetric, name string, value *float64) []telemetry.RawMetric {
-		if value == nil {
-			return metrics
-		}
-
-		return append(metrics, makeMetric(name, *value))
-	}
-
-	if stats != nil {
-		if stats.CPU != nil {
-			multiMetrics = appendIfDefined(multiMetrics, "container_cpu_throttled_time_total", stats.CPU.ThrottledTime)
-			multiMetrics = appendIfDefined(multiMetrics, "container_cpu_throttled_periods_total", stats.CPU.ThrottledPeriods)
-		}
-
-		if stats.PID != nil {
-			multiMetrics = appendIfDefined(multiMetrics, "cpuThreadCount", stats.PID.ThreadCount)
 		}
 	}
 

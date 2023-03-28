@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/process/util"
-	"github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
 
 	"github.com/DataDog/gopsutil/process"
 	"github.com/stretchr/testify/assert"
@@ -105,98 +103,10 @@ func TestDefaultBlacklist(t *testing.T) {
 	assert.NoError(t, err)
 
 	agentConfig, _ := NewAgentConfig(cf)
-	if runtime.GOOS != "windows" {
-		assert.True(t, IsBlacklisted([]string{"/usr/sbin/acpid"}, agentConfig.Blacklist))
-	} else {
-		assert.True(t, IsBlacklisted([]string{"Explorer.EXE"}, agentConfig.Blacklist))
-	}
-}
-
-func TestDefaultBlacklistWindows(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		return
-	}
-
-	var cf *YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"anything: goes",
-	}, "\n")), &cf)
-	assert.NoError(t, err)
-	agentConfig, _ := NewAgentConfig(cf)
-
-	for _, tc := range []struct {
-		name        string
-		processArgs []string
-		expected    bool
-	}{
-		{
-			name:        "Should not filter MyOwnApplication.EXE process based on Blacklist",
-			processArgs: []string{"MyOwnApplication.EXE"},
-			expected:    false,
-		},
-		{
-			name:        "Should filter Explorer.EXE process based on Blacklist",
-			processArgs: []string{"Explorer.EXE"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter conhost.exe process based on Blacklist",
-			processArgs: []string{"conhost.exe"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter DllHost.exe process based on Blacklist",
-			processArgs: []string{"DllHost.exe"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter dwm.exe process based on Blacklist",
-			processArgs: []string{"dwm.exe"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter tasklist.exe process based on Blacklist",
-			processArgs: []string{"tasklist.exe"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter VBoxService.exe process based on Blacklist",
-			processArgs: []string{"VBoxService.exe"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter taskhostw.exe process based on Blacklist",
-			processArgs: []string{"taskhostw.exe"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter svchost.exe process based on Blacklist",
-			processArgs: []string{"svchost.exe"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter lsass.exe process based on Blacklist",
-			processArgs: []string{"lsass.exe"},
-			expected:    true,
-		},
-		{
-			name:        "Should filter msdtc.exe process based on Blacklist",
-			processArgs: []string{"msdtc.exe"},
-			expected:    true,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			filter := IsBlacklisted(tc.processArgs, agentConfig.Blacklist)
-			assert.Equal(t, tc.expected, filter, "Test: [%s], expected filter: %t, found filter: %t", tc.name, tc.expected, filter)
-		})
-	}
+	assert.True(t, IsBlacklisted([]string{"/usr/sbin/acpid"}, agentConfig.Blacklist))
 }
 
 func TestDefaultBlacklistNix(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		return
-	}
-
 	var cf *YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"anything: goes",
@@ -432,7 +342,6 @@ func TestDefaultConfig(t *testing.T) {
 
 	// assert that some sane defaults are set
 	assert.Equal("info", agentConfig.LogLevel)
-	assert.Equal(true, agentConfig.AllowRealTime)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
@@ -476,15 +385,12 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(true, agentConfig.AllowRealTime)
 	assert.Equal(true, agentConfig.Enabled)
 	assert.Equal(true, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(1*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
 	assert.Equal(processChecks, agentConfig.EnabledChecks)
 	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
-	assert.Equal(100, agentConfig.Windows.ArgsRefreshInterval)
-	assert.Equal(false, agentConfig.Windows.AddNewArgs)
 	assert.Equal(false, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
@@ -516,8 +422,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal(false, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(2*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
-	assert.Equal(-1, agentConfig.Windows.ArgsRefreshInterval)
-	assert.Equal(true, agentConfig.Windows.AddNewArgs)
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
@@ -541,8 +445,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(false, agentConfig.Enabled)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
-	assert.Equal(15, agentConfig.Windows.ArgsRefreshInterval)
-	assert.Equal(true, agentConfig.Windows.AddNewArgs)
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
@@ -575,8 +477,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("localhost", eps[2].Endpoint.Hostname())
 	assert.Equal(false, agentConfig.Enabled)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
-	assert.Equal(15, agentConfig.Windows.ArgsRefreshInterval)
-	assert.Equal(true, agentConfig.Windows.AddNewArgs)
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
@@ -654,11 +554,9 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(true, agentConfig.AllowRealTime)
 	assert.Equal(true, agentConfig.Enabled)
 	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
-	assert.Equal(true, agentConfig.NetworkInitialConnectionsFromProc)
 	assert.Equal(10000, agentConfig.NetworkTracerMaxConnections)
 	assert.Equal(append(processChecks, "connections"), agentConfig.EnabledChecks)
 	assert.Equal(10*time.Minute, agentConfig.NetworkRelationCacheDurationMin)
@@ -669,54 +567,6 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert.Equal(30*time.Second, agentConfig.ShortLivedNetworkRelationQualifierSecs)
 }
 
-func TestStackStateNetworkConfigWithHttpMetricsOptions(t *testing.T) {
-	assert := assert.New(t)
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal(
-		[]byte(`
-network_tracer_config:
-  max_connections: 2000
-  network_tracing_enabled: 'true'
-  protocol_inspection_enabled: 'true'
-  ebpf_debuglog_enabled: 'true'
-  http_metrics:
-    sketch_type: 'collapsing_highest_dense'
-    max_num_bins: 42
-    accuracy: 0.123
-`), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	assert.Equal(true, agentConfig.NetworkTracer.EnableProtocolInspection)
-	assert.Equal(true, agentConfig.NetworkTracer.EbpfDebuglogEnabled)
-	assert.Equal(config.CollapsingHighest, agentConfig.NetworkTracer.HTTPMetrics.SketchType)
-	assert.Equal(2000, agentConfig.NetworkTracerMaxConnections)
-	assert.Equal(42, agentConfig.NetworkTracer.HTTPMetrics.MaxNumBins)
-	assert.Equal(0.123, agentConfig.NetworkTracer.HTTPMetrics.Accuracy)
-}
-
-func TestStackStateNetworkConfigDefaultValuesForHttpMetrics(t *testing.T) {
-	assert := assert.New(t)
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal(
-		[]byte(`
-network_tracer_config:
-  network_tracing_enabled: 'true'
-  http_metrics:
-
-`), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	assert.Equal(true, agentConfig.NetworkTracer.EnableProtocolInspection)
-	assert.Equal(config.CollapsingLowest, agentConfig.NetworkTracer.HTTPMetrics.SketchType)
-	assert.Equal(1024, agentConfig.NetworkTracer.HTTPMetrics.MaxNumBins)
-	assert.Equal(0.01, agentConfig.NetworkTracer.HTTPMetrics.Accuracy)
-}
 func TestStackStateNetworkConfigProtocolInspectionDisabled(t *testing.T) {
 	assert := assert.New(t)
 	var ddy YamlAgentConfig

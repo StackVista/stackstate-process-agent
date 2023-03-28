@@ -8,7 +8,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/hostname"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,22 +16,11 @@ import (
 	"strings"
 	"time"
 
-	tracerconfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
-
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	log "github.com/cihub/seelog"
 )
 
 var (
-	// defaultProxyPort is the default port used for proxies.
-	// This mirrors the configuration for the infrastructure agent.
-	defaultProxyPort = 3128
-
-	// defaultNetworkTracerSocketPath is the default unix socket path to be used for connecting to the network tracer
-	defaultNetworkTracerSocketPath = "/opt/datadog-agent/run/nettracer.sock"
-	// defaultNetworkLogFilePath is the default logging file for the network tracer
-	defaultNetworkLogFilePath = "/var/log/datadog/network-tracer.log"
-
 	processChecks = []string{"process"}
 
 	// List of known Kubernetes images that we want to exclude by default.
@@ -42,16 +30,6 @@ var (
 	}
 )
 
-type proxyFunc func(*http.Request) (*url.URL, error)
-
-// WindowsConfig stores all windows-specific configuration for the process-agent.
-type WindowsConfig struct {
-	// Number of checks runs between refreshes of command-line arguments
-	ArgsRefreshInterval int
-	// Controls getting process arguments immediately when a new process is discovered
-	AddNewArgs bool
-}
-
 // NetworkTracerConfig contains some[1] of the network tracer configuration options
 type NetworkTracerConfig struct {
 	// Enables protocol inspection from eBPF code
@@ -60,8 +38,6 @@ type NetworkTracerConfig struct {
 	EbpfDebuglogEnabled bool
 	// Location of the ebpf
 	EbpfArtifactDir string
-	// Settings related to gathering & aggregation of http metrics
-	HTTPMetrics *tracerconfig.HttpMetricConfig
 }
 
 // APIEndpoint is a single endpoint where process data will be submitted.
@@ -86,7 +62,6 @@ type AgentConfig struct {
 	MaxProcFDs               int
 	MaxPerMessage            int
 	MaxConnectionsPerMessage int
-	AllowRealTime            bool
 	Transport                *http.Transport `json:"-"`
 	Logger                   *LoggerConfig
 
@@ -138,11 +113,9 @@ type AgentConfig struct {
 	CheckHealthStateMessageLimit int
 
 	// Containers
-	CriSocketPath          string
-	ContainerBlacklist     []string
-	ContainerWhitelist     []string
-	CollectDockerNetwork   bool
-	ContainerCacheDuration time.Duration
+	CriSocketPath      string
+	ContainerBlacklist []string
+	ContainerWhitelist []string
 
 	// Transaction Manager
 	TxManagerChannelBufferSize       int
@@ -160,9 +133,6 @@ type AgentConfig struct {
 	// Proxy
 	HTTPSProxy *url.URL
 	HTTPProxy  *url.URL
-
-	// Windows-specific config
-	Windows WindowsConfig
 }
 
 // CheckIsEnabled returns a bool indicating if the given check name is enabled.
@@ -185,21 +155,6 @@ const (
 	maxMessageBatch = 100
 )
 
-// NewDefaultTransport provides a http transport configuration with sane default timeouts
-func NewDefaultTransport() *http.Transport {
-	return &http.Transport{
-		MaxIdleConns:    5,
-		IdleConnTimeout: 90 * time.Second,
-		Dial: (&net.Dialer{
-			Timeout:   10 * time.Second,
-			KeepAlive: 10 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout:   5 * time.Second,
-		ResponseHeaderTimeout: 5 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-}
-
 // NewDefaultAgentConfig returns an AgentConfig with defaults initialized
 func NewDefaultAgentConfig() *AgentConfig {
 	u, err := url.Parse(defaultEndpoint)
@@ -219,9 +174,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		MaxProcFDs:               200,
 		MaxPerMessage:            maxMessageBatch,
 		MaxConnectionsPerMessage: 100,
-		AllowRealTime:            true,
 		HostName:                 "",
-		Transport:                NewDefaultTransport(),
 
 		Blacklist: deriveFmapConstructRegex(constructRegex, defaultBlacklistPatterns),
 
@@ -249,37 +202,24 @@ func NewDefaultAgentConfig() *AgentConfig {
 		ShortLivedProcessQualifierSecs: 60 * time.Second,
 
 		// Network collection configuration
-		EnableNetworkTracing:              false,
-		EnableLocalNetworkTracer:          true,
-		NetworkInitialConnectionsFromProc: true,
-		NetworkTracerMaxConnections:       10000,
-		NetworkTracerSocketPath:           defaultNetworkTracerSocketPath,
-		NetworkTracerLogFile:              defaultNetworkLogFilePath,
-		NetworkTracerInitRetryDuration:    5 * time.Second,
-		NetworkTracerInitRetryAmount:      3,
+		EnableNetworkTracing:           false,
+		NetworkTracerMaxConnections:    10000,
+		NetworkTracerInitRetryDuration: 5 * time.Second,
+		NetworkTracerInitRetryAmount:   3,
 		NetworkTracer: &NetworkTracerConfig{
 			EnableProtocolInspection: true,
 			EbpfDebuglogEnabled:      false,
 			EbpfArtifactDir:          "/opt/stackstate-agent/ebpf",
-			HTTPMetrics: &tracerconfig.HttpMetricConfig{
-				SketchType: tracerconfig.CollapsingLowest,
-				MaxNumBins: 1024,
-				Accuracy:   0.01,
-			},
 		},
 
 		// Check config
-		EnabledChecks: processChecks, // sts - Always run process checks by default (process check also runs container check)
+		EnabledChecks: processChecks,
 		CheckIntervals: map[string]time.Duration{
 			"process":     30 * time.Second,
 			"connections": 30 * time.Second,
 		},
 		ReportCheckHealthState:       true,
 		CheckHealthStateMessageLimit: 2048,
-
-		// Docker
-		ContainerCacheDuration: 10 * time.Second,
-		CollectDockerNetwork:   true,
 
 		// Transaction manager
 		TxManagerChannelBufferSize:       transactionmanager.DefaultTxManagerChannelBufferSize,
@@ -297,12 +237,6 @@ func NewDefaultAgentConfig() *AgentConfig {
 		// Proxy
 		HTTPSProxy: nil,
 		HTTPProxy:  nil,
-
-		// Windows process config
-		Windows: WindowsConfig{
-			ArgsRefreshInterval: 15, // with default 20s check interval we refresh every 5m
-			AddNewArgs:          true,
-		},
 	}
 
 	// Set default values for proc/sys paths if unset.
@@ -354,14 +288,6 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 	// (Re)configure the logging from our configuration
 	if err := NewLoggerLevel(cfg.LogLevel, cfg.LogFile, cfg.LogToConsole); err != nil {
 		return nil, err
-	}
-
-	// sanity check. This element is used with the modulo operator (%), so it can't be zero.
-	// if it is, log the error, and assume the config was attempting to disable
-	if cfg.Windows.ArgsRefreshInterval == 0 {
-		log.Warnf("invalid configuration: windows_collect_skip_new_args was set to 0. " +
-			"Disabling argument collection")
-		cfg.Windows.ArgsRefreshInterval = -1
 	}
 
 	if len(cfg.APIEndpoints) > 1 {
@@ -505,18 +431,11 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	}
 
 	// Docker config
-	if v := os.Getenv("STS_COLLECT_DOCKER_NETWORK"); v == "false" {
-		c.CollectDockerNetwork = false
-	}
 	if v := os.Getenv("STS_CONTAINER_BLACKLIST"); v != "" {
 		c.ContainerBlacklist = strings.Split(v, ",")
 	}
 	if v := os.Getenv("STS_CONTAINER_WHITELIST"); v != "" {
 		c.ContainerWhitelist = strings.Split(v, ",")
-	}
-	if v := os.Getenv("STS_CONTAINER_CACHE_DURATION"); v != "" {
-		durationS, _ := strconv.Atoi(v)
-		c.ContainerCacheDuration = time.Duration(durationS) * time.Second
 	}
 
 	// Note: this feature is in development and should not be used in production environments
@@ -525,10 +444,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.EnabledChecks = append(c.EnabledChecks, "connections")
 		c.EnableNetworkTracing = ok
 	}
-	if v := os.Getenv("STS_NETTRACER_SOCKET"); v != "" {
-		c.NetworkTracerSocketPath = v
-	}
-
 	if v := os.Getenv("STS_NETTRACER_EBPF_ARTIFACTS_DIR"); v != "" {
 		c.NetworkTracer.EbpfArtifactDir = v
 	}
@@ -783,19 +698,6 @@ func isAffirmative(value string) (bool, error) {
 	}
 	v := strings.ToLower(value)
 	return v == "true" || v == "yes" || v == "1", nil
-}
-
-func getSketchType(value string) (tracerconfig.MetricSketchType, error) {
-	switch value {
-	case string(tracerconfig.Unbounded):
-		return tracerconfig.Unbounded, nil
-	case string(tracerconfig.CollapsingLowest):
-		return tracerconfig.CollapsingLowest, nil
-	case string(tracerconfig.CollapsingHighest):
-		return tracerconfig.CollapsingHighest, nil
-	default:
-		return "", fmt.Errorf("unknown sketch type")
-	}
 }
 
 // ConfigureHostname puts the hostname into the config. This has been separateded to allow the rest of the config to be processed before finding the hostname

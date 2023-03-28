@@ -44,18 +44,17 @@ require (
 	github.com/DataDog/gopsutil v1.2.2
 	github.com/DataDog/sketches-go v1.4.1
 	github.com/DataDog/zstd v1.5.2
-	github.com/StackExchange/wmi v1.2.1
+	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230322143705-a49da23e37d6
-	github.com/StackVista/tcptracer-bpf v7.0.6+incompatible
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gogo/protobuf v1.3.2
-	github.com/mailru/easyjson v0.7.7
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
+	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/stretchr/testify v1.8.1
-	golang.org/x/sys v0.5.0
+	golang.org/x/sys v0.5.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -400,7 +399,6 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/power-devops/perfstat v0.0.0-20220216144756-c35f1ee13d7c // indirect
 	github.com/prometheus/statsd_exporter v0.22.7 // indirect
-	github.com/pytimer/win-netstat v0.0.0-20180710031115-efa1aff6aafc // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/richardartoul/molecule v0.0.0-20210914193524-25d8911bb85b // indirect

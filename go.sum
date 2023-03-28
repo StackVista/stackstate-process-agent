@@ -232,8 +232,6 @@ github.com/StackVista/sketches-go v1.2.0-pre h1:04QAbYurRVq5LY6VK0KbFPUi4YhJcpEi
 github.com/StackVista/sketches-go v1.2.0-pre/go.mod h1:xerTHIkY3XGMCqOy9PwIlCwHNiaqCJE854wvOvlSjyc=
 github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230322143705-a49da23e37d6 h1:wfPQ2eL6B5lRBPqkvNQK3+8qJwKh6L9Gm/x3jtGuPiU=
 github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230322143705-a49da23e37d6/go.mod h1:pXOe9cKyUCKiQuZy2+nPDwjjQGp7XKH9/qlHptkBm/E=
-github.com/StackVista/tcptracer-bpf v7.0.6+incompatible h1:0XT3cHAiJqL4e67tQvAUjT9kSp+prmPa4eUkl0EM84M=
-github.com/StackVista/tcptracer-bpf v7.0.6+incompatible/go.mod h1:+Nq8JZ/t2qRoubch8CWCiD9ppwX349HP3FJeTQ3RR20=
 github.com/VividCortex/ewma v1.1.1 h1:MnEK4VOv6n0RSY4vtRe3h11qjxL3+t0B8yOL8iMXdcM=
 github.com/VividCortex/ewma v1.1.1/go.mod h1:2Tkkvm3sRDVXaiyucHiACn4cqf7DpdyLvmxzcbUokwA=
 github.com/acobaugh/osrelease v0.1.0 h1:Yb59HQDGGNhCj4suHaFQQfBps5wyoKLSSX/J/+UifRE=
@@ -1511,8 +1509,6 @@ github.com/prometheus/procfs v0.9.0 h1:wzCHvIvM5SxWqYvwgVL7yJY8Lz3PKn49KQtpgMYJf
 github.com/prometheus/procfs v0.9.0/go.mod h1:+pB4zwohETzFnmlpe6yd2lSc+0/46IYZRB/chUwxUZY=
 github.com/prometheus/statsd_exporter v0.22.7 h1:7Pji/i2GuhK6Lu7DHrtTkFmNBCudCPT1pX2CziuyQR0=
 github.com/prometheus/statsd_exporter v0.22.7/go.mod h1:N/TevpjkIh9ccs6nuzY3jQn9dFqnUakOjnEuMPJJJnI=
-github.com/pytimer/win-netstat v0.0.0-20180710031115-efa1aff6aafc h1:NJabarGmZw//DrC1ixmeUOZgmrGnbXL8/IN4CHOeckM=
-github.com/pytimer/win-netstat v0.0.0-20180710031115-efa1aff6aafc/go.mod h1:XrlGxma7SaoqMKNMYaUpU3l24A/5Lytk6243pea+K/4=
 github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 h1:N/ElC8H3+5XpJzTSTfLsJV/mx9Q9g7kxmchpfZyxgzM=
 github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 h1:OdAsTTz6OkFY5QxjkYwrChwuRruF69c169dPK26NUlk=

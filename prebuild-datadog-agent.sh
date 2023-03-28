@@ -167,8 +167,10 @@ elif [ "$ACTION" = "install-go" ]; then
 
   set -x
   chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR"
-  cp -v -a "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR"
-  ls -la "$GO_MOD_DEPENDENCY_DIR/pkg/ebpf/bytecode/runtime/"
+  if [ "$(cp -v -a -u "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR")" != "" ]; then
+    echo "Nuking GOCACHE after changing go files, because we messed with the 'mod' directory (which gets cached)"
+    rm -rf "$(go env GOCACHE)"
+  fi
   set +x
 elif [ "$ACTION" = "install-ebpf" ]; then
   echo "Installing ebpf files"

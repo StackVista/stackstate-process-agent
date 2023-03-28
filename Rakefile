@@ -96,21 +96,16 @@ task :fmt do
 end
 
 task :lint do
-  error = false
+  sh "go install github.com/mgechev/revive@latest"
   packages = `go list ./... | grep -v vendor`.split("\n")
   packages.each do |pkg|
-    puts "golint #{pkg}"
-    output = `golint #{pkg}`.split("\n")
-    output = output.reject do |line|
-      filename = line.split(':')[0]
-      filename.end_with? '.pb.go'
-    end
-    if !output.empty?
-      puts output
-      error = true
+    puts "revive -formatter stylish -config revive-recommended.toml #{pkg}"
+    output = `revive -formatter stylish -config revive-recommended.toml #{pkg}`
+    puts output
+    if output != ""
+      fail "Error during linting"
     end
   end
-  fail "We have some linting errors" if error
 end
 
 desc "Compile the protobuf files for the Process Agent"

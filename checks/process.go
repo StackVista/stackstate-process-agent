@@ -96,7 +96,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 	p.Lock()
 	defer p.Unlock()
 
-	start := time.Now()
+	start := currentTime
 	cpuTimes, err := cpu.Times(false)
 	if err != nil {
 		return nil, err

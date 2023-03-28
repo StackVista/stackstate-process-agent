@@ -262,7 +262,7 @@ func initInfo(conf *config.AgentConfig) error {
 }
 
 // Info is called when --info flag is enabled when executing the agent binary
-func Info(w io.Writer, conf *config.AgentConfig, expvarURL string) error {
+func Info(w io.Writer, _ *config.AgentConfig, expvarURL string) error {
 	var err error
 	client := http.Client{Timeout: 2 * time.Second}
 	resp, err := client.Get(expvarURL)

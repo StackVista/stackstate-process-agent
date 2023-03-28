@@ -170,10 +170,9 @@ func runAgent(exit chan bool) {
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
-		} else {
-			os.Exit(0)
 		}
-		return
+
+		os.Exit(0)
 	}
 
 	if opts.info {

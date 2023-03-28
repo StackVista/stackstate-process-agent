@@ -24,8 +24,7 @@ cd stackstate-process-agent
 Pull down the latest dependencies via `dep` and build the process-agent:
 
 ```
-rake deps
-rake build
+rake local_build
 ```
 
 You can now run the Agent on the command-line:

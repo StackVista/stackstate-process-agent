@@ -16,7 +16,7 @@ variables:
   QUAY_REGISTRY: quay.io
   DOCKER_REGISTRY: docker.io
   VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:d0a884b0
+  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:3e691150
   GOPATH: "$CI_PROJECT_DIR/.go"
 
 .go_process_agent_cache:
@@ -149,7 +149,7 @@ pre_release_windows:
 
 publish_binaries:
   stage: publish
-  image: ${DOCKER_PROXY_URL}/stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-20221024
+  extends: [ .linux_builder, .go_process_agent_cache ]
   needs:
     - build_linux
   before_script:

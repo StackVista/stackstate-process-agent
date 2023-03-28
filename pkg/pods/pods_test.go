@@ -94,57 +94,57 @@ type kubeutilMock struct {
 	pods []*kubelet.Pod
 }
 
-func (k *kubeutilMock) GetLocalPodList(ctx context.Context) ([]*kubelet.Pod, error) {
+func (k *kubeutilMock) GetLocalPodList(_ context.Context) ([]*kubelet.Pod, error) {
 	return k.pods, nil
 }
 
-func (k *kubeutilMock) GetLocalStatsSummary(ctx context.Context) (*kubeletv1alpha1.Summary, error) {
+func (k *kubeutilMock) GetLocalStatsSummary(_ context.Context) (*kubeletv1alpha1.Summary, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) GetNodeInfo(ctx context.Context) (string, string, error) {
+func (k *kubeutilMock) GetNodeInfo(_ context.Context) (string, string, error) {
 
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) GetNodename(ctx context.Context) (string, error) {
+func (k *kubeutilMock) GetNodename(_ context.Context) (string, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) ForceGetLocalPodList(ctx context.Context) ([]*kubelet.Pod, error) {
+func (k *kubeutilMock) ForceGetLocalPodList(_ context.Context) ([]*kubelet.Pod, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) GetPodForContainerID(ctx context.Context, containerID string) (*kubelet.Pod, error) {
+func (k *kubeutilMock) GetPodForContainerID(_ context.Context, _ string) (*kubelet.Pod, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) GetStatusForContainerID(pod *kubelet.Pod, containerID string) (kubelet.ContainerStatus, error) {
+func (k *kubeutilMock) GetStatusForContainerID(_ *kubelet.Pod, _ string) (kubelet.ContainerStatus, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) GetSpecForContainerName(pod *kubelet.Pod, containerName string) (kubelet.ContainerSpec, error) {
+func (k *kubeutilMock) GetSpecForContainerName(_ *kubelet.Pod, _ string) (kubelet.ContainerSpec, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) GetPodFromUID(ctx context.Context, podUID string) (*kubelet.Pod, error) {
+func (k *kubeutilMock) GetPodFromUID(_ context.Context, _ string) (*kubelet.Pod, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) GetPodForEntityID(ctx context.Context, entityID string) (*kubelet.Pod, error) {
+func (k *kubeutilMock) GetPodForEntityID(_ context.Context, _ string) (*kubelet.Pod, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) QueryKubelet(ctx context.Context, path string) ([]byte, int, error) {
+func (k *kubeutilMock) QueryKubelet(_ context.Context, _ string) ([]byte, int, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -159,12 +159,12 @@ func (k *kubeutilMock) GetRawConnectionInfo() map[string]string {
 	panic("implement me")
 }
 
-func (k *kubeutilMock) GetRawMetrics(ctx context.Context) ([]byte, error) {
+func (k *kubeutilMock) GetRawMetrics(_ context.Context) ([]byte, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (k *kubeutilMock) IsAgentHostNetwork(ctx context.Context) (bool, error) {
+func (k *kubeutilMock) IsAgentHostNetwork(_ context.Context) (bool, error) {
 	//TODO implement me
 	panic("implement me")
 }

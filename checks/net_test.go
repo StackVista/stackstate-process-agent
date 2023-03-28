@@ -612,7 +612,7 @@ func TestFormatNamespace(t *testing.T) {
 	assert.Equal(t, "c:h", formatNamespace("c", "h", makeConnectionStatsNoNs(1, "127.0.0.1", "127.0.0.1", 12345, 8080)))
 }
 
-func fillNetworkRelationCache(hostname string, c *NetworkRelationCache, conn network.ConnectionStats, firstObserved, lastObserved int64) error {
+func fillNetworkRelationCache(hostname string, c *NetworkRelationCache, conn network.ConnectionStats, firstObserved, _ int64) error {
 	relationID, err := CreateNetworkRelationIdentifier(hostname, conn)
 	if err != nil {
 		return err

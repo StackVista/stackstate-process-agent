@@ -152,8 +152,6 @@ publish_binaries:
   extends: [ .linux_builder, .go_process_agent_cache ]
   needs:
     - build_linux
-  before_script:
-    - export PROCESS_AGENT_VERSION=$(eval $VERSION_LOGIC)
   script:
     - echo "PROCESS_AGENT_VERSION=${VERSION}"
     - ls -la $CI_PROJECT_DIR

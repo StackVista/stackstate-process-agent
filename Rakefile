@@ -6,8 +6,6 @@ def os
       "linux"
     when /darwin/
       "darwin"
-    when /x64-mingw32/
-      "windows"
     else
       fail 'Unsupported OS'
     end
@@ -131,15 +129,4 @@ task :local_build => [:deps, :prebuild, :build]
 task :err do
   system("go install github.com/kisielk/errcheck")
   sh "errcheck github.com/StackVista/stackstate-process-agent"
-end
-
-task 'windows-versioned-artifact' do
-  process_agent_version = `bash -c "packaging/version.sh"`.strip!
-  system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
-end
-
-task 'windows-tag-or-commit-artifact' do
-  process_agent_version = `bash -c "packaging/commit-or-tag.sh"`.strip!
-  sh "echo %s" % process_agent_version
-  system("cp process-agent.exe stackstate-process-agent-%s.exe" % process_agent_version)
 end

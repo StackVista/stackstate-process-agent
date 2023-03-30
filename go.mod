@@ -36,7 +36,7 @@ replace (
 // Replacements due to upstream improvements
 
 // replace github.com/DataDog/datadog-agent/pkg/util/log => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230330123011-fad1d9a18fd2
+replace github.com/DataDog/datadog-agent v0.0.0-20230307121454-9e9c7904ced5 => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230330123011-fad1d9a18fd2
 
 // replace github.com/DataDog/datadog-agent/pkg/util/log => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20230309153711-2ce9a9612c03
 

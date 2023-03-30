@@ -20,14 +20,20 @@ variables:
   GOPATH: "$CI_PROJECT_DIR/.go"
 
 .go_process_agent_cache:
+  cache: &go_cache
+    key:
+      files:
+        - go.mod
+        - go.sum
+      prefix: process_agent
+    paths:
+      - .go/
+
+.go_process_pull_agent_cache:
   cache:
-    - key:
-        files:
-          - go.mod
-          - go.sum
-        prefix: process_agent
-      paths:
-        - .go/
+    <<: *go_cache
+    # override the policy
+    policy: pull
 
 .linux_builder:
   image: ${LINUX_BUILDER}
@@ -48,6 +54,9 @@ dependencies:
 
 prebuild_agent:
   cache:
+    - <<: *go_cache
+      # override the policy
+      policy: pull
     - key:
         files:
           - go.mod
@@ -56,6 +65,7 @@ prebuild_agent:
       paths:
         - prebuild_artifacts/artifacts/*
   stage: prebuild
+  needs: [ dependencies ]
   image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:5706c724
   script:
     - ./prebuild-datadog-agent.sh --generate-no-docker
@@ -64,7 +74,7 @@ prebuild_agent:
       - prebuild_artifacts/artifacts/*
 
 test_protobuf_updated:
-  extends: [ .linux_builder, .go_process_agent_cache ]
+  extends: [ .linux_builder, .go_process_pull_agent_cache ]
   stage: test
   needs: [ dependencies ]
   script:
@@ -73,7 +83,7 @@ test_protobuf_updated:
     - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
 
 build_linux:
-  extends: [ .linux_builder, .go_process_agent_cache ]
+  extends: [ .linux_builder, .go_process_pull_agent_cache ]
   stage: build
   needs: [ dependencies, prebuild_agent ]
   script:
@@ -92,7 +102,7 @@ build_linux:
       - always
 
 test:
-  extends: [ .linux_builder, .go_process_agent_cache ]
+  extends: [ .linux_builder, .go_process_pull_agent_cache ]
   stage: test
   needs: [ dependencies, prebuild_agent ]
   script:
@@ -105,7 +115,7 @@ test:
 
 publish_binaries:
   stage: publish
-  extends: [ .linux_builder, .go_process_agent_cache ]
+  extends: [ .linux_builder, .go_process_pull_agent_cache ]
   needs:
     - build_linux
   script:

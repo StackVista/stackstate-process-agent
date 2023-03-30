@@ -2,8 +2,8 @@ package checks
 
 import (
 	"errors"
-	tracerConfig "github.com/StackVista/stackstate-agent/pkg/network/config"
-	tracer "github.com/StackVista/stackstate-agent/pkg/network/tracer"
+	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
+	tracer "github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"

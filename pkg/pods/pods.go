@@ -2,8 +2,8 @@ package pods
 
 import (
 	"context"
-	"github.com/StackVista/stackstate-agent/pkg/util/kubernetes/kubelet"
-	"github.com/StackVista/stackstate-agent/pkg/util/retry"
+	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
+	"github.com/DataDog/datadog-agent/pkg/util/retry"
 	log "github.com/cihub/seelog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"

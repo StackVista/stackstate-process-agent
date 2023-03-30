@@ -9,10 +9,7 @@ import (
 	log "github.com/cihub/seelog"
 	"gopkg.in/yaml.v2"
 
-	httputils "github.com/StackVista/stackstate-agent/pkg/util/http"
-	ddconfig "github.com/StackVista/stackstate-process-agent/pkg/config"
-
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration
@@ -21,9 +18,10 @@ type YamlAgentConfig struct {
 	APIKey            string `yaml:"api_key"`
 	Site              string `yaml:"site"`
 	StsURL            string `yaml:"sts_url"`
-	SkipSSLValidation string `yaml:"skip_ssl_validation"`
-	// Whether or not the process-agent should output logs to console
-	LogToConsole bool `yaml:"log_to_console"`
+	SkipSSLValidation bool   `yaml:"skip_ssl_validation"`
+	// Whether the process-agent should output logs to console
+	LogToConsole bool   `yaml:"log_to_console"`
+	LogLevel     string `yaml:"log_level"`
 	// Incremental publishing: send only changes to server, instead of snapshots
 	IncrementalPublishingEnabled string `yaml:"incremental_publishing_enabled"`
 	// Periodically resend all data to allow downstream to recover from any lost data
@@ -40,8 +38,7 @@ type YamlAgentConfig struct {
 		// The interval, in seconds, at which we will run each check. If you want consistent
 		// behavior between real-time you may set the Container/ProcessRT intervals to 10.
 		// Defaults to 10s for normal checks and 2s for others.
-		ProcessDDURL string `yaml:"process_sts_url"`
-		Intervals    struct {
+		Intervals struct {
 			Container         int `yaml:"container"`
 			ContainerRealTime int `yaml:"container_realtime"`
 			Process           int `yaml:"process"`
@@ -101,9 +98,9 @@ type YamlAgentConfig struct {
 		// Only change if the defaults are causing issues.
 		MaxConnectionsPerMessage int `yaml:"max_connections_per_message"`
 		// Overrides the path to the Agent bin used for getting the hostname. The default is usually fine.
-		DDAgentBin string `yaml:"dd_agent_bin"`
+		DDAgentBin string `yaml:"sts_agent_bin"`
 		// Overrides of the environment we pass to fetch the hostname. The default is usually fine.
-		DDAgentEnv []string `yaml:"dd_agent_env"`
+		DDAgentEnv []string `yaml:"sts_agent_env"`
 		// Optional additional pairs of endpoint_url => []apiKeys to submit to other locations.
 		AdditionalEndpoints map[string][]string `yaml:"additional_endpoints"`
 		// Windows-specific configuration goes in this section.
@@ -133,6 +130,8 @@ type YamlAgentConfig struct {
 		NetworkTracerInitRetryAmount int `yaml:"network_tracer_retry_init_amount"`
 		// Whenever debugging statements of eBPF code of network tracer should be redirected to the agent log
 		EBPFDebuglogEnabled string `yaml:"ebpf_debuglog_enabled"`
+		// Location of the ebpf code
+		EBPFArtifactDir string `yaml:"ebpf_artifact_dir"`
 		// A string indicating the enabled state of the protocol inspection.
 		ProtocolInspectionEnabled string `yaml:"protocol_inspection_enabled"`
 		HTTPMetrics               struct {
@@ -144,6 +143,31 @@ type YamlAgentConfig struct {
 			Accuracy float64 `yaml:"accuracy"`
 		} `yaml:"http_metrics"`
 	} `yaml:"network_tracer_config"`
+	TransactionManager struct {
+		// ChannelBufferSize is the concurrent transactions before the tx manager begins backpressure
+		ChannelBufferSize int `yaml:"channel_buffer_size"`
+		// TimeoutDurationSeconds is the amount of time before a transaction is marked as stale, 5 minutes by default
+		TimeoutDurationSeconds int `yaml:"timeout_duration_seconds"`
+		// EvictionDurationSeconds is the amount of time before a transaction is evicted and rolled back, 10 minutes by default
+		EvictionDurationSeconds int `yaml:"eviction_duration_seconds"`
+		// TickerIntervalSeconds is the ticker interval to mark transactions as stale / timeout.
+		TickerDurationSeconds int `yaml:"ticket_duration_seconds"`
+	} `yaml:"transaction_manager"`
+	Batcher struct {
+		// Amount of data buffered in the batcher
+		MaxBufferSize int  `yaml:"max_buffer_size"`
+		LogPayloads   bool `yaml:"log_payloads"`
+	} `yaml:"batcher"`
+	Kubernetes struct {
+		KubeletHost string `yaml:"kubelet_host"`
+	} `yaml:"kubernetes"`
+	Containers struct {
+		CriSocketPath string `yaml:"cri_socket_path"`
+	} `yaml:"containers"`
+	Proxy struct {
+		HTTPS string `yaml:"https"`
+		HTTP  string `yaml:"http"`
+	} `yaml:"proxy"`
 }
 
 // NewYamlIfExists returns a new YamlAgentConfig if the given configPath is exists.
@@ -169,11 +193,9 @@ func NewYamlIfExists(configPath string) (*YamlAgentConfig, error) {
 	return nil, nil
 }
 
-func key(pieces ...string) string {
-	return strings.Join(pieces, ".")
-}
-
 func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig, error) {
+	var err error
+
 	agentConf.APIEndpoints[0].APIKey = yc.APIKey
 
 	if enabled, err := isAffirmative(yc.Process.Enabled); enabled {
@@ -192,32 +214,22 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	if yc.Process.LogFile != "" {
 		agentConf.LogFile = yc.Process.LogFile
 	}
+	if yc.LogLevel != "" {
+		agentConf.LogLevel = yc.LogLevel
+	}
 
 	// (Re)configure the logging from our configuration
 	if err := NewLoggerLevel(agentConf.LogLevel, agentConf.LogFile, agentConf.LogToConsole); err != nil {
 		return nil, err
 	}
 
-	parsedURL, err := url.Parse(ddconfig.GetMainEndpoint("https://process.", "process_config.process_dd_url"))
-	if err != nil {
-		return nil, fmt.Errorf("error parsing process_dd_url: %s", err)
-	}
-	// STS custom
-	if yc.Process.ProcessDDURL != "" {
-		specificURL, err := url.Parse(yc.Process.ProcessDDURL)
-		if err == nil {
-			parsedURL = specificURL
-		}
-		log.Infof("Setting process api endpoint from config using `process_config.process_sts_url`: %s", specificURL)
-	} else if yc.StsURL != "" {
+	if yc.StsURL != "" {
 		defaultURL, err := url.Parse(yc.StsURL)
 		if err == nil {
-			parsedURL = defaultURL
+			agentConf.APIEndpoints[0].Endpoint = defaultURL
 		}
 		log.Infof("Setting process api endpoint from config using `sts_url`: %s", defaultURL)
 	}
-	// /STS custom
-	agentConf.APIEndpoints[0].Endpoint = parsedURL
 
 	if enabled, err := isAffirmative(yc.IncrementalPublishingEnabled); err == nil {
 		log.Infof("Overriding incremental publishing with %ds", yc.IncrementalPublishingEnabled)
@@ -306,16 +318,43 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	if yc.Process.MaxConnectionsPerMessage > 0 {
 		agentConf.MaxConnectionsPerMessage = yc.Process.MaxConnectionsPerMessage
 	}
-	agentConf.DDAgentBin = defaultDDAgentBin
-	if yc.Process.DDAgentBin != "" {
-		agentConf.DDAgentBin = yc.Process.DDAgentBin
+
+	if yc.TransactionManager.ChannelBufferSize > 0 {
+		agentConf.TxManagerChannelBufferSize = yc.TransactionManager.ChannelBufferSize
 	}
 
-	if yc.Process.Windows.ArgsRefreshInterval != 0 {
-		agentConf.Windows.ArgsRefreshInterval = yc.Process.Windows.ArgsRefreshInterval
+	if yc.TransactionManager.EvictionDurationSeconds > 0 {
+		agentConf.TxManagerEvictionDurationSeconds = time.Duration(yc.TransactionManager.EvictionDurationSeconds) * time.Second
 	}
-	if yc.Process.Windows.AddNewArgs != nil {
-		agentConf.Windows.AddNewArgs = *yc.Process.Windows.AddNewArgs
+
+	if yc.TransactionManager.TimeoutDurationSeconds > 0 {
+		agentConf.TxManagerTimeoutDurationSeconds = time.Duration(yc.TransactionManager.TimeoutDurationSeconds) * time.Second
+	}
+
+	if yc.TransactionManager.TickerDurationSeconds > 0 {
+		agentConf.TxManagerTickerIntervalSeconds = time.Duration(yc.TransactionManager.TickerDurationSeconds) * time.Second
+	}
+
+	if yc.Batcher.MaxBufferSize > 0 {
+		agentConf.BatcherMaxBufferSize = yc.Batcher.MaxBufferSize
+	}
+
+	if yc.Batcher.LogPayloads {
+		agentConf.BatcherLogPayloads = yc.Batcher.LogPayloads
+	}
+
+	if yc.Proxy.HTTPS != "" {
+		agentConf.HTTPSProxy, err = url.Parse(yc.Proxy.HTTPS)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing proxy.https: %s", err)
+		}
+	}
+
+	if yc.Proxy.HTTP != "" {
+		agentConf.HTTPProxy, err = url.Parse(yc.Proxy.HTTP)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing proxy.http: %s", err)
+		}
 	}
 
 	for endpointURL, apiKeys := range yc.Process.AdditionalEndpoints {
@@ -332,24 +371,18 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	}
 
 	// [STS] set the skip_ssl_validation for the process-agent + main-agent config
-	if yc.SkipSSLValidation != "" {
-		ddconfig.Datadog.Set("skip_ssl_validation", yc.SkipSSLValidation)
+	if yc.SkipSSLValidation {
+		agentConf.SkipSSLValidation = true
 		log.Infof("Setting skip_ssl_validation to: %s", yc.SkipSSLValidation)
 	}
 
-	// sts begin
-	// Used to override container source auto-detection
-	// and to enable multiple collector sources if needed.
-	// "docker", "ecs_fargate", "kubelet", "kubelet docker", etc.
-	if sources := ddconfig.Datadog.GetStringSlice(key("process_config", "container_source")); len(sources) > 0 {
-		util.SetContainerSources(sources)
+	if yc.Kubernetes.KubeletHost != "" {
+		agentConf.KubernetesKubeletHost = yc.Kubernetes.KubeletHost
 	}
-	// sts end
 
-	// Pull additional parameters from the global config file.
-	agentConf.LogLevel = ddconfig.Datadog.GetString("log_level")
-	agentConf.StatsdPort = ddconfig.Datadog.GetInt("dogstatsd_port")
-	agentConf.Transport = httputils.CreateHTTPTransport()
+	if yc.Containers.CriSocketPath != "" {
+		agentConf.CriSocketPath = yc.Containers.CriSocketPath
+	}
 
 	return agentConf, nil
 }
@@ -359,26 +392,11 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 		agentConf.EnabledChecks = append(agentConf.EnabledChecks, "connections")
 		agentConf.EnableNetworkTracing = enabled
 	}
-	if procEnabled, _ := isAffirmative(networkConf.Network.NetworkInitialConnectionFromProc); procEnabled {
-		agentConf.NetworkInitialConnectionsFromProc = procEnabled
-	}
-	if socketPath := networkConf.Network.UnixSocketPath; socketPath != "" {
-		agentConf.NetworkTracerSocketPath = socketPath
-	}
 	if networkConf.Network.LogFile != "" {
 		agentConf.LogFile = networkConf.Network.LogFile
 	}
 	if enabled, err := isAffirmative(networkConf.Network.EBPFDebuglogEnabled); err == nil {
 		agentConf.NetworkTracer.EbpfDebuglogEnabled = enabled
-	}
-	if networkConf.Network.HTTPMetrics.MaxNumBins != 0 {
-		agentConf.NetworkTracer.HTTPMetrics.MaxNumBins = networkConf.Network.HTTPMetrics.MaxNumBins
-	}
-	if networkConf.Network.HTTPMetrics.Accuracy != 0 {
-		agentConf.NetworkTracer.HTTPMetrics.Accuracy = networkConf.Network.HTTPMetrics.Accuracy
-	}
-	if sketchType, err := getSketchType(networkConf.Network.HTTPMetrics.SketchType); err == nil {
-		agentConf.NetworkTracer.HTTPMetrics.SketchType = sketchType
 	}
 	if protMetrEnabled, err := isAffirmative(networkConf.Network.ProtocolInspectionEnabled); err == nil {
 		agentConf.NetworkTracer.EnableProtocolInspection = protMetrEnabled
@@ -386,23 +404,8 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	if networkConf.Network.NetworkMaxConnections != 0 {
 		agentConf.NetworkTracerMaxConnections = networkConf.Network.NetworkMaxConnections
 	}
-
+	if networkConf.Network.EBPFArtifactDir != "" {
+		agentConf.NetworkTracer.EbpfArtifactDir = networkConf.Network.EBPFArtifactDir
+	}
 	return agentConf, nil
-}
-
-// SetupDDAgentConfig initializes the datadog-agent config with a YAML file.
-// This is required for configuration to be available for container listeners.
-func SetupDDAgentConfig(configPath string) error {
-	ddconfig.Datadog.AddConfigPath(configPath)
-	// If they set a config file directly, let's try to honor that
-	if strings.HasSuffix(configPath, ".yaml") {
-		ddconfig.Datadog.SetConfigFile(configPath)
-	}
-
-	// load the configuration
-	if _, err := ddconfig.Load(); err != nil {
-		return fmt.Errorf("unable to load Datadog config file: %s", err)
-	}
-
-	return nil
 }

@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 )
@@ -49,7 +49,7 @@ const (
   Queue length: {{.Status.QueueSize}}
 
   Logs: {{.Status.Config.LogFile}}{{if .Status.ProxyURL}}
-  HttpProxy: {{.Status.ProxyURL}}{{end}}{{if ne .Status.ContainerID ""}}
+  HTTPProxy: {{.Status.ProxyURL}}{{end}}{{if ne .Status.ContainerID ""}}
   Container ID: {{.Status.ContainerID}}{{end}}
 
 `
@@ -262,7 +262,7 @@ func initInfo(conf *config.AgentConfig) error {
 }
 
 // Info is called when --info flag is enabled when executing the agent binary
-func Info(w io.Writer, conf *config.AgentConfig, expvarURL string) error {
+func Info(w io.Writer, _ *config.AgentConfig, expvarURL string) error {
 	var err error
 	client := http.Client{Timeout: 2 * time.Second}
 	resp, err := client.Get(expvarURL)

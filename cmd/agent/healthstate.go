@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/DataDog/gopsutil/process"
-	"github.com/StackVista/stackstate-agent/pkg/health"
-	"github.com/StackVista/stackstate-agent/pkg/topology"
 	"github.com/StackVista/stackstate-process-agent/checks"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/health"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/topology"
 	log "github.com/cihub/seelog"
 	"os"
 )

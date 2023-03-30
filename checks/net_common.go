@@ -2,10 +2,10 @@ package checks
 
 import (
 	"fmt"
-	"github.com/StackVista/stackstate-agent/pkg/network"
-	tracerConfig "github.com/StackVista/stackstate-agent/pkg/network/config"
-	tracer "github.com/StackVista/stackstate-agent/pkg/network/tracer"
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/network"
+	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
+	tracer "github.com/DataDog/datadog-agent/pkg/network/tracer"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/model"
 
 	log "github.com/cihub/seelog"
@@ -211,9 +211,9 @@ retry:
 			if retriesLeft == 0 {
 				log.Errorf("failed to create network tracer: %s. No retries left.", err)
 				break retry
-			} else {
-				log.Warnf("failed to create network tracer: %s. Retrying...", err)
 			}
+
+			log.Warnf("failed to create network tracer: %s. Retrying...", err)
 		}
 	}
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	ddlog "github.com/StackVista/stackstate-agent/pkg/util/log"
+	ddlog "github.com/DataDog/datadog-agent/pkg/util/log"
 	log "github.com/cihub/seelog"
 )
 
@@ -285,17 +285,25 @@ func replaceLogger(cfg *LoggerConfig) error {
 		log.Infof("log level %s is invalid, defaulting to INFO", cfg.SyslogLevel)
 		cfg.LogLevel = "info"
 	}
-	logger, err := cfg.SeelogLogger()
+
+	ddLogger, err := cfg.SeelogLogger()
 	if err != nil {
 		return err
 	}
 
 	// If the main agent has a logger, replace it with ours and set new log level. If not, then set it up.
-	if ddlog.ChangeLogLevel(logger, cfg.LogLevel) != nil {
-		ddlog.SetupLogger(logger, cfg.LogLevel)
+	if ddlog.ChangeLogLevel(ddLogger, cfg.LogLevel) != nil {
+		ddlog.SetupLogger(ddLogger, cfg.LogLevel)
 	}
 
-	return log.ReplaceLogger(logger)
+	// Two separate loggers, because datadog does SetAdditionalStackDepth due to it being a wrapper. We use plain seelog
+	mainLogger, err := cfg.SeelogLogger()
+	if err != nil {
+		return err
+	}
+
+	// Replace with our main logger
+	return log.ReplaceLogger(mainLogger)
 }
 
 // NewLoggerLevel sets the global logger to the given log level.

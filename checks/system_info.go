@@ -12,7 +12,7 @@ import (
 // CollectSystemInfo collects a set of system-level information that will not
 // change until a restart. This bit of information should be passed along with
 // the process messages.
-func CollectSystemInfo(cfg *config.AgentConfig) (*model.SystemInfo, error) {
+func CollectSystemInfo(_ *config.AgentConfig) (*model.SystemInfo, error) {
 	hi, err := host.Info()
 	if err != nil {
 		return nil, err

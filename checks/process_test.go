@@ -3,14 +3,12 @@ package checks
 import (
 	"fmt"
 	"github.com/DataDog/gopsutil/cpu"
-	"github.com/StackVista/stackstate-agent/pkg/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/patrickmn/go-cache"
 	"regexp"
 	"sort"
 
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -779,7 +777,7 @@ func TestProcessFormatting(t *testing.T) {
 		makeProcessWithResource(20, "write io resource process 3", 0, 0, 10, 0, 0),
 		makeProcessWithResource(21, "write io resource process 4", 0, 0, 10, 0, 0),
 	}
-	var containers []*containers.Container
+	var pidToCid map[int]string
 	lastRun := time.Now().Add(-5 * time.Second)
 	syst1, syst2 := cpu.TimesStat{
 		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
@@ -878,7 +876,7 @@ func TestProcessFormatting(t *testing.T) {
 				fillProcessCache(Process.cache, fp, now.Add(-5*time.Minute), now)
 			}
 
-			processes, _, _ := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+			processes, _, _ := Process.fmtProcesses(cfg, cur, pidToCid, syst2, syst1, lastRun)
 
 			chunked := chunkProcesses(processes, cfg.MaxPerMessage, make([][]*model.Process, 0))
 			assert.Len(t, chunked, tc.expectedChunks, "len %d", i)
@@ -891,29 +889,6 @@ func TestProcessFormatting(t *testing.T) {
 				}
 			}
 			assert.Equal(t, tc.expectedTotal, total, "total test %d", i)
-			sort.Slice(pids, func(i, j int) bool {
-				return pids[i] < pids[j]
-			})
-			assert.Equal(t, tc.expectedPids, pids, "expected pIds: %v, found pIds: %v", tc.expectedPids, pids)
-
-			RTProcess.Init(cfg, &model.SystemInfo{})
-
-			// fill in the real-time process cache
-			for _, fp := range tc.last {
-				fillProcessCache(RTProcess.cache, fp, now.Add(-5*time.Minute), now)
-			}
-
-			chunkedStat := RTProcess.fmtProcessStats(cfg, cur, containers, syst2, syst1, lastRun)
-			assert.Len(t, chunkedStat, tc.expectedChunks, "len stat %d", i)
-			total = 0
-			pids = make([]int32, 0)
-			for _, c := range chunkedStat {
-				total += len(c)
-				for _, proc := range c {
-					pids = append(pids, proc.Pid)
-				}
-			}
-			assert.Equal(t, tc.expectedTotal, total, "total stat test %d", i)
 			sort.Slice(pids, func(i, j int) bool {
 				return pids[i] < pids[j]
 			})
@@ -932,11 +907,9 @@ func TestPercentCalculation(t *testing.T) {
 	assert.True(t, floatEquals(calculatePct(100, 0, 8), 0.0))
 
 	assert.True(t, floatEquals(calculatePct(0, 8.08, 8), 0.0))
-	if runtime.GOOS != "windows" {
-		assert.True(t, floatEquals(calculatePct(100, 200, 2), 100))
-		assert.True(t, floatEquals(calculatePct(0.04, 8.08, 8), 3.960396))
-		assert.True(t, floatEquals(calculatePct(1.09, 8.08, 8), 107.920792))
-	}
+	assert.True(t, floatEquals(calculatePct(100, 200, 2), 100))
+	assert.True(t, floatEquals(calculatePct(0.04, 8.08, 8), 3.960396))
+	assert.True(t, floatEquals(calculatePct(1.09, 8.08, 8), 107.920792))
 }
 
 func TestRateCalculation(t *testing.T) {
@@ -954,7 +927,7 @@ func TestProcessCache(t *testing.T) {
 	cfg := config.NewDefaultAgentConfig()
 	cfg.ShortLivedProcessQualifierSecs = 500 * time.Millisecond
 	cfg.ProcessCacheDurationMin = 600 * time.Millisecond
-	var containers []*containers.Container
+	var pidToCid map[int]string
 	lastRun := time.Now().Add(-5 * time.Second)
 	syst1, syst2 := cpu.TimesStat{
 		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
@@ -981,7 +954,7 @@ func TestProcessCache(t *testing.T) {
 	assert.Zero(t, Process.cache.ItemCount(), "Cache should be empty before running")
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	firstRun, _, _ := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	firstRun, _, _ := Process.fmtProcesses(cfg, cur, pidToCid, syst2, syst1, lastRun)
 	assert.Zero(t, len(firstRun), "Processes should be empty when the cache is not present")
 	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -989,13 +962,13 @@ func TestProcessCache(t *testing.T) {
 	time.Sleep(cfg.ShortLivedProcessQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _, _ := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	secondRun, _, _ := Process.fmtProcesses(cfg, cur, pidToCid, syst2, syst1, lastRun)
 	assert.Equal(t, 4, len(secondRun), "Processes should contain 4 elements")
 	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
 
 	// delete pid 4 from the process map, expect it to be excluded from the process list, but not the cache
 	delete(cur, 4)
-	thirdRun, _, _ := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+	thirdRun, _, _ := Process.fmtProcesses(cfg, cur, pidToCid, syst2, syst1, lastRun)
 	assert.Equal(t, 3, len(thirdRun), "Processes should contain 3 elements")
 	assert.Equal(t, 4, Process.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -1008,7 +981,7 @@ func TestProcessCache(t *testing.T) {
 
 func TestProcessShortLivedFiltering(t *testing.T) {
 	cfg := config.NewDefaultAgentConfig()
-	var containers []*containers.Container
+	var pidToCid map[int]string
 	lastRun := time.Now().Add(-5 * time.Second)
 	syst1, syst2 := cpu.TimesStat{
 		User: 10, System: 20, Nice: 0, Iowait: 0, Irq: 0, Softirq: 0, Steal: 0, Guest: 0,
@@ -1072,25 +1045,10 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 			Process.Init(cfg, &model.SystemInfo{})
 			tc.prepCache(Process.cache)
 			// fill in the process cache
-			processes, _, _ := Process.fmtProcesses(cfg, cur, containers, syst2, syst1, lastRun)
+			processes, _, _ := Process.fmtProcesses(cfg, cur, pidToCid, syst2, syst1, lastRun)
 			var pids []int32
 			for _, p := range processes {
 				pids = append(pids, p.Pid)
-			}
-
-			assert.EqualValues(t, tc.expectedPids, pids)
-
-			// Process RT Check
-			RTProcess.Init(cfg, &model.SystemInfo{})
-			// fill in the real-time process cache
-			tc.prepCache(RTProcess.cache)
-
-			chunkedStat := RTProcess.fmtProcessStats(cfg, cur, containers, syst2, syst1, lastRun)
-			pids = []int32{}
-			for _, c := range chunkedStat {
-				for _, p := range c {
-					pids = append(pids, p.Pid)
-				}
 			}
 
 			assert.EqualValues(t, tc.expectedPids, pids)
@@ -1098,7 +1056,6 @@ func TestProcessShortLivedFiltering(t *testing.T) {
 	}
 
 	Process.cache.Flush()
-	RTProcess.cache.Flush()
 }
 
 func floatEquals(a, b float32) bool {

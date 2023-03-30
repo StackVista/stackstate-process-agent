@@ -3,41 +3,25 @@
 package config
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"net"
+	"github.com/DataDog/datadog-agent/pkg/util/hostname"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	tracerconfig "github.com/StackVista/tcptracer-bpf/pkg/tracer/config"
-
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
-	agentutil "github.com/StackVista/stackstate-agent/pkg/util"
-
-	ddconfig "github.com/StackVista/stackstate-process-agent/pkg/config"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 	log "github.com/cihub/seelog"
-	"github.com/go-ini/ini"
 )
 
 var (
-	// defaultProxyPort is the default port used for proxies.
-	// This mirrors the configuration for the infrastructure agent.
-	defaultProxyPort = 3128
-
-	// defaultNetworkTracerSocketPath is the default unix socket path to be used for connecting to the network tracer
-	defaultNetworkTracerSocketPath = "/opt/datadog-agent/run/nettracer.sock"
-	// defaultNetworkLogFilePath is the default logging file for the network tracer
-	defaultNetworkLogFilePath = "/var/log/datadog/network-tracer.log"
-
-	processChecks   = []string{"process", "rtprocess"}
-	containerChecks = []string{"container", "rtcontainer"}
+	processChecks = []string{"process"}
 
 	// List of known Kubernetes images that we want to exclude by default.
 	defaultKubeBlacklist = []string{
@@ -46,24 +30,14 @@ var (
 	}
 )
 
-type proxyFunc func(*http.Request) (*url.URL, error)
-
-// WindowsConfig stores all windows-specific configuration for the process-agent.
-type WindowsConfig struct {
-	// Number of checks runs between refreshes of command-line arguments
-	ArgsRefreshInterval int
-	// Controls getting process arguments immediately when a new process is discovered
-	AddNewArgs bool
-}
-
 // NetworkTracerConfig contains some[1] of the network tracer configuration options
 type NetworkTracerConfig struct {
 	// Enables protocol inspection from eBPF code
 	EnableProtocolInspection bool
 	// Enables redirection of ebpf code debug messages as logs of the process agent
 	EbpfDebuglogEnabled bool
-	// Settings related to gathering & aggregation of http metrics
-	HTTPMetrics *tracerconfig.HttpMetricConfig
+	// Location of the ebpf
+	EbpfArtifactDir string
 }
 
 // APIEndpoint is a single endpoint where process data will be submitted.
@@ -78,6 +52,7 @@ type AgentConfig struct {
 	Enabled                  bool
 	HostName                 string
 	APIEndpoints             []APIEndpoint
+	SkipSSLValidation        bool
 	LogFile                  string
 	LogLevel                 string
 	LogToConsole             bool
@@ -87,14 +62,8 @@ type AgentConfig struct {
 	MaxProcFDs               int
 	MaxPerMessage            int
 	MaxConnectionsPerMessage int
-	AllowRealTime            bool
 	Transport                *http.Transport `json:"-"`
 	Logger                   *LoggerConfig
-	DDAgentPy                string
-	DDAgentBin               string
-	DDAgentPyEnv             []string
-	StatsdHost               string
-	StatsdPort               int
 
 	// Process Cache Expiration, In Minutes
 	ProcessCacheDurationMin time.Duration
@@ -144,16 +113,26 @@ type AgentConfig struct {
 	CheckHealthStateMessageLimit int
 
 	// Containers
-	ContainerBlacklist     []string
-	ContainerWhitelist     []string
-	CollectDockerNetwork   bool
-	ContainerCacheDuration time.Duration
+	CriSocketPath      string
+	ContainerBlacklist []string
+	ContainerWhitelist []string
 
-	// Internal store of a proxy used for generating the Transport
-	proxy proxyFunc
+	// Transaction Manager
+	TxManagerChannelBufferSize       int
+	TxManagerTimeoutDurationSeconds  time.Duration
+	TxManagerEvictionDurationSeconds time.Duration
+	TxManagerTickerIntervalSeconds   time.Duration
 
-	// Windows-specific config
-	Windows WindowsConfig
+	// Batcher
+	BatcherMaxBufferSize int
+	BatcherLogPayloads   bool
+
+	// Kubernetes
+	KubernetesKubeletHost string
+
+	// Proxy
+	HTTPSProxy *url.URL
+	HTTPProxy  *url.URL
 }
 
 // CheckIsEnabled returns a bool indicating if the given check name is enabled.
@@ -176,21 +155,6 @@ const (
 	maxMessageBatch = 100
 )
 
-// NewDefaultTransport provides a http transport configuration with sane default timeouts
-func NewDefaultTransport() *http.Transport {
-	return &http.Transport{
-		MaxIdleConns:    5,
-		IdleConnTimeout: 90 * time.Second,
-		Dial: (&net.Dialer{
-			Timeout:   10 * time.Second,
-			KeepAlive: 10 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout:   5 * time.Second,
-		ResponseHeaderTimeout: 5 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-}
-
 // NewDefaultAgentConfig returns an AgentConfig with defaults initialized
 func NewDefaultAgentConfig() *AgentConfig {
 	u, err := url.Parse(defaultEndpoint)
@@ -199,17 +163,10 @@ func NewDefaultAgentConfig() *AgentConfig {
 		panic(err)
 	}
 
-	// TODO: not sure this is correct. Process agent config changed a lot.
-	ddconfig.DetectFeatures()
-
-	// Note: This only considers container sources that are already setup. It's possible that container sources may
-	//       need a few minutes to be ready.
-	_, err = util.GetContainers()
-	canAccessContainers := err == nil
-
 	ac := &AgentConfig{
-		Enabled:                  canAccessContainers, // We'll always run inside of a container.
+		Enabled:                  true, // We'll always run inside of a container.
 		APIEndpoints:             []APIEndpoint{{Endpoint: u}},
+		SkipSSLValidation:        false,
 		LogFile:                  defaultLogFilePath,
 		LogLevel:                 "info",
 		LogToConsole:             false,
@@ -217,13 +174,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		MaxProcFDs:               200,
 		MaxPerMessage:            maxMessageBatch,
 		MaxConnectionsPerMessage: 100,
-		AllowRealTime:            true,
 		HostName:                 "",
-		Transport:                NewDefaultTransport(),
-
-		// Statsd for internal instrumentation
-		StatsdHost: "127.0.0.1",
-		StatsdPort: 8125,
 
 		Blacklist: deriveFmapConstructRegex(constructRegex, defaultBlacklistPatterns),
 
@@ -232,10 +183,6 @@ func NewDefaultAgentConfig() *AgentConfig {
 		AmountTopIOReadUsage:        0,
 		AmountTopIOWriteUsage:       0,
 		AmountTopMemoryUsage:        0,
-
-		// Path and environment for the dd-agent embedded python
-		DDAgentPy:    defaultDDAgentPy,
-		DDAgentPyEnv: []string{defaultDDAgentPyEnv},
 
 		EnableIncrementalPublishing:          true,
 		IncrementalPublishingRefreshInterval: 1 * time.Minute,
@@ -255,54 +202,47 @@ func NewDefaultAgentConfig() *AgentConfig {
 		ShortLivedProcessQualifierSecs: 60 * time.Second,
 
 		// Network collection configuration
-		EnableNetworkTracing:              false,
-		EnableLocalNetworkTracer:          true,
-		NetworkInitialConnectionsFromProc: true,
-		NetworkTracerMaxConnections:       10000,
-		NetworkTracerSocketPath:           defaultNetworkTracerSocketPath,
-		NetworkTracerLogFile:              defaultNetworkLogFilePath,
-		NetworkTracerInitRetryDuration:    5 * time.Second,
-		NetworkTracerInitRetryAmount:      3,
+		EnableNetworkTracing:           false,
+		NetworkTracerMaxConnections:    10000,
+		NetworkTracerInitRetryDuration: 5 * time.Second,
+		NetworkTracerInitRetryAmount:   3,
 		NetworkTracer: &NetworkTracerConfig{
 			EnableProtocolInspection: true,
 			EbpfDebuglogEnabled:      false,
-			HTTPMetrics: &tracerconfig.HttpMetricConfig{
-				SketchType: tracerconfig.CollapsingLowest,
-				MaxNumBins: 1024,
-				Accuracy:   0.01,
-			},
+			EbpfArtifactDir:          "/opt/stackstate-agent/ebpf",
 		},
 
 		// Check config
-		EnabledChecks: processChecks, // sts - Always run process checks by default (process check also runs container check)
+		EnabledChecks: processChecks,
 		CheckIntervals: map[string]time.Duration{
 			"process":     30 * time.Second,
-			"rtprocess":   2 * time.Second,
-			"container":   30 * time.Second,
-			"rtcontainer": 2 * time.Second,
 			"connections": 30 * time.Second,
 		},
 		ReportCheckHealthState:       true,
 		CheckHealthStateMessageLimit: 2048,
 
-		// Docker
-		ContainerCacheDuration: 10 * time.Second,
-		CollectDockerNetwork:   true,
+		// Transaction manager
+		TxManagerChannelBufferSize:       transactionmanager.DefaultTxManagerChannelBufferSize,
+		TxManagerTimeoutDurationSeconds:  transactionmanager.DefaultTxManagerTimeoutDurationSeconds * time.Second,
+		TxManagerEvictionDurationSeconds: transactionmanager.DefaultTxManagerEvictionDurationSeconds * time.Second,
+		TxManagerTickerIntervalSeconds:   transactionmanager.DefaultTxManagerTickerIntervalSeconds * time.Second,
+
+		// Batcher
+		BatcherMaxBufferSize: transactionbatcher.DefaultBatcherBufferSize,
+		BatcherLogPayloads:   false,
 
 		// DataScrubber to hide command line sensitive words
 		Scrubber: NewDefaultDataScrubber(),
 
-		// Windows process config
-		Windows: WindowsConfig{
-			ArgsRefreshInterval: 15, // with default 20s check interval we refresh every 5m
-			AddNewArgs:          true,
-		},
+		// Proxy
+		HTTPSProxy: nil,
+		HTTPProxy:  nil,
 	}
 
 	// Set default values for proc/sys paths if unset.
 	// Don't set this is /host is not mounted to use context within container.
 	// Generally only applicable for container-only cases like Fargate.
-	if ddconfig.IsContainerized() && util.PathExists("/host") {
+	if IsContainerized() && util.PathExists("/host") {
 		if v := os.Getenv("HOST_PROC"); v == "" {
 			os.Setenv("HOST_PROC", "/host/proc")
 		}
@@ -324,137 +264,15 @@ func isRunningInKubernetes() bool {
 
 // NewAgentConfig returns an AgentConfig using a configuration file. It can be nil
 // if there is no file available. In this case we'll configure only via environment.
-func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *YamlAgentConfig) (*AgentConfig, error) {
+func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 	var err error
 	cfg := NewDefaultAgentConfig()
 
-	var ns string
-	var section *ini.Section
-	if agentIni != nil {
-		section, _ = agentIni.GetSection("Main")
-	}
-
-	// Pull from the ini Agent config by default.
-	if section != nil {
-		a, err := agentIni.Get("Main", "api_key")
-		if err != nil {
-			return nil, err
-		}
-		ak := strings.Split(a, ",")
-		cfg.APIEndpoints[0].APIKey = ak[0]
-		if len(ak) > 1 {
-			for i := 1; i < len(ak); i++ {
-				cfg.APIEndpoints = append(cfg.APIEndpoints, APIEndpoint{APIKey: ak[i]})
-			}
-		}
-
-		cfg.LogLevel = strings.ToLower(agentIni.GetDefault("Main", "log_level", "INFO"))
-		cfg.proxy, err = getProxySettings(section)
-		if err != nil {
-			log.Errorf("error parsing proxy settings, not using a proxy: %s", err)
-		}
-
-		v, _ := agentIni.Get("Main", "process_agent_enabled")
-		if enabled, err := isAffirmative(v); enabled {
-			cfg.Enabled = true
-			cfg.EnabledChecks = processChecks
-		} else if !enabled && err == nil { // Only want to disable the process agent if it's explicitly disabled
-			cfg.Enabled = false
-		}
-
-		cfg.StatsdHost = agentIni.GetDefault("Main", "bind_host", cfg.StatsdHost)
-		// non_local_traffic is a shorthand in dd-agent configuration that is
-		// equivalent to setting `bind_host: 0.0.0.0`. Respect this flag
-		// since it defaults to true in Docker and saves us a command-line param
-		v, _ = agentIni.Get("Main", "non_local_traffic")
-		if enabled, _ := isAffirmative(v); enabled {
-			cfg.StatsdHost = "0.0.0.0"
-		}
-		cfg.StatsdPort = agentIni.GetIntDefault("Main", "dogstatsd_port", cfg.StatsdPort)
-
-		// All process-agent specific config lives under [process.config] section.
-		// NOTE: we truncate either endpoints or APIEndpoints if the lengths don't match
-		ns = "process.config"
-		endpoints := agentIni.GetStrArrayDefault(ns, "endpoint", ",", []string{defaultEndpoint})
-		if len(endpoints) < len(cfg.APIEndpoints) {
-			log.Warnf("found %d api keys and %d endpoints", len(cfg.APIEndpoints), len(endpoints))
-			cfg.APIEndpoints = cfg.APIEndpoints[:len(endpoints)]
-		} else if len(endpoints) > len(cfg.APIEndpoints) {
-			log.Warnf("found %d api keys and %d endpoints", len(cfg.APIEndpoints), len(endpoints))
-			endpoints = endpoints[:len(cfg.APIEndpoints)]
-		}
-		for i, e := range endpoints {
-			u, err := url.Parse(e)
-			if err != nil {
-				return nil, fmt.Errorf("invalid endpoint URL: %s", err)
-			}
-			cfg.APIEndpoints[i].Endpoint = u
-		}
-
-		cfg.QueueSize = agentIni.GetIntDefault(ns, "queue_size", cfg.QueueSize)
-		cfg.MaxProcFDs = agentIni.GetIntDefault(ns, "max_proc_fds", cfg.MaxProcFDs)
-		cfg.AllowRealTime = agentIni.GetBool(ns, "allow_real_time", cfg.AllowRealTime)
-		cfg.LogFile = agentIni.GetDefault(ns, "log_file", cfg.LogFile)
-		cfg.DDAgentPy = agentIni.GetDefault(ns, "dd_agent_py", cfg.DDAgentPy)
-		cfg.DDAgentPyEnv = agentIni.GetStrArrayDefault(ns, "dd_agent_py_env", ",", cfg.DDAgentPyEnv)
-
-		blacklistPats := agentIni.GetStrArrayDefault(ns, "blacklist", ",", []string{})
-		blacklist := make([]*regexp.Regexp, 0, len(blacklistPats))
-		for _, b := range blacklistPats {
-			r, err := regexp.Compile(b)
-			if err == nil {
-				blacklist = append(blacklist, r)
-			}
-		}
-		cfg.Blacklist = blacklist
-
-		// DataScrubber
-		cfg.Scrubber.Enabled = agentIni.GetBool(ns, "scrub_args", true)
-		customSensitiveWords := agentIni.GetStrArrayDefault(ns, "custom_sensitive_words", ",", []string{})
-		cfg.Scrubber.AddCustomSensitiveWords(customSensitiveWords)
-		cfg.Scrubber.StripAllArguments = agentIni.GetBool(ns, "strip_proc_arguments", false)
-
-		batchSize := agentIni.GetIntDefault(ns, "proc_limit", cfg.MaxPerMessage)
-		if batchSize <= maxMessageBatch {
-			cfg.MaxPerMessage = batchSize
-		} else {
-			log.Warn("Overriding the configured item count per message limit because it exceeds maximum")
-			cfg.MaxPerMessage = maxMessageBatch
-		}
-
-		// Checks intervals can be overridden by configuration.
-		for checkName, defaultInterval := range cfg.CheckIntervals {
-			key := fmt.Sprintf("%s_interval", checkName)
-			interval := agentIni.GetDurationDefault(ns, key, time.Second, defaultInterval)
-			if interval != defaultInterval {
-				log.Infof("Overriding check interval for %s to %s", checkName, interval)
-				cfg.CheckIntervals[checkName] = interval
-			}
-		}
-
-		// Docker config
-		cfg.CollectDockerNetwork = agentIni.GetBool(ns, "collect_docker_network", cfg.CollectDockerNetwork)
-		cfg.ContainerBlacklist = agentIni.GetStrArrayDefault(ns, "container_blacklist", ",", cfg.ContainerBlacklist)
-		cfg.ContainerWhitelist = agentIni.GetStrArrayDefault(ns, "container_whitelist", ",", cfg.ContainerWhitelist)
-		cfg.ContainerCacheDuration = agentIni.GetDurationDefault(ns, "container_cache_duration", time.Second, 30*time.Second)
-
-		// windows args config
-		cfg.Windows.ArgsRefreshInterval = agentIni.GetIntDefault(ns, "windows_args_refresh_interval", cfg.Windows.ArgsRefreshInterval)
-		cfg.Windows.AddNewArgs = agentIni.GetBool(ns, "windows_add_new_args", true)
-	}
-
-	// For Agents >= 6 we will have a YAML config file to use.
 	if agentYaml != nil {
 		if cfg, err = mergeYamlConfig(cfg, agentYaml); err != nil {
 			return nil, err
 		}
 		if cfg, err = mergeNetworkYamlConfig(cfg, agentYaml); err != nil {
-			return nil, err
-		}
-	}
-
-	if networkYaml != nil {
-		if cfg, err = mergeNetworkYamlConfig(cfg, networkYaml); err != nil {
 			return nil, err
 		}
 	}
@@ -472,42 +290,8 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 		return nil, err
 	}
 
-	// sts begin
-	/* if cfg.HostName == "" {
-		if fargate.IsFargateInstance() {
-			// Fargate tasks should have no concept of host names, so we're using the task ARN.
-			if hostname, err := fargate.GetFargateHost(); err == nil {
-				cfg.HostName = fmt.Sprintf("fargate_task:%s", hostname)
-			} else {
-				log.Errorf("Failed to retrieve Fargate task metadata: %s", err)
-			}
-		} else if hostname, err := getHostname(cfg.DDAgentPy, cfg.DDAgentBin, cfg.DDAgentPyEnv); err == nil {
-			cfg.HostName = hostname
-		}
-	} */
-	// Get hostname from agent util since the process-agent image doesn't include the main agent
-	if cfg.HostName == "" {
-		if hostname, err := agentutil.GetHostname(context.TODO()); err == nil {
-			cfg.HostName = hostname
-			log.Debugf("Got hostname from agent util")
-		} else if hostname, err := getHostname(cfg.DDAgentPy, cfg.DDAgentBin, cfg.DDAgentPyEnv); err == nil {
-			cfg.HostName = hostname
-			log.Debugf("Got hostname from DDAgent")
-		}
-	}
-	log.Infof("Hostname is: %s", cfg.HostName)
-	// sts end
-
-	if cfg.proxy != nil {
-		cfg.Transport.Proxy = cfg.proxy
-	}
-
-	// sanity check. This element is used with the modulo operator (%), so it can't be zero.
-	// if it is, log the error, and assume the config was attempting to disable
-	if cfg.Windows.ArgsRefreshInterval == 0 {
-		log.Warnf("invalid configuration: windows_collect_skip_new_args was set to 0. " +
-			"Disabling argument collection")
-		cfg.Windows.ArgsRefreshInterval = -1
+	if len(cfg.APIEndpoints) > 1 {
+		log.Warnf("Multiple API endpoints is not supported. Additional endpoints will be ignored")
 	}
 
 	if cfg.EnableShortLivedProcessFilter {
@@ -527,39 +311,17 @@ func NewAgentConfig(agentIni *File, agentYaml *YamlAgentConfig, networkYaml *Yam
 	return cfg, nil
 }
 
-// NewNetworkAgentConfig returns a network-tracer specific AgentConfig using a configuration file. It can be nil
-// if there is no file available. In this case we'll configure only via environment.
-func NewNetworkAgentConfig(networkYaml *YamlAgentConfig) (*AgentConfig, error) {
-	cfg := NewDefaultAgentConfig()
-	var err error
-
-	if networkYaml != nil {
-		if cfg, err = mergeNetworkYamlConfig(cfg, networkYaml); err != nil {
-			return nil, fmt.Errorf("failed to parse config: %s", err)
-		}
-	}
-
-	cfg = mergeEnvironmentVariables(cfg)
-
-	// (Re)configure the logging from our configuration, with the network tracer logfile
-	if err := NewLoggerLevel(cfg.LogLevel, cfg.NetworkTracerLogFile, cfg.LogToConsole); err != nil {
-		return nil, fmt.Errorf("failed to setup network-tracer logger: %s", err)
-	}
-
-	return cfg, nil
-}
-
 // mergeEnvironmentVariables applies overrides from environment variables to the process agent configuration
 func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	var err error
-	if enabled, err := isAffirmative(os.Getenv("DD_PROCESS_AGENT_ENABLED")); enabled {
+	if enabled, err := isAffirmative(os.Getenv("STS_PROCESS_AGENT_ENABLED")); enabled {
 		c.Enabled = true
 		c.EnabledChecks = processChecks
 	} else if !enabled && err == nil {
 		c.Enabled = false
 	}
 
-	if v := os.Getenv("DD_HOSTNAME"); v != "" {
+	if v := os.Getenv("STS_HOSTNAME"); v != "" {
 		log.Info("overriding hostname from env DD_HOSTNAME value")
 		c.HostName = v
 	}
@@ -570,7 +332,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		apiKey = v
 		log.Info("overriding API key from env API_KEY value")
 	}
-	if v := os.Getenv("DD_API_KEY"); v != "" {
+	if v := os.Getenv("STS_API_KEY"); v != "" {
 		apiKey = v
 		log.Infof("overriding API key from env DD_API_KEY value %s", apiKey)
 	}
@@ -586,36 +348,59 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if v := os.Getenv("LOG_LEVEL"); v != "" {
 		c.LogLevel = v
 	}
-	if v := os.Getenv("DD_LOG_LEVEL"); v != "" {
+	if v := os.Getenv("STS_LOG_LEVEL"); v != "" {
 		c.LogLevel = v
 	}
 
 	// Logging to console
-	if enabled, err := isAffirmative(os.Getenv("DD_LOGS_STDOUT")); err == nil {
+	if enabled, err := isAffirmative(os.Getenv("STS_LOGS_STDOUT")); err == nil {
 		c.LogToConsole = enabled
 	}
 	if enabled, err := isAffirmative(os.Getenv("LOG_TO_CONSOLE")); err == nil {
 		c.LogToConsole = enabled
 	}
-	if enabled, err := isAffirmative(os.Getenv("DD_LOG_TO_CONSOLE")); err == nil {
+	if enabled, err := isAffirmative(os.Getenv("STS_LOG_TO_CONSOLE")); err == nil {
 		c.LogToConsole = enabled
 	}
 
-	if c.proxy, err = proxyFromEnv(c.proxy); err != nil {
-		log.Errorf("error parsing proxy settings, not using a proxy: %s", err)
-		c.proxy = nil
+	if proxyURL := os.Getenv("HTTPS_PROXY"); proxyURL != "" {
+		c.HTTPSProxy, err = url.Parse(proxyURL)
+		if err != nil {
+			log.Errorf("error parsing HTTPS_PROXY, not using a proxy: %s", err)
+		}
+	}
+
+	if proxyURL := os.Getenv("STS_HTTPS_PROXY"); proxyURL != "" {
+		c.HTTPSProxy, err = url.Parse(proxyURL)
+		if err != nil {
+			log.Errorf("error parsing STS_HTTPS_PROXY, not using a proxy: %s", err)
+		}
+	}
+
+	if proxyURL := os.Getenv("HTTP_PROXY"); proxyURL != "" {
+		c.HTTPProxy, err = url.Parse(proxyURL)
+		if err != nil {
+			log.Errorf("error parsing HTTP_PROXY, not using a proxy: %s", err)
+		}
+	}
+
+	if proxyURL := os.Getenv("STS_HTTP_PROXY"); proxyURL != "" {
+		c.HTTPProxy, err = url.Parse(proxyURL)
+		if err != nil {
+			log.Errorf("error parsing STS_HTTP_PROXY, not using a proxy: %s", err)
+		}
 	}
 
 	// STS
-	if v := os.Getenv("DD_PROCESS_AGENT_URL"); v != "" {
+	if v := os.Getenv("STS_PROCESS_AGENT_URL"); v != "" {
 		u, err := url.Parse(v)
 		if err != nil {
-			log.Warnf("DD_PROCESS_AGENT_URL is invalid: %s", err)
+			log.Warnf("STS_PROCESS_AGENT_URL is invalid: %s", err)
 		} else {
 			log.Infof("overriding API endpoint from env")
 			c.APIEndpoints[0].Endpoint = u
 		}
-		if site := os.Getenv("DD_SITE"); site != "" {
+		if site := os.Getenv("STS_SITE"); site != "" {
 			log.Infof("Using 'process_dd_url' (%s) and ignoring 'site' (%s)", v, site)
 		}
 		log.Infof("Overriding process api endpoint with environment variable `STS_PROCESS_AGENT_URL`: %s", u)
@@ -630,72 +415,37 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		}
 		log.Infof("Overriding process api endpoint with environment variable `STS_STS_URL`: %s", u)
 	}
-	// /STS
 
 	// Process Arguments Scrubbing
-	if enabled, err := isAffirmative(os.Getenv("DD_SCRUB_ARGS")); enabled {
+	if enabled, err := isAffirmative(os.Getenv("STS_SCRUB_ARGS")); enabled {
 		c.Scrubber.Enabled = true
 	} else if !enabled && err == nil {
 		c.Scrubber.Enabled = false
 	}
 
-	if v := os.Getenv("DD_CUSTOM_SENSITIVE_WORDS"); v != "" {
+	if v := os.Getenv("STS_CUSTOM_SENSITIVE_WORDS"); v != "" {
 		c.Scrubber.AddCustomSensitiveWords(strings.Split(v, ","))
 	}
-	if ok, _ := isAffirmative(os.Getenv("DD_STRIP_PROCESS_ARGS")); ok {
+	if ok, _ := isAffirmative(os.Getenv("STS_STRIP_PROCESS_ARGS")); ok {
 		c.Scrubber.StripAllArguments = true
 	}
 
-	if v := os.Getenv("DD_AGENT_PY"); v != "" {
-		c.DDAgentPy = v
-	}
-	if v := os.Getenv("DD_AGENT_PY_ENV"); v != "" {
-		c.DDAgentPyEnv = strings.Split(v, ",")
-	}
-
-	if v := os.Getenv("DD_DOGSTATSD_PORT"); v != "" {
-		port, err := strconv.Atoi(v)
-		if err != nil {
-			log.Info("Failed to parse DD_DOGSTATSD_PORT: it should be a port number")
-		} else {
-			c.StatsdPort = port
-		}
-	}
-
-	if v := os.Getenv("DD_BIND_HOST"); v != "" {
-		c.StatsdHost = v
-	}
-
 	// Docker config
-	if v := os.Getenv("DD_COLLECT_DOCKER_NETWORK"); v == "false" {
-		c.CollectDockerNetwork = false
-	}
-	if v := os.Getenv("DD_CONTAINER_BLACKLIST"); v != "" {
+	if v := os.Getenv("STS_CONTAINER_BLACKLIST"); v != "" {
 		c.ContainerBlacklist = strings.Split(v, ",")
 	}
-	if v := os.Getenv("DD_CONTAINER_WHITELIST"); v != "" {
+	if v := os.Getenv("STS_CONTAINER_WHITELIST"); v != "" {
 		c.ContainerWhitelist = strings.Split(v, ",")
 	}
-	if v := os.Getenv("DD_CONTAINER_CACHE_DURATION"); v != "" {
-		durationS, _ := strconv.Atoi(v)
-		c.ContainerCacheDuration = time.Duration(durationS) * time.Second
-	}
-
-	// Used to override container source auto-detection.
-	// "docker", "ecs_fargate", "kubelet", etc
-	// sts ignore
-	//if v := os.Getenv("STS_PROCESS_AGENT_CONTAINER_SOURCE"); v != "" {
-	//	util.SetContainerSource(v)
-	//}
 
 	// Note: this feature is in development and should not be used in production environments
 	// STS: ignore DD notes, this will enable our tcptracer-ebpf and that is production ready
-	if ok, _ := isAffirmative(os.Getenv("DD_NETWORK_TRACING_ENABLED")); ok {
+	if ok, _ := isAffirmative(os.Getenv("STS_NETWORK_TRACING_ENABLED")); ok {
 		c.EnabledChecks = append(c.EnabledChecks, "connections")
 		c.EnableNetworkTracing = ok
 	}
-	if v := os.Getenv("DD_NETTRACER_SOCKET"); v != "" {
-		c.NetworkTracerSocketPath = v
+	if v := os.Getenv("STS_NETTRACER_EBPF_ARTIFACTS_DIR"); v != "" {
+		c.NetworkTracer.EbpfArtifactDir = v
 	}
 
 	if ok, _ := isAffirmative(os.Getenv("STS_INCREMENTAL_PUBLISHING")); ok {
@@ -806,10 +556,41 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.CheckIntervals["connections"] = time.Duration(v) * time.Second
 	}
 
-	// STS
+	if v, err := strconv.Atoi(os.Getenv("STS_TX_MANAGER_CHANNEL_BUFFER_SIZE")); err == nil {
+		c.TxManagerChannelBufferSize = v
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_TX_MANAGER_TIMEOUT_DURATION_SECONDS")); err == nil {
+		c.TxManagerTimeoutDurationSeconds = time.Duration(v) * time.Second
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_TX_MANAGER_EVICTION_DURATION_SECONDS")); err == nil {
+		c.TxManagerEvictionDurationSeconds = time.Duration(v) * time.Second
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_TX_MANAGER_TICKER_INTERVAL_SECONDS")); err == nil {
+		c.TxManagerTickerIntervalSeconds = time.Duration(v) * time.Second
+	}
+
+	if v, err := strconv.Atoi(os.Getenv("STS_BATCHER_MAX_BUFFER_SIZE")); err == nil {
+		c.BatcherMaxBufferSize = v
+	}
+
+	if enabled, _ := isAffirmative(os.Getenv("STS_BATCHER_LOG_PAYLOADS")); enabled {
+		c.BatcherLogPayloads = enabled
+	}
+
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
-		ddconfig.Datadog.Set("skip_ssl_validation", v)
+		c.SkipSSLValidation = true
 		log.Infof("Overriding skip_ssl_validation to: %s", v)
+	}
+
+	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {
+		c.KubernetesKubeletHost = v
+	}
+
+	if v := os.Getenv("STS_CRI_SOCKET_PATH"); v != "" {
+		c.CriSocketPath = v
 	}
 
 	return c
@@ -824,7 +605,7 @@ func setProcessBlacklist(agentConf *AgentConfig,
 		log.Infof("Overriding processes blacklist to %v", patterns)
 		agentConf.Blacklist = deriveFmapConstructRegex(constructRegex, patterns)
 	} else {
-		log.Infof("Using default processes blacklist %v", agentConf.Blacklist)
+		log.Infof("Using default processes blacklist.", agentConf.Blacklist)
 	}
 	if amountTopCPUPercentageUsage >= 0 {
 		log.Infof("Overriding top CPU percentage using processes inclusions to %d", amountTopCPUPercentageUsage)
@@ -919,155 +700,19 @@ func isAffirmative(value string) (bool, error) {
 	return v == "true" || v == "yes" || v == "1", nil
 }
 
-func getSketchType(value string) (tracerconfig.MetricSketchType, error) {
-	switch value {
-	case string(tracerconfig.Unbounded):
-		return tracerconfig.Unbounded, nil
-	case string(tracerconfig.CollapsingLowest):
-		return tracerconfig.CollapsingLowest, nil
-	case string(tracerconfig.CollapsingHighest):
-		return tracerconfig.CollapsingHighest, nil
-	default:
-		return "", fmt.Errorf("unknown sketch type")
-	}
-}
-
-// getHostname shells out to obtain the hostname used by the infra agent
-// falling back to os.Hostname() if it is unavailable
-func getHostname(ddAgentPy, ddAgentBin string, ddAgentEnv []string) (string, error) {
-	var cmd *exec.Cmd
-	// In Agent 6 we will have an Agent binary defined.
-	if ddAgentBin != "" {
-		cmd = exec.Command(ddAgentBin, "hostname")
-	} else {
-		getHostnameCmd := "from utils.hostname import get_hostname; print get_hostname()"
-		cmd = exec.Command(ddAgentPy, "-c", getHostnameCmd)
-	}
-
-	// Copying all environment variables to child process
-	// Windows: Required, so the child process can load DLLs, etc.
-	// Linux:   Optional, but will make use of DD_HOSTNAME and DOCKER_DD_AGENT if they exist
-	osEnv := os.Environ()
-	cmd.Env = append(ddAgentEnv, osEnv...)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		log.Infof("error retrieving dd-agent hostname, falling back to os.Hostname(): %v", err)
-		return os.Hostname()
-	}
-
-	hostname := strings.TrimSpace(stdout.String())
-
-	if hostname == "" {
-		log.Infof("error retrieving dd-agent hostname, falling back to os.Hostname(): %s", stderr.String())
-		return os.Hostname()
-	}
-
-	return hostname, err
-}
-
-// getProxySettings returns a url.Url for the proxy configuration from datadog.conf, if available.
-// In the case of invalid settings an error is logged and nil is returned. If settings are missing,
-// meaning we don't want a proxy, then nil is returned with no error.
-func getProxySettings(m *ini.Section) (proxyFunc, error) {
-	var host string
-	scheme := "http"
-	if v := m.Key("proxy_host").MustString(""); v != "" {
-		// accept either http://myproxy.com or myproxy.com
-		if i := strings.Index(v, "://"); i != -1 {
-			// when available, parse the scheme from the url
-			scheme = v[0:i]
-			host = v[i+3:]
-		} else {
-			host = v
+// ConfigureHostname puts the hostname into the config. This has been separateded to allow the rest of the config to be processed before finding the hostname
+func ConfigureHostname(cfg *AgentConfig) {
+	// Get hostname from agent util since the process-agent image doesn't include the main agent
+	if cfg.HostName == "" {
+		if hostname, err := hostname.Get(context.TODO()); err == nil {
+			cfg.HostName = hostname
+			log.Debugf("Got hostname from agent util")
 		}
 	}
-
-	if host == "" {
-		return nil, nil
-	}
-
-	port := defaultProxyPort
-	if v := m.Key("proxy_port").MustInt(-1); v != -1 {
-		port = v
-	}
-	var user, password string
-	if v := m.Key("proxy_user").MustString(""); v != "" {
-		user = v
-	}
-	if v := m.Key("proxy_password").MustString(""); v != "" {
-		password = v
-	}
-	return constructProxy(host, scheme, port, user, password)
+	log.Infof("Hostname is: %s", cfg.HostName)
 }
 
-// proxyFromEnv parses out the proxy configuration from the ENV variables in a
-// similar way to getProxySettings and, if enough values are available, returns
-// a new proxy URL value. If the environment is not set for this then the
-// `defaultVal` is returned.
-func proxyFromEnv(defaultVal proxyFunc) (proxyFunc, error) {
-	var host string
-	scheme := "http"
-	if v := os.Getenv("PROXY_HOST"); v != "" {
-		// accept either http://myproxy.com or myproxy.com
-		if i := strings.Index(v, "://"); i != -1 {
-			// when available, parse the scheme from the url
-			scheme = v[0:i]
-			host = v[i+3:]
-		} else {
-			host = v
-		}
-	}
-
-	if host == "" {
-		return defaultVal, nil
-	}
-
-	port := defaultProxyPort
-	if v := os.Getenv("PROXY_PORT"); v != "" {
-		port, _ = strconv.Atoi(v)
-	}
-	var user, password string
-	if v := os.Getenv("PROXY_USER"); v != "" {
-		user = v
-	}
-	if v := os.Getenv("PROXY_PASSWORD"); v != "" {
-		password = v
-	}
-
-	return constructProxy(host, scheme, port, user, password)
-}
-
-// constructProxy constructs a *url.Url for a proxy given the parts of a
-// Note that we assume we have at least a non-empty host for this call but
-// all other values can be their defaults (empty string or 0).
-func constructProxy(host, scheme string, port int, user, password string) (proxyFunc, error) {
-	var userpass *url.Userinfo
-	if user != "" {
-		if password != "" {
-			userpass = url.UserPassword(user, password)
-		} else {
-			userpass = url.User(user)
-		}
-	}
-
-	var path string
-	if userpass != nil {
-		path = fmt.Sprintf("%s@%s:%v", userpass.String(), host, port)
-	} else {
-		path = fmt.Sprintf("%s:%v", host, port)
-	}
-	if scheme != "" {
-		path = fmt.Sprintf("%s://%s", scheme, path)
-	}
-
-	u, err := url.Parse(path)
-	if err != nil {
-		return nil, err
-	}
-	return http.ProxyURL(u), nil
+// IsContainerized returns whether the Agent is running on a Docker container
+func IsContainerized() bool {
+	return os.Getenv("DOCKER_STS_AGENT") != ""
 }

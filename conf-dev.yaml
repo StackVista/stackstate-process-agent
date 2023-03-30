@@ -15,6 +15,7 @@ sts_url: http://localhost:7077/stsAgent
 api_key: API_KEY
 process_agent_enabled: true
 incremental_publishing_enabled: true
+
 process_config:
   enabled: 'true'
 
@@ -23,17 +24,22 @@ process_config:
 #    container: 8
 #    process: 5
 #    connections: 5
-  process_blacklist:
-    # Process blacklist inclusions for top resource using processes
-    inclusions:
-      amount_top_cpu_pct_usage: 3
-      cpu_pct_usage_threshold: 20
-      amount_top_io_read_usage: 3
-      amount_top_io_write_usage: 3
-      amount_top_mem_usage: 3
-      mem_usage_threshold: 35
+#  process_blacklist:
+#    # Process blacklist inclusions for top resource using processes
+#    inclusions:
+#      amount_top_cpu_pct_usage: 3
+#      cpu_pct_usage_threshold: 20
+#      amount_top_io_read_usage: 3
+#      amount_top_io_write_usage: 3
+#      amount_top_mem_usage: 3
+#      mem_usage_threshold: 35
 network_tracer_config:
   network_tracing_enabled: 'true'
   initial_connections_from_proc: 'true'
   ebpf_debuglog_enabled: 'true'
   protocol_inspection_enabled: 'true'
+  ebpf_artifact_dir: './ebpf-object-files-root'
+transaction_manager:
+  # for testing purposes
+  timeout_duration_seconds: 5
+  eviction_duration_seconds: 10

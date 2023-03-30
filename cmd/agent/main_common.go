@@ -2,35 +2,39 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
+	"github.com/DataDog/datadog-agent/pkg/tagger/local"
+	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
-	"github.com/StackVista/stackstate-process-agent/pkg/forwarder"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionforwarder"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"time"
 
-	"github.com/StackVista/stackstate-agent/pkg/pidfile"
+	"github.com/DataDog/datadog-agent/pkg/pidfile"
 	log "github.com/cihub/seelog"
 
-	"github.com/StackVista/stackstate-agent/pkg/process/util"
-	"github.com/StackVista/stackstate-agent/pkg/tagger"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/tagger"
 	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
 )
 
 var opts struct {
-	configPath    string
-	ddConfigPath  string
-	netConfigPath string
-	pidfilePath   string
-	debug         bool
-	version       bool
-	check         string
-	info          bool
+	configPath  string
+	pidfilePath string
+	debug       bool
+	version     bool
+	check       string
+	info        bool
 }
 
 // version info sourced from build flags
@@ -66,12 +70,6 @@ func versionString() string {
 }
 
 const (
-	agent5DisabledMessage = `process-agent not enabled.
-Set env var STS_PROCESS_AGENT_ENABLED=true or add
-process_agent_enabled: true
-to your stackstate.conf file.
-Exiting.`
-
 	agent6DisabledMessage = `process-agent not enabled.
 Set env var STS_PROCESS_AGENT_ENABLED=true or add
 process_config:
@@ -100,31 +98,13 @@ func runAgent(exit chan bool) {
 		}()
 	}
 
-	agentConf, err := config.NewIfExists(opts.ddConfigPath)
-	//if err != nil {
-	//	log.Criticalf("Error reading sts-agent config: %s", err)
-	//	os.Exit(1)
-	//}
-
 	yamlConf, err := config.NewYamlIfExists(opts.configPath)
 	if err != nil {
 		log.Criticalf("Error reading stackstate.yaml: %s", err)
 		os.Exit(1)
-	} else if yamlConf != nil {
-		log.Debugf("Setting up agent config for config path: %s", opts.configPath)
-		config.SetupDDAgentConfig(opts.configPath)
 	}
 
-	// Tagger must be initialized after agent config has been setup (via config.SetupDDAgentConfig)
-	tagger.Init()
-
-	networkConf, err := config.NewYamlIfExists(opts.netConfigPath)
-	if err != nil {
-		log.Criticalf("Error reading network-tracer.yaml: %s", err)
-		os.Exit(1)
-	}
-
-	cfg, err := config.NewAgentConfig(agentConf, yamlConf, networkConf)
+	cfg, err := config.NewAgentConfig(yamlConf)
 	if err != nil {
 		log.Criticalf("Error parsing config: %s", err)
 		os.Exit(1)
@@ -134,32 +114,38 @@ func runAgent(exit chan bool) {
 		log.Criticalf("Error initializing info: %s", err)
 		os.Exit(1)
 	}
-	// [sts] don't use statsd going forward we prefer the forwarder.
-	//if err := statsd.Configure(cfg); err != nil {
-	//	log.Criticalf("Error configuring statsd: %s", err)
-	//	os.Exit(1)
-	//}
 
-	fwd := forwarder.MakeProcessForwarder(cfg)
-	fwd.Start()
+	// Setup config for the datadog agent
+	config.SetupDDAgentConfig(cfg)
 
-	// sts send metrics
-	snd, err := aggregator.GetSender("process-agent")
+	// Configuring hostname after datadog is configured, because it uses datadog logic
+	config.ConfigureHostname(cfg)
+
+	// Setting up the tagger (must be done after config is setup)
+	store := workloadmeta.CreateGlobalStore(workloadmeta.NodeAgentCatalog)
+	store.Start(context.TODO())
+
+	tagger.SetDefaultTagger(local.NewTagger(store))
+	err = tagger.Init(context.TODO())
 	if err != nil {
-		_ = log.Error("No default sender available: ", err)
-
+		log.Errorf("failed to start the tagger: %s", err)
 	}
-	defer snd.Commit()
+	defer tagger.Stop() //nolint:errcheck
 
-	snd.Gauge("stackstate.process_agent.started", 1, cfg.HostName,
-		[]string{fmt.Sprintf("version:%s", versionString())})
+	client := httpclient.NewStackStateClient(makeClientHost(cfg))
+	manager := transactionmanager.NewTransactionManager(
+		cfg.TxManagerChannelBufferSize,
+		cfg.TxManagerTickerIntervalSeconds,
+		cfg.TxManagerTimeoutDurationSeconds,
+		cfg.TxManagerEvictionDurationSeconds)
+	fwd := transactionforwarder.NewTransactionalForwarder(client, manager)
+	batcher := transactionbatcher.NewTransactionalBatcher(
+		cfg.HostName, cfg.BatcherMaxBufferSize, fwd, manager, cfg.BatcherLogPayloads)
 
 	// Exit if agent is not enabled and we're not debugging a check.
 	if !cfg.Enabled && opts.check == "" {
 		if yamlConf != nil {
 			log.Infof(agent6DisabledMessage)
-		} else {
-			log.Info(agent5DisabledMessage)
 		}
 
 		// a sleep is necessary to ensure that supervisor registers this process as "STARTED"
@@ -184,10 +170,9 @@ func runAgent(exit chan bool) {
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
-		} else {
-			os.Exit(0)
 		}
-		return
+
+		os.Exit(0)
 	}
 
 	if opts.info {
@@ -212,7 +197,7 @@ func runAgent(exit chan bool) {
 		http.ListenAndServe("localhost:6063", promServerMux)
 	}()
 
-	cl, err := NewCollector(cfg)
+	cl, err := NewCollector(cfg, client, batcher, manager)
 	if err != nil {
 		log.Criticalf("Error creating collector: %s", err)
 		os.Exit(1)
@@ -220,9 +205,36 @@ func runAgent(exit chan bool) {
 	}
 	cl.run(exit)
 	for range exit {
-		// stop the forwarder before exiting
+		batcher.Stop()
 		fwd.Stop()
+		manager.Stop()
 	}
+}
+
+func makeClientHost(cfg *config.AgentConfig) *httpclient.ClientHost {
+	host := &httpclient.ClientHost{
+		HostURL:           cfg.APIEndpoints[0].Endpoint.String(),
+		APIKey:            cfg.APIEndpoints[0].APIKey,
+		ContentEncoding:   httpclient.NewGzipContentEncoding(gzip.BestCompression),
+		SkipSSLValidation: cfg.SkipSSLValidation,
+		RetryWaitMin:      httpclient.DefaultRetryMin,
+		RetryWaitMax:      httpclient.DefaultRetryMax,
+		NoProxy:           true,
+	}
+
+	if cfg.APIEndpoints[0].Endpoint.Scheme == "https" {
+		if cfg.HTTPSProxy != nil {
+			host.ProxyURL = cfg.HTTPSProxy
+			host.NoProxy = false
+		}
+	} else {
+		if cfg.HTTPProxy != nil {
+			host.ProxyURL = cfg.HTTPProxy
+			host.NoProxy = false
+		}
+	}
+
+	return host
 }
 
 func debugCheckResults(cfg *config.AgentConfig, check string) error {
@@ -254,11 +266,9 @@ func printResults(cfg *config.AgentConfig, ch checks.Check) error {
 		return fmt.Errorf("collection error: %s", err)
 	}
 
-	if cfg.EnableLocalNetworkTracer && ch.Name() == checks.Connections.Name() {
+	if ch.Name() == checks.Connections.Name() {
 		fmt.Printf("Waiting 5 seconds to allow for active connections to transmit data\n")
 		time.Sleep(5 * time.Second)
-	} else {
-		time.Sleep(1 * time.Second)
 	}
 
 	fmt.Printf("-----------------------------\n\n")

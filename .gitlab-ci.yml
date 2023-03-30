@@ -1,4 +1,5 @@
 stages:
+  - prebuild
   - build
   - test
   - publish
@@ -7,44 +8,73 @@ variables:
   SRC_PATH: /src/github.com/StackVista/stackstate-process-agent
   STS_AWS_BUCKET: stackstate-process-agent-2-test
   STS_REPO_BRANCH_NAME: $CI_COMMIT_REF_NAME
-  CIRCLE_BRANCH: $CI_COMMIT_REF_NAME
+  PACKAGING_BRANCH: $CI_COMMIT_REF_NAME
   STS_DOCKER_RELEASE_REPO: stackstate-process-agent
   STS_DOCKER_TEST_REPO: stackstate-process-agent-test
   STS_DOCKER_K8S_REPO: stackstate-k8s-process-agent
   GO111MODULE: "on"
   QUAY_REGISTRY: quay.io
   DOCKER_REGISTRY: docker.io
-  RUNNER7_DIR: $CI_PROJECT_DIR/.cd-builders/runner-gitlab-centos7
   VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-runner-gitlab:llvmclang11-x64-20221207-7c6f401
+  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:d0a884b0
   GOPATH: "$CI_PROJECT_DIR/.go"
 
-.go_cache:
+.go_process_agent_cache:
+  cache: &go_cache
+    key:
+      files:
+        - go.mod
+        - go.sum
+      prefix: process_agent
+    paths:
+      - .go/
+
+.go_process_pull_agent_cache:
   cache:
-    - key:
-        files:
-          - go.mod
-          - go.sum
-      paths:
-        - .go/
+    <<: *go_cache
+    # override the policy
+    policy: pull
 
 .linux_builder:
   image: ${LINUX_BUILDER}
   before_script:
     - eval "$(gimme)"
+    - source /root/.bashrc
+    - source /etc/profile
+    - conda activate ddpy3
     - export PATH="${GOPATH}/bin:${PATH}"
 
-
 dependencies:
-  extends: [ .linux_builder, .go_cache ]
-  stage: build
+  extends: [ .linux_builder, .go_process_agent_cache ]
+  stage: prebuild
   needs: []
   script:
     - mkdir -p .go
     - go mod download
 
+prebuild_agent:
+  cache:
+    - <<: *go_cache
+      # override the policy
+      policy: pull
+    - key:
+        files:
+          - go.mod
+          - go.sum
+        prefix: prebuild_datadog_agent
+      paths:
+        - prebuild_artifacts/artifacts/*
+  stage: prebuild
+  needs: [ dependencies ]
+  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:5706c724
+  script:
+    - ./prebuild-datadog-agent.sh --generate-no-docker
+  artifacts:
+    paths:
+      - prebuild_artifacts/artifacts/*
+
 test_protobuf_updated:
-  extends: [ .linux_builder, .go_cache ]
+  extends: [ .linux_builder, .go_process_pull_agent_cache ]
   stage: test
   needs: [ dependencies ]
   script:
@@ -52,30 +82,19 @@ test_protobuf_updated:
     - rake protobuf
     - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
 
-build_ebpf:
-  extends: [ .linux_builder, .go_cache ]
-  stage: build
-  needs: [ dependencies ]
-  script:
-    - mkdir "${CI_PROJECT_DIR}/ebpf-object-files"
-    - ./build-ebpf.sh "${CI_PROJECT_DIR}/ebpf-object-files"
-  artifacts:
-    paths:
-      - ebpf-object-files/*
-
 build_linux:
-  extends: [ .linux_builder, .go_cache ]
+  extends: [ .linux_builder, .go_process_pull_agent_cache ]
   stage: build
-  needs: [ dependencies ]
+  needs: [ dependencies, prebuild_agent ]
   script:
-    - export PROCESS_AGENT_VERSION=$(packaging/version.sh)
-    - export EBPF=${EBPF:-true}
+    - export PROCESS_AGENT_VERSION=$(eval $VERSION_LOGIC)
     - printenv
-    - (cd packaging; ./apply_branding.sh)
     - rake build
+    - ./prebuild-datadog-agent.sh --install-ebpf
   artifacts:
     paths:
       - $CI_PROJECT_DIR/process-agent
+      - $CI_PROJECT_DIR/ebpf-object-files
     expire_in: 2 week
   retry:
     max: 2
@@ -83,93 +102,32 @@ build_linux:
       - always
 
 test:
-  extends: [ .linux_builder, .go_cache ]
+  extends: [ .linux_builder, .go_process_pull_agent_cache ]
   stage: test
-  needs: [ dependencies ]
+  needs: [ dependencies, prebuild_agent ]
   script:
-    - export PROCESS_AGENT_VERSION=$(packaging/version.sh)
-    - export EBPF=${EBPF:-true}
     - printenv
-    - (cd packaging; ./apply_branding.sh)
     - rake ci
   retry:
     max: 2
     when:
       - always
 
-build_linux_packages:
-  image: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-20221024
-  stage: build
-  needs: [ build_linux ]
-  script:
-    - (cd packaging; ./build_staging_package.sh)
-  artifacts:
-    paths:
-      - $CI_PROJECT_DIR/packaging/debian/*.deb
-    expire_in: 2 week
-
-# Gitlab dedicated runner in a Windows VM
-build_windows:
-  stage: build
-  when: manual
-  needs: []
-  script:
-    - rake deps windres=true --trace
-    - bash -c "./packaging/apply_branding.sh"
-    - .gitlab-scripts/windows_build.cmd
-  artifacts:
-    expire_in: 2 weeks
-    paths:
-      - ./process-agent.exe
-  tags:
-    - windows_agent7_go1.17
-  rules:
-    - when: manual
-      allow_failure: true
-  retry:
-    max: 2
-    when:
-      - runner_system_failure
-      - stuck_or_timeout_failure
-      - script_failure
-
-pre_release_windows:
+publish_binaries:
   stage: publish
+  extends: [ .linux_builder, .go_process_pull_agent_cache ]
   needs:
-    - build_windows
-  script:
-    - rake windows-tag-or-commit-artifact
-    - aws.exe s3 cp . s3://stackstate-process-agent-2-test/$CI_COMMIT_REF_NAME --recursive --exclude "*" --include "*.exe" --acl public-read
-  tags:
-    - windows_agent7_go1.17
-  rules:
-    - when: manual
-      allow_failure: true
-  retry:
-    max: 2
-    when:
-      - runner_system_failure
-      - stuck_or_timeout_failure
-      - script_failure
-
-publish_linux_deb_rpm:
-  stage: publish
-  image: artifactory.tooling.stackstate.io/docker-virtual/stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-20221024
-  needs:
-    - build_linux_packages
     - build_linux
-  before_script:
-    - export PROCESS_AGENT_VERSION=$(eval $VERSION_LOGIC)
   script:
-    - echo "PROCESS_AGENT_VERSION=${VERSION}"
+    - export PROCESS_AGENT_VERSION=$(eval $VERSION_LOGIC)
     - ls -la $CI_PROJECT_DIR
     - ls -la $CI_PROJECT_DIR/packaging
     - cd $CI_PROJECT_DIR/packaging && ./publish_staging_package.sh
 
 .docker_build:
-  image: artifactory.tooling.stackstate.io/docker-virtual/docker:18.06.0
+  image: ${DOCKER_PROXY_URL}/docker:20
   services:
-    - name: artifactory.tooling.stackstate.io/docker-virtual/docker:18.09-dind
+    - name: ${DOCKER_PROXY_URL}/docker:20-dind
       alias: docker
   variables:
     DOCKER_DRIVER: overlay
@@ -184,7 +142,7 @@ publish_linux_deb_rpm:
   stage: publish
   needs:
     - build_linux
-    - build_ebpf
+    - prebuild_agent
   script:
     - export BUILD_TAG="${REPO}:${TAG}"
     - docker build -t "${BUILD_TAG}" .
@@ -215,34 +173,3 @@ publish_linux_docker_release:
     - tags
     - trigger
 
-build_builder_x64:
-  extends: [ .docker_build ]
-  stage: build
-  rules:
-    - when: manual
-      allow_failure: true
-  script:
-    - cd .cd-builders/builder-x64; pwd
-    - export RUNTIMETAG="$(date +%Y%m%d)-${CI_COMMIT_SHA:0:7}"; echo ${RUNTIMETAG}
-    - docker build -t stackstate/stackstate-process-agent-runner-gitlab:llvmclang11-x64-${RUNTIMETAG} .
-    - docker push stackstate/stackstate-process-agent-runner-gitlab:llvmclang11-x64-${RUNTIMETAG}
-  timeout: 3 hours
-  tags:
-    - sts-k8s-xl-runner
-
-build_runner_centos7:
-  extends: [ .docker_build ]
-  stage: build
-  retry:
-    max: 2
-    when:
-      - always
-  rules:
-    - when: manual
-      allow_failure: true
-  script:
-    - cd $RUNNER7_DIR
-    - pwd
-    - export RUNTIMETAG=$(date +%Y%m%d)
-    - docker build -t stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-${RUNTIMETAG} .
-    - docker push stackstate/stackstate-process-agent-runner-gitlab:runner_centos7-${RUNTIMETAG}

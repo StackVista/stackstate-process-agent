@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/StackVista/stackstate-agent/pkg/aggregator"
-	"github.com/StackVista/stackstate-agent/pkg/batcher"
-	"github.com/StackVista/stackstate-agent/pkg/collector/check"
-	"github.com/StackVista/stackstate-agent/pkg/telemetry"
-	"github.com/StackVista/stackstate-agent/pkg/topology"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/check"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/topology"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
+	"github.com/gofrs/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"io"
@@ -41,7 +43,7 @@ type checkResult struct {
 
 type checkPayload struct {
 	messages  []model.MessageBody
-	metrics   []telemetry.RawMetrics
+	metrics   []telemetry.RawMetric
 	endpoint  string
 	timestamp time.Time
 }
@@ -49,23 +51,22 @@ type checkPayload struct {
 // Collector will collect metrics from the local system and ship to the backend.
 type Collector struct {
 	send          chan checkResult
-	rtIntervalCh  chan time.Duration
 	cfg           *config.AgentConfig
-	httpClient    http.Client
 	groupID       int32
 	runCounter    int32
 	enabledChecks []checks.Check
 	features      features.Features
 
-	// Controls the real-time interval, can change live.
-	realTimeInterval time.Duration
-	// Set to 1 if enabled 0 is not. We're using an integer
-	// so we can use the sync/atomic for thread-safe access.
-	realTimeEnabled int32
+	batcher transactionbatcher.TransactionalBatcher
+	manager transactionmanager.TransactionManager
+	client  *httpclient.StackStateClient
 }
 
 // NewCollector creates a new Collector
-func NewCollector(cfg *config.AgentConfig) (Collector, error) {
+func NewCollector(cfg *config.AgentConfig,
+	client *httpclient.StackStateClient,
+	batcher transactionbatcher.TransactionalBatcher,
+	manager transactionmanager.TransactionManager) (Collector, error) {
 	sysInfo, err := checks.CollectSystemInfo(cfg)
 	if err != nil {
 		return Collector{}, err
@@ -81,16 +82,14 @@ func NewCollector(cfg *config.AgentConfig) (Collector, error) {
 
 	return Collector{
 		send:          make(chan checkResult, cfg.QueueSize),
-		rtIntervalCh:  make(chan time.Duration),
 		cfg:           cfg,
 		groupID:       rand.Int31(),
-		httpClient:    http.Client{Timeout: HTTPTimeout, Transport: cfg.Transport},
 		enabledChecks: enabledChecks,
 		features:      features.Empty(),
 
-		// Defaults for real-time on start
-		realTimeInterval: 2 * time.Second,
-		realTimeEnabled:  0,
+		batcher: batcher,
+		manager: manager,
+		client:  client,
 	}, nil
 }
 
@@ -110,8 +109,6 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 	updateLastCollectTime(currentTime)
 	result, err := c.Run(l.cfg, features, atomic.AddInt32(&l.groupID, 1), currentTime)
 	checkRunDuration.WithLabelValues(c.Name()).Observe(time.Since(currentTime).Seconds())
-	// defer commit to after check run
-	defer c.Sender().Commit()
 
 	if err != nil && result == nil {
 		l.send <- checkResult{check: c, err: err}
@@ -131,16 +128,15 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 		} else {
 			log.Infof("Ignoring empty result of '%s' check", c.Name())
 		}
-		if !c.RealTime() {
-			d := time.Since(currentTime)
-			switch {
-			case runCounter < 5:
-				log.Infof("Finished check #%d in %s", runCounter, d)
-			case runCounter == 5:
-				log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
-			case runCounter%20 == 0:
-				log.Infof("Finish check #%d in %s", runCounter, d)
-			}
+
+		d := time.Since(currentTime)
+		switch {
+		case runCounter < 5:
+			log.Infof("Finished check #%d in %s", runCounter, d)
+		case runCounter == 5:
+			log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
+		case runCounter%20 == 0:
+			log.Infof("Finish check #%d in %s", runCounter, d)
 		}
 	}
 }
@@ -153,16 +149,8 @@ func (l *Collector) run(exit chan bool) {
 	log.Infof("Starting process-agent for host=%s, endpoints=%s, enabled checks=%v", l.cfg.HostName, eps, l.cfg.EnabledChecks)
 
 	go handleSignals(exit)
-	heartbeat := time.NewTicker(15 * time.Second)
 	queueSizeTicker := time.NewTicker(10 * time.Second)
 	featuresTicker := time.NewTicker(5 * time.Second)
-
-	s, err := aggregator.GetSender("process-agent")
-	if err != nil {
-		_ = log.Error("No default sender available: ", err)
-
-	}
-	defer s.Commit()
 
 	// Channel to announce new features detected
 	featuresCh := make(chan features.Features, 1)
@@ -179,8 +167,22 @@ func (l *Collector) run(exit chan bool) {
 					<-l.send
 				}
 
-				btch := batcher.GetBatcher()
-				checkID := check.ID(result.check.Name())
+				checkID := check.CheckID(result.check.Name())
+				transactionUID, err := uuid.NewV4()
+
+				if err != nil {
+					log.Errorf("Error creating transaction id: %s", err.Error())
+					break
+				}
+
+				transactionID := transactionUID.String()
+
+				txOut := make(chan interface{})
+
+				l.manager.StartTransaction(checkID, transactionID, txOut)
+				l.batcher.StartTransaction(checkID, transactionID)
+
+				// create a new transaction in the transaction manager and wait for responses
 
 				if result.payload != nil {
 					payload := result.payload
@@ -189,7 +191,7 @@ func (l *Collector) run(exit chan bool) {
 					}
 
 					for _, metric := range payload.metrics {
-						btch.SubmitRawMetricsData(checkID, metric)
+						l.batcher.SubmitRawMetricsData(checkID, transactionID, metric)
 					}
 				}
 
@@ -198,22 +200,23 @@ func (l *Collector) run(exit chan bool) {
 
 					components, relations := l.integrationTopology(result.check)
 					for _, component := range components {
-						btch.SubmitComponent(checkID, agentTopologyInstance, component)
+						l.batcher.SubmitComponent(checkID, transactionID, agentTopologyInstance, component)
 					}
 					for _, relation := range relations {
-						btch.SubmitRelation(checkID, agentTopologyInstance, relation)
+						l.batcher.SubmitRelation(checkID, transactionID, agentTopologyInstance, relation)
 					}
 
 					repeatInterval := int(l.cfg.CheckInterval(result.check.Name()).Seconds())
-					btch.SubmitHealthStartSnapshot(checkID, healthStream, repeatInterval, repeatInterval*2)
-					btch.SubmitHealthCheckData(checkID, healthStream, healthData)
-					btch.SubmitHealthStopSnapshot(checkID, healthStream)
+					l.batcher.SubmitHealthStartSnapshot(checkID, transactionID, healthStream, repeatInterval, repeatInterval*2)
+					l.batcher.SubmitHealthCheckData(checkID, transactionID, healthStream, healthData)
+					l.batcher.SubmitHealthStopSnapshot(checkID, transactionID, healthStream)
 				}
 
-				btch.SubmitComplete(checkID)
-			case <-heartbeat.C:
-				log.Tracef("got heartbeat.C message. (Ignored)")
-				s.Gauge("stackstate.process_agent.running", 1, l.cfg.HostName, []string{"version:" + versionString()})
+				l.batcher.SubmitCompleteTransaction(checkID, transactionID)
+
+				// Wait for the transaction response. We are not too interested in handling transaction errors right now
+				<-txOut
+				close(txOut)
 			case <-queueSizeTicker.C:
 				updateQueueSize(l.send)
 			case <-featuresTicker.C:
@@ -232,24 +235,13 @@ func (l *Collector) run(exit chan bool) {
 		// Assignment here, because iterator value gets altered
 		go func(c checks.Check) {
 			// Run the check the first time to prime the caches.
-			if !c.RealTime() {
-				l.runCheck(c, l.features)
-			}
+			l.runCheck(c, l.features)
 
 			ticker := time.NewTicker(l.cfg.CheckInterval(c.Name()))
 			for {
 				select {
 				case <-ticker.C:
-					realTimeEnabled := atomic.LoadInt32(&l.realTimeEnabled) == 1
-					if !c.RealTime() || realTimeEnabled {
-						l.runCheck(c, l.features)
-					}
-				case d := <-l.rtIntervalCh:
-					// Live-update the ticker.
-					if c.RealTime() {
-						ticker.Stop()
-						ticker = time.NewTicker(d)
-					}
+					l.runCheck(c, l.features)
 				case _, ok := <-exit:
 					if !ok {
 						return
@@ -301,40 +293,15 @@ func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp
 }
 
 func (l *Collector) updateStatus(statuses []*model.CollectorStatus) {
-	curEnabled := atomic.LoadInt32(&l.realTimeEnabled) == 1
-
 	// If any of the endpoints wants real-time we'll do that.
 	// We will pick the maximum interval given since generally this is
 	// only set if we're trying to limit load on the backend.
-	shouldEnableRT := false
 	maxInterval := 0 * time.Second
 	for _, s := range statuses {
-		shouldEnableRT = shouldEnableRT || (s.ActiveClients > 0 && l.cfg.AllowRealTime)
 		interval := time.Duration(s.Interval) * time.Second
 		if interval > maxInterval {
 			maxInterval = interval
 		}
-	}
-
-	if curEnabled && !shouldEnableRT {
-		log.Info("Detected 0 clients, disabling real-time mode")
-		atomic.StoreInt32(&l.realTimeEnabled, 0)
-	} else if !curEnabled && shouldEnableRT {
-		log.Info("Detected active clients, enabling real-time mode")
-		atomic.StoreInt32(&l.realTimeEnabled, 1)
-	}
-
-	if maxInterval != l.realTimeInterval {
-		l.realTimeInterval = maxInterval
-		if l.realTimeInterval <= 0 {
-			l.realTimeInterval = 2 * time.Second
-		}
-		// Pass along the real-time interval, one per check, so that every
-		// check routine will see the new interval.
-		for range l.enabledChecks {
-			l.rtIntervalCh <- l.realTimeInterval
-		}
-		log.Infof("real time interval updated to %s", l.realTimeInterval)
 	}
 }
 
@@ -424,7 +391,8 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 	defer cancel()
 	req.WithContext(ctx)
 
-	resp, err := l.httpClient.Do(req)
+	log.Infof("Sent payload, size: %d bytes.", len(body))
+	resp, err := l.client.GetClient().Do(req)
 	if err != nil {
 		if isHTTPTimeout(err) {
 			return nil, fmt.Errorf("Timeout detected on %s, %s", url, err)

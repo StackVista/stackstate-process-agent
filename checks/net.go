@@ -431,16 +431,21 @@ func (k aggStatsKey) toMap() map[string]string {
 func aggregateStats(stats []http.RequestStat) (int, *ddsketch.DDSketch) {
 	requestCount := 0
 	latencies := emptySketch()
+
+	// DataDog reports their histograms as nanoseconds, we produce them as seconds (for legacy reasons, but also common sense).
+	// We need to transform the nanoseconds to seconds here
+	const nsToS float64 = 0.000000001
+
 	for _, stat := range stats {
 		requestCount += stat.Count
 		if stat.Count == 0 {
 			continue
 		} else if stat.Count == 1 {
-			latencies.Add(stat.FirstLatencySample * 0.000000001)
+			latencies.Add(stat.FirstLatencySample * nsToS)
 		} else {
 			if stat.Latencies != nil {
 				var scaled = emptySketch()
-				scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), 0.000000001)
+				scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), nsToS)
 				latencies.MergeWith(scaled)
 			}
 		}

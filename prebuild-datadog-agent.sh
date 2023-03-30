@@ -84,16 +84,19 @@ if [ "$(go list -f '{{ .Replace }}' -m github.com/DataDog/datadog-agent)" = "<ni
 else
   GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Replace.Dir }}' -m github.com/DataDog/datadog-agent)
 
-  if [ -d "$GO_MOD_REPLACE_DEPENDENCY_DIR/.git" ]; then
+  if [ -d "$GO_MOD_DEPENDENCY_DIR/.git" ]; then
     echo "Running the data prebuild for a local dependency $DEPENDENCY_VERSION. Be aware that generate will not automatically pickup changes. Be sure to run -clean whenever the generated code would change."
     # The dependency is a local git repo. No need to pull or pick a version
     DEPENDENCY_VERSION="local"
-    SOURCE_DIR=$GO_MOD_REPLACE_DEPENDENCY_DIR
-  else
+    SOURCE_DIR=$GO_MOD_DEPENDENCY_DIR
+  elif [ -d "$GO_MOD_DEPENDENCY_DIR" ]; then
     echo "Running for replacement git remote"
     DEPENDENCY_VERSION=$(go list -f '{{ .Replace.Version }}' -m github.com/DataDog/datadog-agent)
     REPO_PATH="https://$(go list -f '{{ .Replace.Path }}' -m github.com/DataDog/datadog-agent)"
     SOURCE_DIR="$ALL_ARTIFACTS_DIR/checkout/$DEPENDENCY_VERSION"
+  else
+    echo "Unknown path in go.mod: '$GO_MOD_DEPENDENCY_DIR'"
+    exit 1
   fi
 fi
 
@@ -143,7 +146,7 @@ runPrebuildInDocker() {
 if [ "$ACTION" = "generate" ]; then
   echo "Generating code"
   if [ -d "$DEPENDENCY_ARTIFACTS_DIR" ]; then
-    echo "Prebuild artifacts were already generated. Skipping. To regenerate first run with --clean"
+    echo "Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
     exit 0
   fi
 
@@ -152,7 +155,7 @@ if [ "$ACTION" = "generate" ]; then
 elif [ "$ACTION" = "generate-no-docker" ]; then
   echo "Generating code in the current environment"
   if [ -d "$DEPENDENCY_ARTIFACTS_DIR" ]; then
-    echo "Prebuild artifacts were already generated. Skipping. To regenerate first run with --clean"
+    echo "Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
     exit 0
   fi
 
@@ -181,6 +184,7 @@ elif [ "$ACTION" = "install-ebpf" ]; then
 
   set -x
   mkdir -p $DIR/ebpf-object-files
+  rm -rf $DIR/ebpf-object-files/*
   cp -v -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files/"
   set +x
 elif [ "$ACTION" = "install-ebpf-root" ]; then

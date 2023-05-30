@@ -313,6 +313,10 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 
 // mergeEnvironmentVariables applies overrides from environment variables to the process agent configuration
 func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
+	log.Infof("Testing the function 'mergeEnvironmentVariables' INFO log line")
+	log.Warnf("Testing the function 'mergeEnvironmentVariables' WARN log line")
+	log.Errorf("Testing the function 'mergeEnvironmentVariables' ERROR log line")
+
 	var err error
 	if enabled, err := isAffirmative(os.Getenv("STS_PROCESS_AGENT_ENABLED")); enabled {
 		c.Enabled = true
@@ -579,6 +583,10 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if enabled, _ := isAffirmative(os.Getenv("STS_BATCHER_LOG_PAYLOADS")); enabled {
 		c.BatcherLogPayloads = enabled
 	}
+
+	log.Infof("Testing the ENV:STS_SKIP_SSL_VALIDATION '%s'", os.Getenv("STS_SKIP_SSL_VALIDATION"))
+	log.Warnf("Testing the ENV:STS_SKIP_SSL_VALIDATION '%s'", os.Getenv("STS_SKIP_SSL_VALIDATION"))
+	log.Errorf("Testing the ENV:STS_SKIP_SSL_VALIDATION '%s'", os.Getenv("STS_SKIP_SSL_VALIDATION"))
 
     // TODO: STS_SKIP_SSL_VALIDATION Remove comment
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {

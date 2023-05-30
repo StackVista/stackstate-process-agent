@@ -580,6 +580,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.BatcherLogPayloads = enabled
 	}
 
+    // TODO: STS_SKIP_SSL_VALIDATION Remove comment
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
 		c.SkipSSLValidation = true
 		log.Infof("Overriding skip_ssl_validation to: %s", v)

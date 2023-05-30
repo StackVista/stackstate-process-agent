@@ -51,6 +51,7 @@ func (p *CachedPods) GetContainerToPodMap(ctx context.Context) map[string]*kubel
 
 	kubeutil, retrier := p.getKubeutil()
 	if kubeutil == nil {
+		_ = log.Errorf("Env variable 'kubelet_tls_verify' is set to: %v", ddconfig.Datadog.GetBool("kubelet_tls_verify"))
 		_ = log.Errorf("Could not get kubeutil: %v", retrier.LastError())
 		return result
 	}

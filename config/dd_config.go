@@ -20,6 +20,9 @@ func SetupDDAgentConfig(cfg *AgentConfig) error {
 
 	os.Setenv("DD_KUBERNETES_KUBELET_HOST", cfg.KubernetesKubeletHost)
 
+	if cfg.SkipSSLValidation {
+		os.Setenv("DD_KUBELET_TLS_VERIFY", "false")
+	}
 	// load the configuration, this basically initializes everything with defaults
 	if _, err := ddconfig.Load(); err != nil {
 		return fmt.Errorf("unable to load Datadog config file: %s", err)

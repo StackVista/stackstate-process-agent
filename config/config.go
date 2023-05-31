@@ -586,7 +586,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
 		c.SkipSSLValidation = true
-		log.Infof("Overriding skip_ssl_validation to: %s", v)
 	}
 
 	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {

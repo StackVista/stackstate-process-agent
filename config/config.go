@@ -290,6 +290,10 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 		return nil, err
 	}
 
+	if c.SkipSSLValidation {
+		log.Warnf("Skip SSL validation is enabled")
+	}
+
 	if len(cfg.APIEndpoints) > 1 {
 		log.Warnf("Multiple API endpoints is not supported. Additional endpoints will be ignored")
 	}

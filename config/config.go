@@ -290,6 +290,10 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 		return nil, err
 	}
 
+	if cfg.SkipSSLValidation {
+		log.Warnf("Skip SSL validation is enabled")
+	}
+
 	if len(cfg.APIEndpoints) > 1 {
 		log.Warnf("Multiple API endpoints is not supported. Additional endpoints will be ignored")
 	}
@@ -582,7 +586,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
 		c.SkipSSLValidation = true
-		log.Infof("Overriding skip_ssl_validation to: %s", v)
 	}
 
 	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {

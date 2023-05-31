@@ -290,7 +290,7 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 		return nil, err
 	}
 
-	if c.SkipSSLValidation {
+	if cfg.SkipSSLValidation {
 		log.Warnf("Skip SSL validation is enabled")
 	}
 

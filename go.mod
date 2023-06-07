@@ -31,12 +31,12 @@ replace (
 
 // replace github.com/StackVista/stackstate-receiver-go-client => /home/bram/stackvista/agent/src/github.com/StackVista/stackstate-receiver-go-client
 
-// replace github.com/DataDog/datadog-agent => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent
+// replace github.com/DataDog/datadog-agent => /home/zandrewitte/git/datadog-agent-upstream-for-process-agent
 
 // Replacements due to upstream improvements
 
 // replace github.com/DataDog/datadog-agent/pkg/util/log => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log
-replace github.com/DataDog/datadog-agent v0.0.0-20230307121454-9e9c7904ced5 => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230330143836-1e06a5228263 // stackstate-7.43.1
+replace github.com/DataDog/datadog-agent v0.0.0-20230307121454-9e9c7904ced5 => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230607095704-55b2dcd1e590 // stackstate-7.43.1
 
 // replace github.com/DataDog/datadog-agent/pkg/util/log => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20230309153711-2ce9a9612c03
 

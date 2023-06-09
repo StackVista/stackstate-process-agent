@@ -377,6 +377,12 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		log.Infof("Setting skip_ssl_validation to: %s", yc.SkipSSLValidation)
 	}
 
+	// [STS] set the kubelet_tls_verify for the process-agent + main-agent config
+	if yc.KubeletTlsVerify == false {
+		agentConf.KubeletTlsVerify = false
+		log.Infof("Setting kubelet tls verify to: %s", yc.KubeletTlsVerify)
+	}
+
 	if yc.Kubernetes.KubeletHost != "" {
 		agentConf.KubernetesKubeletHost = yc.Kubernetes.KubeletHost
 	}

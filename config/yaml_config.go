@@ -19,7 +19,6 @@ type YamlAgentConfig struct {
 	Site              string `yaml:"site"`
 	StsURL            string `yaml:"sts_url"`
 	SkipSSLValidation bool   `yaml:"skip_ssl_validation"`
-	KubeletTlsVerify  bool   `yaml:"kubelet_tls_verify"`
 	// Whether the process-agent should output logs to console
 	LogToConsole bool   `yaml:"log_to_console"`
 	LogLevel     string `yaml:"log_level"`
@@ -375,12 +374,6 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	if yc.SkipSSLValidation {
 		agentConf.SkipSSLValidation = true
 		log.Infof("Setting skip_ssl_validation to: %s", yc.SkipSSLValidation)
-	}
-
-	// [STS] set the kubelet_tls_verify for the process-agent + main-agent config
-	if yc.KubeletTlsVerify == false {
-		agentConf.KubeletTlsVerify = false
-		log.Infof("Setting kubelet tls verify to: %s", yc.KubeletTlsVerify)
 	}
 
 	if yc.Kubernetes.KubeletHost != "" {

@@ -53,7 +53,6 @@ type AgentConfig struct {
 	HostName                 string
 	APIEndpoints             []APIEndpoint
 	SkipSSLValidation        bool
-	KubeletTlsVerify         bool
 	LogFile                  string
 	LogLevel                 string
 	LogToConsole             bool
@@ -168,7 +167,6 @@ func NewDefaultAgentConfig() *AgentConfig {
 		Enabled:                  true, // We'll always run inside of a container.
 		APIEndpoints:             []APIEndpoint{{Endpoint: u}},
 		SkipSSLValidation:        false,
-		KubeletTlsVerify:         true,
 		LogFile:                  defaultLogFilePath,
 		LogLevel:                 "info",
 		LogToConsole:             false,
@@ -290,10 +288,6 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 	// (Re)configure the logging from our configuration
 	if err := NewLoggerLevel(cfg.LogLevel, cfg.LogFile, cfg.LogToConsole); err != nil {
 		return nil, err
-	}
-
-	if cfg.KubeletTlsVerify == false {
-		log.Warnf("Kubelet TLS Verify is set to %s", cfg.KubeletTlsVerify)
 	}
 
 	if len(cfg.APIEndpoints) > 1 {
@@ -586,8 +580,9 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.BatcherLogPayloads = enabled
 	}
 
-	if enabled, _ := isAffirmative(os.Getenv("STS_KUBELET_TLS_VERIFY")); enabled == false {
-		c.KubeletTlsVerify = false
+	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
+		c.SkipSSLValidation = true
+		log.Infof("Overriding skip_ssl_validation to: %s", v)
 	}
 
 	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {

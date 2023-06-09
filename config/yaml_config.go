@@ -19,6 +19,7 @@ type YamlAgentConfig struct {
 	Site              string `yaml:"site"`
 	StsURL            string `yaml:"sts_url"`
 	SkipSSLValidation bool   `yaml:"skip_ssl_validation"`
+	KubeletTLSVerify  bool   `yaml:"kubelet_tls_verify"`
 	// Whether the process-agent should output logs to console
 	LogToConsole bool   `yaml:"log_to_console"`
 	LogLevel     string `yaml:"log_level"`

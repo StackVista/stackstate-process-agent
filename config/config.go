@@ -587,6 +587,11 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		log.Infof("Overriding skip_ssl_validation to: %s", v)
 	}
 
+	if enabled, _ := isAffirmative(os.Getenv("STS_KUBELET_TLS_VERIFY")); enabled == false {
+		c.KubeletTLSVerify = false
+		log.Infof("Overriding kubelet_tls_verify to: %s", c.KubeletTLSVerify)
+	}
+
 	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {
 		c.KubernetesKubeletHost = v
 	}

@@ -53,6 +53,7 @@ type AgentConfig struct {
 	HostName                 string
 	APIEndpoints             []APIEndpoint
 	SkipSSLValidation        bool
+	KubeletTLSVerify         bool
 	LogFile                  string
 	LogLevel                 string
 	LogToConsole             bool
@@ -167,6 +168,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		Enabled:                  true, // We'll always run inside of a container.
 		APIEndpoints:             []APIEndpoint{{Endpoint: u}},
 		SkipSSLValidation:        false,
+		KubeletTLSVerify:         true,
 		LogFile:                  defaultLogFilePath,
 		LogLevel:                 "info",
 		LogToConsole:             false,

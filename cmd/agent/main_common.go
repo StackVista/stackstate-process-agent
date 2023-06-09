@@ -217,6 +217,7 @@ func makeClientHost(cfg *config.AgentConfig) *httpclient.ClientHost {
 		APIKey:            cfg.APIEndpoints[0].APIKey,
 		ContentEncoding:   httpclient.NewGzipContentEncoding(gzip.BestCompression),
 		SkipSSLValidation: cfg.SkipSSLValidation,
+		KubeletTlsVerify:  cfg.KubeletTlsVerify,
 		RetryWaitMin:      httpclient.DefaultRetryMin,
 		RetryWaitMax:      httpclient.DefaultRetryMax,
 		NoProxy:           true,

@@ -15,11 +15,11 @@ import (
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration
 // available in Agent versions >= 6
 type YamlAgentConfig struct {
-	APIKey            string `yaml:"api_key"`
-	Site              string `yaml:"site"`
-	StsURL            string `yaml:"sts_url"`
-	SkipSSLValidation bool   `yaml:"skip_ssl_validation"`
-	KubeletTLSVerify  bool   `yaml:"kubelet_tls_verify,default:true"`
+	APIKey               string `yaml:"api_key"`
+	Site                 string `yaml:"site"`
+	StsURL               string `yaml:"sts_url"`
+	SkipSSLValidation    bool   `yaml:"skip_ssl_validation"`
+	SkipKubeletTLSVerify bool   `yaml:"skip_kubelet_tls_verify"`
 	// Whether the process-agent should output logs to console
 	LogToConsole bool   `yaml:"log_to_console"`
 	LogLevel     string `yaml:"log_level"`
@@ -378,9 +378,9 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	}
 
 	// [STS] set the kubelet_tls_validation for the process-agent + main-agent config
-	if yc.KubeletTLSVerify == false {
-		agentConf.KubeletTLSVerify = false
-		log.Infof("Setting kubelet_tls_verify to: %s", yc.KubeletTLSVerify)
+	if yc.SkipKubeletTLSVerify {
+		agentConf.SkipKubeletTLSVerify = true
+		log.Infof("Setting skip_kubelet_tls_verify to: %s", yc.SkipKubeletTLSVerify)
 	}
 
 	if yc.Kubernetes.KubeletHost != "" {

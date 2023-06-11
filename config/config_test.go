@@ -935,34 +935,34 @@ func TestSkipSSLValidation_FromEnv(t *testing.T) {
 	os.Unsetenv("STS_SKIP_SSL_VALIDATION")
 }
 
-func TestKubeletTLSVerify_Default(t *testing.T) {
+func TestSkipKubeletTLSVerify_Default(t *testing.T) {
 	var ddy YamlAgentConfig
 	conf, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
-	assert.Equal(t, true, conf.KubeletTLSVerify)
+	assert.Equal(t, false, conf.SkipKubeletTLSVerify)
 }
 
-func TestKubeletTLSVerify_FromYaml(t *testing.T) {
+func TestSkipKubeletTLSVerify_FromYaml(t *testing.T) {
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"kubelet_tls_verify: false",
+		"skip_kubelet_tls_verify: true",
 	}, "\n")), &ddy)
 	assert.NoError(t, err)
 
 	conf, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
-	assert.Equal(t, false, conf.KubeletTLSVerify)
+	assert.Equal(t, true, conf.SkipKubeletTLSVerify)
 }
 
-func TestKubeletTLSVerify_FromEnv(t *testing.T) {
-	os.Setenv("STS_KUBELET_TLS_VERIFY", "true")
+func TestSkipKubeletTLSVerify_FromEnv(t *testing.T) {
+	os.Setenv("STS_SKIP_KUBELET_TLS_VERIFY", "true")
 
 	conf, err := NewAgentConfig(nil)
 	assert.NoError(t, err)
 
-	assert.Equal(t, false, conf.KubeletTLSVerify)
+	assert.Equal(t, true, conf.SkipKubeletTLSVerify)
 
-	os.Unsetenv("STS_KUBELET_TLS_VERIFY")
+	os.Unsetenv("STS_SKIP_KUBELET_TLS_VERIFY")
 }

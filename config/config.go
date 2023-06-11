@@ -53,7 +53,7 @@ type AgentConfig struct {
 	HostName                 string
 	APIEndpoints             []APIEndpoint
 	SkipSSLValidation        bool
-	KubeletTLSVerify         bool
+	SkipKubeletTLSVerify     bool
 	LogFile                  string
 	LogLevel                 string
 	LogToConsole             bool
@@ -168,7 +168,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		Enabled:                  true, // We'll always run inside of a container.
 		APIEndpoints:             []APIEndpoint{{Endpoint: u}},
 		SkipSSLValidation:        false,
-		KubeletTLSVerify:         true,
+		SkipKubeletTLSVerify:     false,
 		LogFile:                  defaultLogFilePath,
 		LogLevel:                 "info",
 		LogToConsole:             false,
@@ -587,10 +587,10 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		log.Infof("Overriding skip_ssl_validation to: %s", v)
 	}
 
-	if tlsValue := os.Getenv("STS_KUBELET_TLS_VERIFY"); tlsValue != "" {
-		c.KubeletTLSVerify, _ = isAffirmative(tlsValue)
-		fmt.Printf("Setting KubeletTLSVerify to %v", c.KubeletTLSVerify)
-		log.Infof("Overriding kubelet_tls_verify to: %s", c.KubeletTLSVerify)
+	if tlsValue := os.Getenv("STS_SKIP_KUBELET_TLS_VERIFY"); tlsValue != "" {
+		c.SkipKubeletTLSVerify, _ = isAffirmative(tlsValue)
+		fmt.Printf("Setting SkipKubeletTLSVerify to %v", c.SkipKubeletTLSVerify)
+		log.Infof("Overriding skip_kubelet_tls_verify to: %s", c.SkipKubeletTLSVerify)
 	}
 
 	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {

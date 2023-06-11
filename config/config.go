@@ -164,8 +164,6 @@ func NewDefaultAgentConfig() *AgentConfig {
 		panic(err)
 	}
 
-	fmt.Println("Setting KubeletTLSVerify default to false")
-
 	ac := &AgentConfig{
 		Enabled:                  true, // We'll always run inside of a container.
 		APIEndpoints:             []APIEndpoint{{Endpoint: u}},
@@ -591,11 +589,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if tlsValue := os.Getenv("STS_KUBELET_TLS_VERIFY"); tlsValue != "" {
 		c.KubeletTLSVerify, _ = isAffirmative(tlsValue)
-		log.Infof("Overriding kubelet_tls_verify to: %s", c.KubeletTLSVerify)
-	}
-
-	if enabled, _ := isAffirmative(os.Getenv("STS_KUBELET_TLS_VERIFY")); enabled == false {
-		c.KubeletTLSVerify = false
+		fmt.Printf("Setting KubeletTLSVerify to %v", c.KubeletTLSVerify)
 		log.Infof("Overriding kubelet_tls_verify to: %s", c.KubeletTLSVerify)
 	}
 

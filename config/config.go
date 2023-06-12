@@ -598,9 +598,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.CriSocketPath = v
 	}
 
-	log.Infof("skip_ssl_validation is set to: %s", c.SkipSSLValidation)
-	log.Infof("skip_kubelet_tls_verify is set to: %s", c.SkipKubeletTLSVerify)
-
 	return c
 }
 

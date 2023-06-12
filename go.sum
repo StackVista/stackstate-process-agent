@@ -224,8 +224,6 @@ github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d h1:UrqY+r/O
 github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/StackExchange/wmi v1.2.1 h1:VIkavFPXSjcnS+O8yTq7NI32k0R5Aj+v39y29VYDOSA=
 github.com/StackExchange/wmi v1.2.1/go.mod h1:rcmrprowKIVzvc+NUiLncP2uuArMWLCbu9SBzvHz7e8=
-github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230607095704-55b2dcd1e590 h1:vq6QyTFow+d46BOXefrWIeEPGtdirJ7ujUpqpdyDOcA=
-github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230607095704-55b2dcd1e590/go.mod h1:0e31w2c2AMd6MBcHLRS0ZAD6FwYrjV97+7b5W8WB0JM=
 github.com/StackVista/gobpf v0.1.2 h1:A7u+WTC0OLar/5LvcgoI4iK6F22vRbBUXxOYHHj64yI=
 github.com/StackVista/gobpf v0.1.2/go.mod h1:oNzyvRglZNW//1GU+8+FxFk/EBGzXcYtf8UTI4QIk5U=
 github.com/StackVista/sketches-go v1.2.0-pre h1:04QAbYurRVq5LY6VK0KbFPUi4YhJcpEi5AansGdLdMw=

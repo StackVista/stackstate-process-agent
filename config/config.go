@@ -589,7 +589,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if tlsValue := os.Getenv("STS_SKIP_KUBELET_TLS_VERIFY"); tlsValue != "" {
 		c.SkipKubeletTLSVerify, _ = isAffirmative(tlsValue)
-		fmt.Printf("Setting SkipKubeletTLSVerify to %v", c.SkipKubeletTLSVerify)
 		log.Infof("Overriding skip_kubelet_tls_verify to: %s", c.SkipKubeletTLSVerify)
 	}
 

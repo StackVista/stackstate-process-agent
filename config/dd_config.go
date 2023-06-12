@@ -20,10 +20,7 @@ func SetupDDAgentConfig(cfg *AgentConfig) error {
 	}
 
 	os.Setenv("DD_KUBERNETES_KUBELET_HOST", cfg.KubernetesKubeletHost)
-
-	if cfg.SkipKubeletTLSVerify {
-		os.Setenv("DD_KUBELET_TLS_VERIFY", strconv.FormatBool(cfg.SkipKubeletTLSVerify))
-	}
+	os.Setenv("DD_KUBELET_TLS_VERIFY", strconv.FormatBool(cfg.SkipKubeletTLSVerify))
 
 	// load the configuration, this basically initializes everything with defaults
 	if _, err := ddconfig.Load(); err != nil {

@@ -584,12 +584,10 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if v := os.Getenv("STS_SKIP_SSL_VALIDATION"); v != "" {
 		c.SkipSSLValidation = true
-		log.Infof("Overriding skip_ssl_validation to: %s", v)
 	}
 
 	if tlsValue := os.Getenv("STS_SKIP_KUBELET_TLS_VERIFY"); tlsValue != "" {
 		c.SkipKubeletTLSVerify, _ = isAffirmative(tlsValue)
-		log.Infof("Overriding skip_kubelet_tls_verify to: %s", c.SkipKubeletTLSVerify)
 	}
 
 	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {
@@ -599,6 +597,9 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if v := os.Getenv("STS_CRI_SOCKET_PATH"); v != "" {
 		c.CriSocketPath = v
 	}
+
+	log.Infof("skip_ssl_validation is set to: %s", c.SkipSSLValidation)
+	log.Infof("skip_kubelet_tls_verify is set to: %s", c.SkipKubeletTLSVerify)
 
 	return c
 }

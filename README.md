@@ -35,14 +35,19 @@ sudo ./process-agent -config $PATH_TO_PROCESS_CONFIG_FILE
 
 ## Regenerating proto files
 
+ 
 If you modify any of the `.proto` files you _must_ rebuild the `*.pb.go` files.
 
-First make sure you install the gogo-proto binaries from the `./vendor`:
+Make sure protobuf 3.6.1.3 is installed, typically has to be built from source: `https://github.com/protocolbuffers/protobuf/tree/v3.6.1.3`
+
+Make sure you install the gogo-proto binaries from the go mod directory:
 
 ```
-cd vendor/github.com/gogo/protobuf
+cd $GO_PATH/pkg/github.com/gogo/protobuf@1.3.2
 make install
 ```
+
+Make sure `$GO_PATH/bin` is in the `PATH`.
 
 and then:
 

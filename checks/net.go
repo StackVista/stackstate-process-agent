@@ -14,6 +14,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
+	"github.com/pborman/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"sync"
@@ -89,6 +90,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	}
 
 	httpStats := aggregateHTTPStats(conns.HTTP, aggregatedInterval, false)
+	httpObservations := aggregateHTTPTraceObservations(conns.HTTPObservations)
 
 	dnsMap := map[string][]dns.Hostname{}
 	for ip, addrs := range conns.DNS {
@@ -98,7 +100,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 
 	containerToPod := c.podsCache.GetContainerToPodMap(context.TODO())
 
-	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats, containerToPod)
+	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats, httpObservations, containerToPod)
 	c.prevCheckTime = currentTime
 
 	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
@@ -178,6 +180,7 @@ func (c *ConnectionsCheck) formatConnections(
 	conns []network.ConnectionStats,
 	prevCheckTimeDiff time.Duration,
 	httpMetrics map[connKey][]*model.ConnectionMetric,
+	httpObservations map[connKey][]*model.HTTPTraceObservation,
 	containerToPod map[string]*kubelet.Pod,
 ) ([]*model.Connection, *connectionsPodsIndex) {
 	// Process create-times required to construct unique process hash keys on the backend
@@ -265,6 +268,11 @@ func (c *ConnectionsCheck) formatConnections(
 			log.Warnf("unexpected connection direction %s for %v", conn.Direction.String(), conn)
 		}
 
+		observations := httpObservations[getConnectionKey(conn)]
+		if observations == nil {
+			observations = make([]*model.HTTPTraceObservation, 0)
+		}
+
 		appProto := ""
 		metrics := httpMetrics[getConnectionKey(conn)]
 		if len(metrics) > 0 {
@@ -307,6 +315,7 @@ func (c *ConnectionsCheck) formatConnections(
 			ConnectionIdentifier:   relationID,
 			ApplicationProtocol:    appProto,
 			Metrics:                metrics,
+			HttpObservations:       observations,
 		})
 
 		connectionCounter.WithLabelValues("reported").Inc()
@@ -428,13 +437,13 @@ func (k aggStatsKey) toMap() map[string]string {
 	return tags
 }
 
+// DataDog reports their histograms as nanoseconds, we produce them as seconds (for legacy reasons, but also common sense).
+// We need to transform the nanoseconds to seconds here
+const nsToS float64 = 0.000000001
+
 func aggregateStats(stats []http.RequestStat) (int, *ddsketch.DDSketch) {
 	requestCount := 0
 	latencies := emptySketch()
-
-	// DataDog reports their histograms as nanoseconds, we produce them as seconds (for legacy reasons, but also common sense).
-	// We need to transform the nanoseconds to seconds here
-	const nsToS float64 = 0.000000001
 
 	for _, stat := range stats {
 		requestCount += stat.Count
@@ -451,6 +460,76 @@ func aggregateStats(stats []http.RequestStat) (int, *ddsketch.DDSketch) {
 		}
 	}
 	return requestCount, latencies
+}
+
+func aggregateHTTPTraceObservations(httpObservations []http.TransactionObservation) map[connKey][]*model.HTTPTraceObservation {
+	result := map[connKey][]*model.HTTPTraceObservation{}
+
+	for _, observation := range httpObservations {
+		connKey := getConnectionKeyForStats(observation.Key)
+
+		connObservations := result[connKey]
+
+		if connObservations == nil {
+			connObservations = make([]*model.HTTPTraceObservation, 0)
+		}
+
+		var traceDirection model.TraceDirection
+
+		switch observation.TraceId.Type {
+		case http.TraceIdRequest:
+			traceDirection = model.TraceDirection_request
+		case http.TraceIdResponse:
+			traceDirection = model.TraceDirection_response
+		case http.TraceIdBoth:
+			traceDirection = model.TraceDirection_both
+		case http.TraceIdAmbiguous, http.TraceIdNone:
+			continue
+		}
+
+		var method model.HTTPMethod
+
+		switch observation.Key.Method {
+		case http.MethodUnknown:
+			continue
+		case http.MethodGet:
+			method = model.HTTPMethod_GET
+		case http.MethodPost:
+			method = model.HTTPMethod_POST
+		case http.MethodPut:
+			method = model.HTTPMethod_PUT
+		case http.MethodDelete:
+			method = model.HTTPMethod_DELETE
+		case http.MethodHead:
+			method = model.HTTPMethod_HEAD
+		case http.MethodOptions:
+			method = model.HTTPMethod_OPTIONS
+		case http.MethodPatch:
+			method = model.HTTPMethod_PATCH
+		}
+
+		var traceId []byte
+
+		// Special case for UUIDs: represent as bytes to reduce data
+		uid := uuid.Parse(observation.TraceId.Id)
+		if uid != nil {
+			traceId, _ = uid.MarshalBinary()
+		} else {
+			traceId = []byte(observation.TraceId.Id)
+		}
+
+		connObservations = append(connObservations, &model.HTTPTraceObservation{
+			LatencySec:     observation.LatencyNs * nsToS,
+			TraceDirection: traceDirection,
+			TraceId:        traceId,
+			Method:         method,
+			Response:       int32(observation.Status),
+		})
+
+		result[connKey] = connObservations
+	}
+
+	return result
 }
 
 func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time.Duration, sendForPath bool) map[connKey][]*model.ConnectionMetric {

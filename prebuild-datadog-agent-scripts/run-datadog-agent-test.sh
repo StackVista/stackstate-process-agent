@@ -41,3 +41,6 @@ invoke test --build-include=linux_bpf --targets=./pkg/network/tracer/. --skip-li
 # Does not work yet, needs runtime compilation
 # invoke test --build-include=linux_bpf --targets=./pkg/network/tracer/. --skip-linters  --run="^TestHTTPGoTLSAttachProbes$"
 # invoke test --build-include=linux_bpf --targets=./pkg/network/tracer/. --skip-linters  --run="\(^TestHTTPSViaLibraryIntegration\)\|\(^TestHTTPSViaLibraryIntegration\)"
+
+# Run an individual test
+# invoke test --build-include=linux_bpf --targets=./pkg/network/protocols/http/.,./pkg/network/. --skip-linters --run="^TestHTTPMonitorRequestId$"

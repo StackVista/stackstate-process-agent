@@ -50,7 +50,29 @@ and then:
 rake protobuf
 ```
 
+## Working with the datadog dependency
+
+The `prebuild-datadog-agent'sh` script is in charge of prebuilding artifacts for the main build. See --help there.
+
+### Working against a local copy
+
+Run `./update-datadog-dependency.sh -l <path>` to work with a local checkout of the upstream datadog agent.
+
+### Updating the upstream reference
+
+Run `./prebuild-datadog-agent.sh -t` to assure the tests pass (these do not run in CI due to the deep integration with the host system).
+After pushing a change to `datadog-agent-upstream-for-process-agent` be sure to run `./update-datadog-dependency.sh -b <branch>` with the updated branch/tag.
+
+### Test cycle for the datadog dependency
+
+Use `./update-datadog-dependency.sh -l <path>` to work against a local checkout of `datadog-agent-upstream-for-process-agent`
+Run `./prebuild-datadog-agent.sh -s` to get into the build shell.
+
+Rerun `/scripts/rune-datadog-agent-test.sh rerun` to keep running the tests after a change was made
+Rerun `/scripts/rune-datadog-agent-prebuild.sh rerun` to keep building the output artifacts after a change was made
+
 ## Development or Running with Vagrant
+
 There is a Vagrantfile in the root directory, that can be used to create a vagrant vm where the StackState process agent can be run.
 
 ```

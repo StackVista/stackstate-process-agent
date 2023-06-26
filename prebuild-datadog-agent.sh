@@ -23,6 +23,7 @@ This script run the prebuild steps for the datadog agent dependency. Those steps
   -i/--install-go -- Install the prebuild go files
   --install-ebpf  -- Install the prebuild ebpf files to ./ebpf-object-files for further processing
   --install-ebpf-root -- Install the prebuild ebpf files to ./ebpf-object-files-root for use in the process-agent binary
+  -t/--test       -- Run tests on the upstream datadog agent
   -s/--shell      -- Launch into a shell in which the prebuild files are built
   -h/--help       -- Print this help page
 
@@ -55,6 +56,10 @@ while [ $# -gt 0 ]; do
       ;;
     -s|--shell)
       ACTION="shell"
+      shift
+    ;;
+    -t|--test)
+      ACTION="test"
       shift
     ;;
     -c|--clean)
@@ -139,13 +144,15 @@ runPrebuildInDocker() {
     -e OUTPUTDIR="/output" \
     -e WORKDIR="/workdir-datadog-agent" \
     -v "$DIR/prebuild-datadog-agent-scripts":/scripts \
+    --privileged \
+    --cap-add SYS_ADMIN \
     "$@"
   set +x
 }
 
 if [ "$ACTION" = "generate" ]; then
   echo "Generating code"
-  if [ -d "$DEPENDENCY_ARTIFACTS_DIR" ]; then
+  if [ -d "$DEPENDENCY_ARTIFACTS_DIR/gofiles" ]; then
     echo "Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
     exit 0
   fi
@@ -207,8 +214,12 @@ elif [ "$ACTION" = "clean" ]; then
   if [ -d "$DIR/ebpf-object-files-root/" ]; then
     sudo rm -rf ebpf-object-files-root
   fi
+elif [ "$ACTION" = "test" ]; then
+  echo "Running tests"
+  runPrebuildInDocker "$DOCKER_IMAGE" /scripts/run-datadog-agent-test.sh
 elif [ "$ACTION" = "shell" ]; then
   echo "Launching generate shell"
+  echo "From the shell it is possible to run the scripts in the /scripts directory to regenerate artifacts or run tests."
   runPrebuildInDocker -it "$DOCKER_IMAGE" /bin/bash
 elif [ -z "$ACTION" ]; then
   echo "No argument was passed"

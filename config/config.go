@@ -38,6 +38,8 @@ type NetworkTracerConfig struct {
 	EbpfDebuglogEnabled bool
 	// Location of the ebpf
 	EbpfArtifactDir string
+	// Enabling http tracing using x-reqeust-id headers
+	EnableHTTPTracing bool
 }
 
 // APIEndpoint is a single endpoint where process data will be submitted.
@@ -212,6 +214,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 			EnableProtocolInspection: true,
 			EbpfDebuglogEnabled:      false,
 			EbpfArtifactDir:          "/opt/stackstate-agent/ebpf",
+			EnableHTTPTracing:        false,
 		},
 
 		// Check config
@@ -464,6 +467,10 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if ok, err := isAffirmative(os.Getenv("STS_PROTOCOL_INSPECTION_ENABLED")); err == nil {
 		c.NetworkTracer.EnableProtocolInspection = ok
+	}
+
+	if ok, err := isAffirmative(os.Getenv("STS_HTTP_TRACING_ENABLED")); err == nil {
+		c.NetworkTracer.EnableHTTPTracing = ok
 	}
 
 	var patterns []string

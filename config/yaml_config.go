@@ -135,7 +135,9 @@ type YamlAgentConfig struct {
 		EBPFArtifactDir string `yaml:"ebpf_artifact_dir"`
 		// A string indicating the enabled state of the protocol inspection.
 		ProtocolInspectionEnabled string `yaml:"protocol_inspection_enabled"`
-		HTTPMetrics               struct {
+		// A string indicating the enabled state of the protocol inspection.
+		HTTPTracingEnabled string `yaml:"http_tracing_enabled"`
+		HTTPMetrics        struct {
 			// Specifies which algorithm to use to collapse measurements: collapsing_lowest_dense, collapsing_highest_dense, unbounded
 			SketchType string `yaml:"sketch_type"`
 			// A maximum number of bins of the ddSketch we use to store percentiles
@@ -404,6 +406,9 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	}
 	if protMetrEnabled, err := isAffirmative(networkConf.Network.ProtocolInspectionEnabled); err == nil {
 		agentConf.NetworkTracer.EnableProtocolInspection = protMetrEnabled
+	}
+	if httpTracingEnabled, err := isAffirmative(networkConf.Network.HTTPTracingEnabled); err == nil {
+		agentConf.NetworkTracer.EnableHTTPTracing = httpTracingEnabled
 	}
 	if networkConf.Network.NetworkMaxConnections != 0 {
 		agentConf.NetworkTracerMaxConnections = networkConf.Network.NetworkMaxConnections

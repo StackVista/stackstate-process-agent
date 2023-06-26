@@ -583,6 +583,22 @@ network_tracer_config:
 	assert.Equal(false, agentConfig.NetworkTracer.EnableProtocolInspection)
 }
 
+func TestStackStateHttpTracingDisabled(t *testing.T) {
+	assert := assert.New(t)
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal(
+		[]byte(`
+network_tracer_config:
+  http_tracing_enabled: 'true'
+`), &ddy)
+	assert.NoError(err)
+
+	agentConfig, err := NewAgentConfig(&ddy)
+	assert.NoError(err)
+
+	assert.Equal(true, agentConfig.NetworkTracer.EnableHTTPTracing)
+}
+
 func TestEnvOverrides(t *testing.T) {
 	assert := assert.New(t)
 	os.Setenv("STS_NETWORK_TRACER_MAX_CONNECTIONS", "500")
@@ -591,6 +607,7 @@ func TestEnvOverrides(t *testing.T) {
 	os.Setenv("STS_MAX_CONNECTIONS_PER_MESSAGE", "502")
 	os.Setenv("STS_PROTOCOL_INSPECTION_ENABLED", "false")
 	os.Setenv("STS_NETWORK_TRACING_ENABLED", "true")
+	os.Setenv("STS_HTTP_TRACING_ENABLED", "true")
 	os.Setenv("STS_EBPF_DEBUG_LOG_ENABLED", "true")
 
 	agentConfig, _ := NewAgentConfig(nil)
@@ -601,6 +618,7 @@ func TestEnvOverrides(t *testing.T) {
 	assert.Equal(false, agentConfig.NetworkTracer.EnableProtocolInspection)
 	assert.Equal(true, agentConfig.EnableNetworkTracing)
 	assert.Equal(true, agentConfig.NetworkTracer.EbpfDebuglogEnabled)
+	assert.Equal(true, agentConfig.NetworkTracer.EnableHTTPTracing)
 }
 
 func TestEnvSiteConfig(t *testing.T) {

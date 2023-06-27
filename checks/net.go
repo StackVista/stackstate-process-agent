@@ -508,20 +508,20 @@ func aggregateHTTPTraceObservations(httpObservations []http.TransactionObservati
 			method = model.HTTPMethod_PATCH
 		}
 
-		var traceId []byte
+		var traceID []byte
 
 		// Special case for UUIDs: represent as bytes to reduce data
 		uid := uuid.Parse(observation.TraceId.Id)
 		if uid != nil {
-			traceId, _ = uid.MarshalBinary()
+			traceID, _ = uid.MarshalBinary()
 		} else {
-			traceId = []byte(observation.TraceId.Id)
+			traceID = []byte(observation.TraceId.Id)
 		}
 
 		connObservations = append(connObservations, &model.HTTPTraceObservation{
 			LatencySec:     observation.LatencyNs * nsToS,
 			TraceDirection: traceDirection,
-			TraceId:        traceId,
+			TraceId:        traceID,
 			Method:         method,
 			Response:       int32(observation.Status),
 		})

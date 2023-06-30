@@ -4,6 +4,10 @@
 
 set -ex
 
+if [ "$1" = "rerun" ]; then
+  rm -rf "$WORKDIR" || true
+fi
+
 # This command assumes the datadog agent to be mounted at /source-datadog-agent. To avoid outputting to that directory,
 # we make a clone before running any commands
 mkdir $WORKDIR

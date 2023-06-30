@@ -27,18 +27,7 @@ replace (
 	golang.org/x/net => golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
 )
 
-// For local development
-
-// replace github.com/StackVista/stackstate-receiver-go-client => /home/bram/stackvista/agent/src/github.com/StackVista/stackstate-receiver-go-client
-
-// replace github.com/DataDog/datadog-agent => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent
-
-// Replacements due to upstream improvements
-
-// replace github.com/DataDog/datadog-agent/pkg/util/log => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log
-replace github.com/DataDog/datadog-agent v0.0.0-20230307121454-9e9c7904ced5 => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230330143836-1e06a5228263 // stackstate-7.43.1
-
-// replace github.com/DataDog/datadog-agent/pkg/util/log => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20230309153711-2ce9a9612c03
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230630095443-ec0e1808dcab
 
 require (
 	github.com/DataDog/agent-payload/v5 v5.0.67
@@ -147,7 +136,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
 	github.com/opencontainers/runc v1.1.3 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20220311020903-6969a0a09ab1 // indirect
-	github.com/pborman/uuid v1.2.1 // indirect
+	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect

@@ -66,6 +66,7 @@ end
 
 desc "Test Datadog Process agent"
 task :test do
+  sh "./prebuild-datadog-agent.sh -i"
   go_test("$(go list ./...)", {
    :bpf => true,
    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],

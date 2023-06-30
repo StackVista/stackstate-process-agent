@@ -367,6 +367,30 @@ message ConnectionMetric {
     ConnectionMetricValue value = 3;
 }
 
+enum TraceDirection {
+	request = 0;
+	response = 1;
+	both = 2;
+}
+
+enum HTTPMethod {
+	GET = 0;
+	POST = 1;
+	PUT = 2;
+	DELETE = 3;
+	HEAD = 4;
+	OPTIONS = 5;
+	PATCH = 6;
+}
+
+message HTTPTraceObservation {
+	double latencySec = 1;
+	TraceDirection traceDirection = 2;
+	bytes traceId = 3;
+	HTTPMethod method = 4;
+	int32 response = 5;
+}
+
 message Connection {
 	int32 pid = 1;
 	// 2 is deprecated
@@ -387,6 +411,7 @@ message Connection {
 	repeated ConnectionMetric metrics = 54;
 	Addr natladdr = 55; // Translated local address
 	Addr natraddr = 56; // Translated remote address
+	repeated HTTPTraceObservation httpObservations = 57;
 }
 
 message Addr {

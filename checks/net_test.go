@@ -8,6 +8,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/DataDog/sketches-go/ddsketch"
+	"github.com/pborman/uuid"
 	"math"
 	"sort"
 	"strings"
@@ -194,7 +195,7 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 		// pid 4 filtered by process blacklisting, so we expect no connections for pid 4
 	}
 
-	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil)
+	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
 
 	assert.Len(t, connections, 3)
 
@@ -274,7 +275,7 @@ func TestPodsIndexFormatted(t *testing.T) {
 		Pids:      []int32{2, 3},
 	}
 
-	_, podsIndex := c.formatConnections(cfg, connStats, 15*time.Second, nil, containerToPod)
+	_, podsIndex := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, containerToPod)
 
 	assert.Len(t, podsIndex.pidToPodUID, 3)
 	assert.Equal(t, "pod-a-uid", podsIndex.pidToPodUID[1])
@@ -323,7 +324,7 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 		4: {Pid: 4, CreateTime: now.Add(-5 * time.Minute).Unix()},
 	}
 
-	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil)
+	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
 
 	assert.Len(t, connections, 4)
 	for _, c := range connections {
@@ -365,7 +366,7 @@ func TestRelationCache(t *testing.T) {
 	assert.Zero(t, c.cache.ItemCount(), "Cache should be empty before running")
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	firstRun, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil)
+	firstRun, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
 	assert.Zero(t, len(firstRun), "Connections should be empty when the cache is not present")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -373,13 +374,13 @@ func TestRelationCache(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _ := c.formatConnections(cfg, connStats, 10*time.Second, nil, nil)
+	secondRun, _ := c.formatConnections(cfg, connStats, 10*time.Second, nil, nil, nil)
 	assert.Equal(t, 4, len(secondRun), "Connections should contain 4 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
 	// delete last connection from the connection stats slice, expect it to be excluded from the connection list, but not the cache
 	connStats = connStats[:len(connStats)-1]
-	thirdRun, _ := c.formatConnections(cfg, connStats, 5*time.Second, nil, nil)
+	thirdRun, _ := c.formatConnections(cfg, connStats, 5*time.Second, nil, nil, nil)
 	assert.Equal(t, 3, len(thirdRun), "Connections should contain 3 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -472,7 +473,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	}
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	c.formatConnections(cfg, connStats, 15*time.Second, nil, nil)
+	c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
 
 	connStats = []network.ConnectionStats{
 		amendConnectionStats(connStats[0], PID1CONN1SEND2, PID1CONN1RECV2),
@@ -485,7 +486,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil, nil)
+	secondRun, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil, nil, nil)
 
 	assert.Equal(t, PID1CONN1SEND2DELTA, getConnectionMetricNumber(t, secondRun[0].Metrics, bytesSentDelta), bytesSentDelta)
 	assert.Equal(t, PID1CONN2SEND2DELTA, getConnectionMetricNumber(t, secondRun[1].Metrics, bytesSentDelta), bytesSentDelta)
@@ -580,7 +581,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			// fill in the relation cache
 			tc.prepCache(c.cache)
 
-			connections, _ := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), nil, nil)
+			connections, _ := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), nil, nil, nil)
 			var rIDs []string
 			for _, conn := range connections {
 				rIDs = append(rIDs, conn.ConnectionIdentifier)
@@ -875,6 +876,136 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 	//  * 5 - specific status code groups
 	//  * 3 - request count + rate + response time
 	assert.Equal(t, (1+1)*5*3, len(conn2Metrics))
+}
+
+func TestHTTPObservations(t *testing.T) {
+
+	conn1req1 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		"/page", true, http.MethodGet)
+	conn1req2 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		"/page", true, http.MethodPost)
+	conn1req3 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		"/otherpath", true, http.MethodGet)
+	conn2req4 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
+		"/page", true, http.MethodGet)
+	conn2req5 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
+		"/page", true, http.MethodPost)
+
+	conn1Key := getConnectionKeyForStats(conn1req1)
+	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req2))
+	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req3))
+	conn2Key := getConnectionKeyForStats(conn2req4)
+	assert.Equal(t, conn2Key, getConnectionKeyForStats(conn2req5))
+	assert.NotEqual(t, conn1Key, conn2Key)
+
+	observations := aggregateHTTPTraceObservations([]http.TransactionObservation{
+		http.TransactionObservation{
+			LatencyNs: msToNs(800),
+			Status:    200,
+			Key:       conn1req1,
+			TraceId: http.TransactionTraceId{
+				Id:   "traceId",
+				Type: http.TraceIdRequest,
+			},
+		},
+		http.TransactionObservation{
+			LatencyNs: msToNs(800),
+			Status:    400,
+			Key:       conn1req2,
+			TraceId: http.TransactionTraceId{
+				Id:   "traceId",
+				Type: http.TraceIdResponse,
+			},
+		},
+		http.TransactionObservation{
+			LatencyNs: msToNs(800),
+			Status:    200,
+			Key:       conn1req3,
+			TraceId: http.TransactionTraceId{
+				Id:   "0538a510-7ad2-4ef1-a852-19dd47c50090", // uuid-v4
+				Type: http.TraceIdRequest,
+			},
+		},
+		http.TransactionObservation{
+			LatencyNs: msToNs(800),
+			Status:    501,
+			Key:       conn2req4,
+			TraceId: http.TransactionTraceId{
+				Id:   "bd4f98f0-141a-11ee-be56-0242ac120002", // uuid-v1
+				Type: http.TraceIdBoth,
+			},
+		},
+		http.TransactionObservation{
+			LatencyNs: msToNs(450),
+			Status:    200,
+			Key:       conn2req5,
+			TraceId: http.TransactionTraceId{
+				Id:   "BD4f98f0-141a-11ee-be56-0242ac120002", // Some caps
+				Type: http.TraceIdResponse,
+			},
+		},
+		http.TransactionObservation{
+			LatencyNs: msToNs(450),
+			Status:    200,
+			Key:       conn2req5,
+			TraceId: http.TransactionTraceId{
+				Id:   "BD4f98f0-141a-11ee-be56-0242ac120002", // Some caps
+				Type: http.TraceIdNone,                       // Will be filtered
+			},
+		},
+	})
+
+	v4trace, _ := uuid.Parse("0538a510-7ad2-4ef1-a852-19dd47c50090").MarshalBinary()
+	v1trace, _ := uuid.Parse("bd4f98f0-141a-11ee-be56-0242ac120002").MarshalBinary()
+
+	// no more metrics for conn1
+	assert.EqualValues(t, map[connKey][]*model.HTTPTraceObservation{
+		conn1Key: []*model.HTTPTraceObservation{
+			&model.HTTPTraceObservation{
+				LatencySec:     0.8,
+				TraceDirection: model.TraceDirection_request,
+				TraceId:        []byte("traceId"),
+				Method:         model.HTTPMethod_GET,
+				Response:       200,
+			},
+			&model.HTTPTraceObservation{
+				LatencySec:     0.8,
+				TraceDirection: model.TraceDirection_response,
+				TraceId:        []byte("traceId"),
+				Method:         model.HTTPMethod_POST,
+				Response:       400,
+			},
+			&model.HTTPTraceObservation{
+				LatencySec:     0.8,
+				TraceDirection: model.TraceDirection_request,
+				TraceId:        v4trace,
+				Method:         model.HTTPMethod_GET,
+				Response:       200,
+			},
+		},
+		conn2Key: []*model.HTTPTraceObservation{
+			&model.HTTPTraceObservation{
+				LatencySec:     0.8,
+				TraceDirection: model.TraceDirection_both,
+				TraceId:        v1trace,
+				Method:         model.HTTPMethod_GET,
+				Response:       501,
+			},
+			&model.HTTPTraceObservation{
+				LatencySec:     0.45,
+				TraceDirection: model.TraceDirection_response,
+				TraceId:        v1trace,
+				Method:         model.HTTPMethod_POST,
+				Response:       200,
+			},
+		},
+	}, observations)
+
 }
 
 func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {

@@ -268,15 +268,23 @@ func (c *ConnectionsCheck) formatConnections(
 			log.Warnf("unexpected connection direction %s for %v", conn.Direction.String(), conn)
 		}
 
-		observations := httpObservations[getConnectionKey(conn)]
+		co := getConnectionKey(conn)
+
+		observations := httpObservations[co]
 		if observations == nil {
 			observations = make([]*model.HTTPTraceObservation, 0)
+		} else {
+			delete(httpObservations, co)
 		}
 
 		appProto := ""
-		metrics := httpMetrics[getConnectionKey(conn)]
+		metrics := httpMetrics[co]
 		if len(metrics) > 0 {
 			appProto = "http"
+		}
+
+		if metrics != nil {
+			delete(httpMetrics, co)
 		}
 
 		metrics = append(metrics, &model.ConnectionMetric{
@@ -323,6 +331,10 @@ func (c *ConnectionsCheck) formatConnections(
 		c.cache.PutNetworkRelationCache(relationID)
 	}
 
+	for k, v := range httpObservations {
+		log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
+	}
+
 	return cxs, connsPods
 }
 
@@ -333,6 +345,7 @@ type connKey struct {
 	DstIPHigh uint64
 	DstIPLow  uint64
 	DstPort   uint16
+	NetNs     uint32
 }
 
 func getConnectionKey(conn network.ConnectionStats) connKey {
@@ -340,14 +353,21 @@ func getConnectionKey(conn network.ConnectionStats) connKey {
 	var sport, dport uint16
 
 	connIsIncoming := conn.Direction == network.INCOMING
+	// This mimics the logic from the http probe to assign the http server to the non-ephemeral port.
 	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(sport))
 
 	if connIsIncoming || connLooksLikeIncoming {
-		saddr, sport = network.GetNATRemoteAddress(conn)
-		daddr, dport = network.GetNATLocalAddress(conn)
+		saddr = conn.Dest
+		sport = conn.DPort
+
+		daddr = conn.Source
+		dport = conn.SPort
 	} else {
-		saddr, sport = network.GetNATLocalAddress(conn)
-		daddr, dport = network.GetNATRemoteAddress(conn)
+		daddr = conn.Dest
+		dport = conn.DPort
+
+		saddr = conn.Source
+		sport = conn.SPort
 	}
 
 	saddrl, saddrh := util.ToLowHigh(saddr)
@@ -355,6 +375,7 @@ func getConnectionKey(conn network.ConnectionStats) connKey {
 	return connKey{
 		SrcIPHigh: saddrh, SrcIPLow: saddrl, SrcPort: sport,
 		DstIPHigh: daddrh, DstIPLow: daddrl, DstPort: dport,
+		NetNs: conn.NetNS,
 	}
 }
 
@@ -366,6 +387,7 @@ func getConnectionKeyForStats(key http.Key) connKey {
 		DstIPHigh: key.DstIPHigh,
 		DstIPLow:  key.DstIPLow,
 		DstPort:   key.DstPort,
+		NetNs:     key.NetNs,
 	}
 }
 

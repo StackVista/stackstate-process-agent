@@ -23,6 +23,8 @@ git tag -a 7.0.0 -m 7.0.0
 # This command will create system-probe. Running the go:generate as well as invoking the precompilation of the ebpf files
 invoke system-probe.build
 
+llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/http-debug.o > $OUTPUTDIR/dump.txt
+
 # Output the generated gofiles (including relative paths) to the output directory
 mkdir -p "$OUTPUTDIR/gofiles"
 git ls-files --others --ignored --exclude-from=.gitignore | grep "\.go$" | xargs -I{} cp --parents {} "$OUTPUTDIR/gofiles"

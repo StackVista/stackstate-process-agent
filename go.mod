@@ -27,7 +27,7 @@ replace (
 	golang.org/x/net => golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
 )
 
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230703140319-e0e77949a950
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20230704133552-3896ca31a6ae
 
 require (
 	github.com/DataDog/agent-payload/v5 v5.0.67

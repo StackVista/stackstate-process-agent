@@ -104,8 +104,16 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	c.prevCheckTime = currentTime
 
 	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
+	var clientObservations, serverObservations int
+	for _, conn := range formattedConnections {
+		if conn.Direction == model.ConnectionDirection_incoming || (conn.Direction != model.ConnectionDirection_outgoing && network.IsEphemeralPort(int(conn.Raddr.Port))) {
+			serverObservations += len(conn.HttpObservations)
+		} else {
+			clientObservations += len(conn.HttpObservations)
+		}
+	}
 
-	log.Infof("collected %d connections in %s", len(formattedConnections), time.Since(start))
+	log.Infof("collected %d connections and %d http client observations and %d http server trace observations in %s", len(formattedConnections), clientObservations, serverObservations, time.Since(start))
 	for _, conn := range formattedConnections {
 		log.Debugf("%v", conn)
 	}
@@ -202,7 +210,14 @@ func (c *ConnectionsCheck) formatConnections(
 	}
 
 	cxs := make([]*model.Connection, 0, len(conns))
+	unsentObservations := make(map[connKey][]*model.HTTPTraceObservation)
+	for k, v := range httpObservations {
+		unsentObservations[k] = v
+	}
+
 	for _, conn := range conns {
+		// log.Infof("Consider conn: %v", conn)
+
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		process, ok := processes[conn.Pid]
 		if !ok {
@@ -268,23 +283,25 @@ func (c *ConnectionsCheck) formatConnections(
 			log.Warnf("unexpected connection direction %s for %v", conn.Direction.String(), conn)
 		}
 
-		co := getConnectionKey(conn)
-
-		observations := httpObservations[co]
-		if observations == nil {
-			observations = make([]*model.HTTPTraceObservation, 0)
-		} else {
-			delete(httpObservations, co)
-		}
-
+		metrics := make([]*model.ConnectionMetric, 0)
+		observations := make([]*model.HTTPTraceObservation, 0)
 		appProto := ""
-		metrics := httpMetrics[co]
-		if len(metrics) > 0 {
-			appProto = "http"
-		}
 
-		if metrics != nil {
-			delete(httpMetrics, co)
+		for _, co := range getConnectionKeys(conn) {
+			observations = append(observations, httpObservations[co]...)
+
+			// Not deleting from httpObservations, because the same observations might be attached to both client and server
+			// side of a connection.
+			delete(unsentObservations, co)
+
+			if len(observations) > 0 {
+				log.Debugf("Sent connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
+			}
+
+			metrics := append(metrics, httpMetrics[co]...)
+			if len(metrics) > 0 {
+				appProto = "http"
+			}
 		}
 
 		metrics = append(metrics, &model.ConnectionMetric{
@@ -331,7 +348,7 @@ func (c *ConnectionsCheck) formatConnections(
 		c.cache.PutNetworkRelationCache(relationID)
 	}
 
-	for k, v := range httpObservations {
+	for k, v := range unsentObservations {
 		log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
 	}
 
@@ -348,13 +365,37 @@ type connKey struct {
 	NetNs     uint32
 }
 
+func getXLatedConnectionKey(conn network.ConnectionStats) connKey {
+	var saddr, daddr util.Address
+	var sport, dport uint16
+
+	connIsIncoming := conn.Direction == network.INCOMING
+	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(sport))
+
+	if connIsIncoming || connLooksLikeIncoming {
+		saddr, sport = network.GetNATRemoteAddress(conn)
+		daddr, dport = network.GetNATLocalAddress(conn)
+	} else {
+		saddr, sport = network.GetNATLocalAddress(conn)
+		daddr, dport = network.GetNATRemoteAddress(conn)
+	}
+
+	saddrl, saddrh := util.ToLowHigh(saddr)
+	daddrl, daddrh := util.ToLowHigh(daddr)
+	return connKey{
+		SrcIPHigh: saddrh, SrcIPLow: saddrl, SrcPort: sport,
+		DstIPHigh: daddrh, DstIPLow: daddrl, DstPort: dport,
+		NetNs: conn.NetNS,
+	}
+}
+
 func getConnectionKey(conn network.ConnectionStats) connKey {
 	var saddr, daddr util.Address
 	var sport, dport uint16
 
 	connIsIncoming := conn.Direction == network.INCOMING
 	// This mimics the logic from the http probe to assign the http server to the non-ephemeral port.
-	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(sport))
+	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(conn.SPort))
 
 	if connIsIncoming || connLooksLikeIncoming {
 		saddr = conn.Dest
@@ -377,6 +418,22 @@ func getConnectionKey(conn network.ConnectionStats) connKey {
 		DstIPHigh: daddrh, DstIPLow: daddrl, DstPort: dport,
 		NetNs: conn.NetNS,
 	}
+}
+
+/** A connection can have multiple keys, due to translation in iptables. These translations can happen
+ * at multiple stages, so we can never be sure exactly what translation will be observed by the http
+ * usm probe. For this reason we generate all possible keys, such that we collect all data.
+ * This is safe to do because we stay within the network namespace for connections and usm observations,
+ * so there is no chance of false aliasing.
+ */
+func getConnectionKeys(conn network.ConnectionStats) []connKey {
+	keys := make([]connKey, 0, 2)
+	keys = append(keys, getConnectionKey(conn))
+	if conn.IPTranslation != nil {
+		keys = append(keys, getXLatedConnectionKey(conn))
+	}
+
+	return keys
 }
 
 func getConnectionKeyForStats(key http.Key) connKey {

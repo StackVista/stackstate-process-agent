@@ -298,10 +298,11 @@ func (c *ConnectionsCheck) formatConnections(
 				log.Debugf("Sent connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
 			}
 
-			metrics := append(metrics, httpMetrics[co]...)
-			if len(metrics) > 0 {
-				appProto = "http"
-			}
+			metrics = append(metrics, httpMetrics[co]...)
+		}
+
+		if len(metrics) > 0 || len(observations) > 0 {
+			appProto = "http"
 		}
 
 		metrics = append(metrics, &model.ConnectionMetric{

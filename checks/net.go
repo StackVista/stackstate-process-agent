@@ -181,6 +181,14 @@ var (
 	}, []string{"state"})
 )
 
+func isHeaderProxyContainer(process *model.Process) bool {
+	if process.Container == nil {
+		return false
+	}
+
+	return process.Container.Name == "http-header-proxy"
+}
+
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
 func (c *ConnectionsCheck) formatConnections(
@@ -288,7 +296,11 @@ func (c *ConnectionsCheck) formatConnections(
 		appProto := ""
 
 		for _, co := range getConnectionKeys(conn) {
-			observations = append(observations, httpObservations[co]...)
+			metrics = append(metrics, httpMetrics[co]...)
+
+			if !isHeaderProxyContainer(process) {
+				observations = append(observations, httpObservations[co]...)
+			}
 
 			// Not deleting from httpObservations, because the same observations might be attached to both client and server
 			// side of a connection.
@@ -298,7 +310,6 @@ func (c *ConnectionsCheck) formatConnections(
 				log.Debugf("Sent connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
 			}
 
-			metrics = append(metrics, httpMetrics[co]...)
 		}
 
 		if len(metrics) > 0 || len(observations) > 0 {
@@ -349,9 +360,27 @@ func (c *ConnectionsCheck) formatConnections(
 		c.cache.PutNetworkRelationCache(relationID)
 	}
 
-	for k, v := range unsentObservations {
-		log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
+	// Figure out which observations were not in the root namespace
+	var unsentNonRootObservations int = 0
+	rootHandle, err := util.GetRootNetNamespace(util.GetProcRoot())
+	if err == nil {
+		ino, err := util.GetInoForNs(rootHandle)
+		if err == nil {
+			for k, v := range unsentObservations {
+				if k.NetNs != ino {
+					log.Debugf("Unsent non-root observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
+					unsentNonRootObservations += 1
+				}
+				log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
+			}
+		} else {
+			unsentNonRootObservations = -1
+		}
+	} else {
+		unsentNonRootObservations = -1
 	}
+
+	log.Debugf("Unsent non-root observations: %d, unsent observations: %d", unsentNonRootObservations, len(unsentObservations))
 
 	return cxs, connsPods
 }

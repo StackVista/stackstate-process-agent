@@ -361,7 +361,7 @@ func (c *ConnectionsCheck) formatConnections(
 	}
 
 	// Figure out which observations were not in the root namespace
-	var unsentNonRootObservations int = 0
+	var unsentNonRootObservations int
 	rootHandle, err := util.GetRootNetNamespace(util.GetProcRoot())
 	if err == nil {
 		ino, err := util.GetInoForNs(rootHandle)
@@ -369,7 +369,7 @@ func (c *ConnectionsCheck) formatConnections(
 			for k, v := range unsentObservations {
 				if k.NetNs != ino {
 					log.Debugf("Unsent non-root observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
-					unsentNonRootObservations += 1
+					unsentNonRootObservations++
 				}
 				log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
 			}

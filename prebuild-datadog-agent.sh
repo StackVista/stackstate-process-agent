@@ -144,6 +144,10 @@ runPrebuildInDocker() {
     -e OUTPUTDIR="/output" \
     -e WORKDIR="/workdir-datadog-agent" \
     -v "$DIR/prebuild-datadog-agent-scripts":/scripts \
+    -v /proc:/host/proc \
+    -e HOST_PROC=/host/proc \
+    -v /sys:/host/sys \
+    -e HOST_SYS=/host/sys \
     --privileged \
     --cap-add SYS_ADMIN \
     "$@"

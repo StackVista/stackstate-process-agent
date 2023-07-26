@@ -31,7 +31,6 @@ llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/http-debug.o > $OUTPUTDIR/dump.
 export DD_SYSTEM_PROBE_BPF_DIR=$WORKDIR/pkg/ebpf/bytecode/build/
 
 export STS_TEST_RUN=true
-
 # Selected test suites for testing
 echo "Running suites"
 invoke test --build-include=linux_bpf --targets=./pkg/network/protocols/http/.,./pkg/network/. --skip-linters

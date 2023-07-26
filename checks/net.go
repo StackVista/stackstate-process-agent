@@ -104,8 +104,16 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	c.prevCheckTime = currentTime
 
 	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
+	var clientObservations, serverObservations int
+	for _, conn := range formattedConnections {
+		if conn.Direction == model.ConnectionDirection_incoming || (conn.Direction != model.ConnectionDirection_outgoing && network.IsEphemeralPort(int(conn.Raddr.Port))) {
+			serverObservations += len(conn.HttpObservations)
+		} else {
+			clientObservations += len(conn.HttpObservations)
+		}
+	}
 
-	log.Infof("collected %d connections in %s", len(formattedConnections), time.Since(start))
+	log.Infof("collected %d connections and %d http client observations and %d http server trace observations in %s", len(formattedConnections), clientObservations, serverObservations, time.Since(start))
 	for _, conn := range formattedConnections {
 		log.Debugf("%v", conn)
 	}
@@ -173,6 +181,14 @@ var (
 	}, []string{"state"})
 )
 
+func isHeaderProxyContainer(process *model.Process) bool {
+	if process.Container == nil {
+		return false
+	}
+
+	return process.Container.Name == "http-header-proxy"
+}
+
 // Connections are split up into a chunks of at most 100 connections per message to
 // limit the message size on intake.
 func (c *ConnectionsCheck) formatConnections(
@@ -202,6 +218,11 @@ func (c *ConnectionsCheck) formatConnections(
 	}
 
 	cxs := make([]*model.Connection, 0, len(conns))
+	unsentObservations := make(map[connKey][]*model.HTTPTraceObservation)
+	for k, v := range httpObservations {
+		unsentObservations[k] = v
+	}
+
 	for _, conn := range conns {
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		process, ok := processes[conn.Pid]
@@ -268,14 +289,28 @@ func (c *ConnectionsCheck) formatConnections(
 			log.Warnf("unexpected connection direction %s for %v", conn.Direction.String(), conn)
 		}
 
-		observations := httpObservations[getConnectionKey(conn)]
-		if observations == nil {
-			observations = make([]*model.HTTPTraceObservation, 0)
+		metrics := make([]*model.ConnectionMetric, 0)
+		observations := make([]*model.HTTPTraceObservation, 0)
+		appProto := ""
+
+		for _, co := range getConnectionKeys(conn) {
+			metrics = append(metrics, httpMetrics[co]...)
+
+			if !isHeaderProxyContainer(process) {
+				observations = append(observations, httpObservations[co]...)
+			}
+
+			// Not deleting from httpObservations, because the same observations might be attached to both client and server
+			// side of a connection.
+			delete(unsentObservations, co)
+
+			if len(observations) > 0 {
+				log.Debugf("Sent connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
+			}
+
 		}
 
-		appProto := ""
-		metrics := httpMetrics[getConnectionKey(conn)]
-		if len(metrics) > 0 {
+		if len(metrics) > 0 || len(observations) > 0 {
 			appProto = "http"
 		}
 
@@ -323,6 +358,29 @@ func (c *ConnectionsCheck) formatConnections(
 		c.cache.PutNetworkRelationCache(relationID)
 	}
 
+	// Figure out which observations were not in the root namespace
+	var unsentNonRootObservations int
+	rootHandle, err := util.GetRootNetNamespace(util.GetProcRoot())
+	if err == nil {
+		ino, err := util.GetInoForNs(rootHandle)
+		if err == nil {
+			for k, v := range unsentObservations {
+				if k.NetNs != ino {
+					log.Debugf("Unsent non-root observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
+					unsentNonRootObservations++
+					continue
+				}
+				log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
+			}
+		} else {
+			unsentNonRootObservations = -1
+		}
+	} else {
+		unsentNonRootObservations = -1
+	}
+
+	log.Debugf("Unsent non-root observations: %d, unsent observations: %d", unsentNonRootObservations, len(unsentObservations))
+
 	return cxs, connsPods
 }
 
@@ -333,9 +391,10 @@ type connKey struct {
 	DstIPHigh uint64
 	DstIPLow  uint64
 	DstPort   uint16
+	NetNs     uint32
 }
 
-func getConnectionKey(conn network.ConnectionStats) connKey {
+func getXLatedConnectionKey(conn network.ConnectionStats) connKey {
 	var saddr, daddr util.Address
 	var sport, dport uint16
 
@@ -355,7 +414,55 @@ func getConnectionKey(conn network.ConnectionStats) connKey {
 	return connKey{
 		SrcIPHigh: saddrh, SrcIPLow: saddrl, SrcPort: sport,
 		DstIPHigh: daddrh, DstIPLow: daddrl, DstPort: dport,
+		NetNs: conn.NetNS,
 	}
+}
+
+func getConnectionKey(conn network.ConnectionStats) connKey {
+	var saddr, daddr util.Address
+	var sport, dport uint16
+
+	connIsIncoming := conn.Direction == network.INCOMING
+	// This mimics the logic from the http probe to assign the http server to the non-ephemeral port.
+	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(conn.SPort))
+
+	if connIsIncoming || connLooksLikeIncoming {
+		saddr = conn.Dest
+		sport = conn.DPort
+
+		daddr = conn.Source
+		dport = conn.SPort
+	} else {
+		daddr = conn.Dest
+		dport = conn.DPort
+
+		saddr = conn.Source
+		sport = conn.SPort
+	}
+
+	saddrl, saddrh := util.ToLowHigh(saddr)
+	daddrl, daddrh := util.ToLowHigh(daddr)
+	return connKey{
+		SrcIPHigh: saddrh, SrcIPLow: saddrl, SrcPort: sport,
+		DstIPHigh: daddrh, DstIPLow: daddrl, DstPort: dport,
+		NetNs: conn.NetNS,
+	}
+}
+
+/** A connection can have multiple keys, due to translation in iptables. These translations can happen
+ * at multiple stages, so we can never be sure exactly what translation will be observed by the http
+ * usm probe. For this reason we generate all possible keys, such that we collect all data.
+ * This is safe to do because we stay within the network namespace for connections and usm observations,
+ * so there is no chance of false aliasing.
+ */
+func getConnectionKeys(conn network.ConnectionStats) []connKey {
+	keys := make([]connKey, 0, 2)
+	keys = append(keys, getConnectionKey(conn))
+	if conn.IPTranslation != nil {
+		keys = append(keys, getXLatedConnectionKey(conn))
+	}
+
+	return keys
 }
 
 func getConnectionKeyForStats(key http.Key) connKey {
@@ -366,6 +473,7 @@ func getConnectionKeyForStats(key http.Key) connKey {
 		DstIPHigh: key.DstIPHigh,
 		DstIPLow:  key.DstIPLow,
 		DstPort:   key.DstPort,
+		NetNs:     key.NetNs,
 	}
 }
 

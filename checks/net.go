@@ -224,8 +224,6 @@ func (c *ConnectionsCheck) formatConnections(
 	}
 
 	for _, conn := range conns {
-		// log.Infof("Consider conn: %v", conn)
-
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		process, ok := processes[conn.Pid]
 		if !ok {
@@ -370,6 +368,7 @@ func (c *ConnectionsCheck) formatConnections(
 				if k.NetNs != ino {
 					log.Debugf("Unsent non-root observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
 					unsentNonRootObservations++
+					continue
 				}
 				log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
 			}

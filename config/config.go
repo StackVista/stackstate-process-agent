@@ -214,7 +214,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 			EnableProtocolInspection: true,
 			EbpfDebuglogEnabled:      false,
 			EbpfArtifactDir:          "/opt/stackstate-agent/ebpf",
-			EnableHTTPTracing:        true,
+			EnableHTTPTracing:        false,
 		},
 
 		// Check config

@@ -149,7 +149,8 @@ runPrebuildInDocker() {
     -v /sys:/host/sys \
     -e HOST_SYS=/host/sys \
     --privileged \
-    --cap-add SYS_ADMIN \
+    --pid host \
+    --cap-add all \
     "$@"
   set +x
 }

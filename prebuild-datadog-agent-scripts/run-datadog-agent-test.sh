@@ -31,9 +31,10 @@ llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/http-debug.o > $OUTPUTDIR/dump.
 export DD_SYSTEM_PROBE_BPF_DIR=$WORKDIR/pkg/ebpf/bytecode/build/
 
 export STS_TEST_RUN=true
+
 # Selected test suites for testing
 echo "Running suites"
-invoke test --build-include=linux_bpf --targets=./pkg/network/protocols/http/.,./pkg/network/. --skip-linters
+invoke test --build-include=linux_bpf --targets=./pkg/network/protocols/http/.,./pkg/network/.,./pkg/process/monitor/. --skip-linters
 # Only openssl was proven to work, still need to prove gnutls
 invoke test --build-include=linux_bpf --targets=./pkg/network/tracer/. --skip-linters  --run="^TestHTTPSObservationViaLibraryIntegration$"
 
@@ -42,4 +43,4 @@ invoke test --build-include=linux_bpf --targets=./pkg/network/tracer/. --skip-li
 # invoke test --build-include=linux_bpf --targets=./pkg/network/tracer/. --skip-linters  --run="\(^TestHTTPSViaLibraryIntegration\)\|\(^TestHTTPSViaLibraryIntegration\)"
 
 # Run an individual test
-# invoke test --build-include=linux_bpf --targets=./pkg/network/protocols/http/.,./pkg/network/. --skip-linters --run="^TestHTTPMonitorRequestId$"
+# invoke test --build-include=linux_bpf --targets=./pkg/process/monitor/. --skip-linters # --run="^TestProcessMonitorCallbacks"

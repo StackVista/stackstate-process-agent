@@ -130,7 +130,7 @@ func TestNetworkRelationCacheExpiration(t *testing.T) {
 	hostname := "example.org"
 	addStats := func(conns ...network.ConnectionStats) {
 		for _, conn := range conns {
-			relationID, _ := CreateNetworkRelationIdentifier(hostname, conn)
+			relationID := CreateNetworkRelationIdentifier(hostname, conn)
 			cache.PutNetworkRelationCache(relationID)
 		}
 	}
@@ -588,8 +588,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			}
 
 			conn := connStats[0]
-			relationID, err := CreateNetworkRelationIdentifier(cfg.HostName, conn)
-			assert.NoError(t, err)
+			relationID := CreateNetworkRelationIdentifier(cfg.HostName, conn)
 
 			if tc.expected {
 				assert.Len(t, connections, 1, "The connection should be present in the returned payload for the Connection Check")
@@ -614,10 +613,7 @@ func TestFormatNamespace(t *testing.T) {
 }
 
 func fillNetworkRelationCache(hostname string, c *NetworkRelationCache, conn network.ConnectionStats, firstObserved, _ int64) error {
-	relationID, err := CreateNetworkRelationIdentifier(hostname, conn)
-	if err != nil {
-		return err
-	}
+	relationID := CreateNetworkRelationIdentifier(hostname, conn)
 
 	cachedRelation := &NetworkRelationCacheItem{
 		FirstObserved: firstObserved,

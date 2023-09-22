@@ -263,9 +263,9 @@ func (c *ConnectionsCheck) formatConnections(
 		uncorrelatedObservations[k] = v
 	}
 
-	uncorrelatedHttpMetrics := make(map[connKey][]*model.ConnectionMetric)
+	uncorrelatedHTTPMetrics := make(map[connKey][]*model.ConnectionMetric)
 	for k, v := range httpMetrics {
-		uncorrelatedHttpMetrics[k] = v
+		uncorrelatedHTTPMetrics[k] = v
 	}
 
 	var httpMetricNoProcess, httpMetricShortLived, httpMetricCorrelated float64 = 0, 0, 0
@@ -287,7 +287,7 @@ func (c *ConnectionsCheck) formatConnections(
 			// Not deleting from httpObservations, because the same observations might be attached to both client and server
 			// side of a connection.
 			delete(uncorrelatedObservations, co)
-			delete(uncorrelatedHttpMetrics, co)
+			delete(uncorrelatedHTTPMetrics, co)
 			if len(observations) > 0 {
 				log.Debugf("Correlated connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
 			}
@@ -417,7 +417,7 @@ func (c *ConnectionsCheck) formatConnections(
 
 	// Figure out which observations were not in the root namespace
 	var unsentNonRootObservations = 0
-	var unsentNonRootHttpMetrics = 0
+	var unsentNonRootHTTPMetrics = 0
 	rootHandle, err := util.GetRootNetNamespace(util.GetProcRoot())
 	if err == nil {
 		ino, err := util.GetInoForNs(rootHandle)
@@ -431,25 +431,25 @@ func (c *ConnectionsCheck) formatConnections(
 				log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
 			}
 
-			for k, _ := range uncorrelatedHttpMetrics {
+			for k := range uncorrelatedHTTPMetrics {
 				if k.NetNs != ino {
-					unsentNonRootHttpMetrics++
+					unsentNonRootHTTPMetrics++
 					continue
 				}
 			}
 		} else {
 			unsentNonRootObservations = -1
-			unsentNonRootHttpMetrics = -1
+			unsentNonRootHTTPMetrics = -1
 		}
 	} else {
 		unsentNonRootObservations = -1
-		unsentNonRootHttpMetrics = -1
+		unsentNonRootHTTPMetrics = -1
 	}
 
 	httpMetricProcessedCounter.WithLabelValues("no_process").Set(httpMetricNoProcess)
 	httpMetricProcessedCounter.WithLabelValues("relation_short_lived").Set(httpMetricShortLived)
 	httpMetricProcessedCounter.WithLabelValues("correlated").Set(httpMetricCorrelated)
-	httpMetricProcessedCounter.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootHttpMetrics))
+	httpMetricProcessedCounter.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootHTTPMetrics))
 
 	httpObservationProcessedCounter.WithLabelValues("no_process").Set(httpObservationNoProcess)
 	httpObservationProcessedCounter.WithLabelValues("relation_short_lived").Set(httpObservationShortLived)

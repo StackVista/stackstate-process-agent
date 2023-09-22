@@ -173,11 +173,32 @@ func (cp *connectionsPodsIndex) addPodWithPID(pod *kubelet.Pod, pid int32) {
 }
 
 var (
-	connectionCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+	connectionProcessedCounter = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "stackstate_process_agent",
 		Subsystem: "connections",
 		Name:      "processed",
-		Help:      "Number of connections processed by the connections check",
+		Help:      "Connections processed by the connections check and the processing result",
+	}, []string{"result"})
+
+	httpMetricProcessedCounter = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "stackstate_process_agent",
+		Subsystem: "http_metric",
+		Name:      "processed",
+		Help:      "Http metrics processed by the connections check and the processing result",
+	}, []string{"result"})
+
+	httpObservationProcessedCounter = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "stackstate_process_agent",
+		Subsystem: "http_observation",
+		Name:      "processed",
+		Help:      "Http observations processed byt the connections check and the processing result",
+	}, []string{"result"})
+
+	processHasPodGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "stackstate_process_agent",
+		Subsystem: "connections",
+		Name:      "process_has_prod",
+		Help:      "Processes which have or do not have a pod",
 	}, []string{"state"})
 )
 
@@ -187,6 +208,37 @@ func isHeaderProxyContainer(process *model.Process) bool {
 	}
 
 	return process.Container.Name == "http-header-proxy"
+}
+
+func (c *ConnectionsCheck) collectConnPods(processes map[uint32]*model.Process, containerToPod map[string]*kubelet.Pod) *connectionsPodsIndex {
+	// build process to pod association
+	connsPods := &connectionsPodsIndex{
+		pods:        make(map[string]*model.Pod),
+		pidToPodUID: make(map[int32]string),
+	}
+
+	var noContainer, noPod, withPod float64 = 0, 0, 0
+
+	for pid, process := range processes {
+		if len(process.ContainerId) == 0 {
+			noContainer++
+		} else {
+			if pod, ok := containerToPod[process.ContainerId]; ok {
+				withPod++
+				connsPods.addPodWithPID(pod, int32(pid))
+				log.Tracef("found pod for container %s: %v", process.ContainerId, pod)
+			} else {
+				noPod++
+				log.Debugf("not found pod for container %s", process.ContainerId)
+			}
+		}
+	}
+
+	processHasPodGauge.WithLabelValues("no_container").Set(noContainer)
+	processHasPodGauge.WithLabelValues("no_pod").Set(noPod)
+	processHasPodGauge.WithLabelValues("with_pod").Set(withPod)
+
+	return connsPods
 }
 
 // Connections are split up into a chunks of at most 100 connections per message to
@@ -203,111 +255,42 @@ func (c *ConnectionsCheck) formatConnections(
 	// attention! There is a conns.Conns[0].PidCreateTime, it is always zero, so we do have to look up the actual value
 	processes := Process.getProcesses(connectionPIDs(conns))
 
-	// build process to pod association
-	connsPods := &connectionsPodsIndex{
-		pods:        make(map[string]*model.Pod),
-		pidToPodUID: make(map[int32]string),
-	}
-	for pid, process := range processes {
-		if pod, ok := containerToPod[process.ContainerId]; ok {
-			connsPods.addPodWithPID(pod, int32(pid))
-			log.Tracef("found pod for container %s: %v", process.ContainerId, pod)
-		} else {
-			log.Debugf("not found pod for container %s", process.ContainerId)
-		}
-	}
+	connPods := c.collectConnPods(processes, containerToPod)
 
 	cxs := make([]*model.Connection, 0, len(conns))
-	unsentObservations := make(map[connKey][]*model.HTTPTraceObservation)
+	uncorrelatedObservations := make(map[connKey][]*model.HTTPTraceObservation)
 	for k, v := range httpObservations {
-		unsentObservations[k] = v
+		uncorrelatedObservations[k] = v
 	}
 
+	uncorrelatedHttpMetrics := make(map[connKey][]*model.ConnectionMetric)
+	for k, v := range httpMetrics {
+		uncorrelatedHttpMetrics[k] = v
+	}
+
+	var httpMetricNoProcess, httpMetricShortLived, httpMetricCorrelated float64 = 0, 0, 0
+	var httpObservationNoProcess, httpObservationShortLived, httpObservationCorrelated float64 = 0, 0, 0
+
 	for _, conn := range conns {
-		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
-		process, ok := processes[conn.Pid]
-		if !ok {
-			connectionCounter.WithLabelValues("no_process").Inc()
-			log.Debugf("Filter connection: %v is out because process %d is not observed (gone or just started)", conn, conn.Pid)
-			continue
-		}
-		pidCreateTime := process.CreateTime
-
-		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
-		relationID, err := CreateNetworkRelationIdentifier(namespace, conn)
-		if err != nil {
-			connectionCounter.WithLabelValues("invalid").Inc()
-			log.Warnf("invalid connection description - can't determine ID: %v", err)
-			continue
-		}
-		// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
-		relationCache, ok := c.cache.IsNetworkRelationCached(relationID)
-		// put it in the cache for the next run
-		c.cache.PutNetworkRelationCache(relationID)
-
-		if cfg.EnableShortLivedNetworkRelationFilter &&
-			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
-
-			connectionCounter.WithLabelValues("short_living").Inc()
-			logShortLivingNoticeOnce.Do(func() {
-				log.Infof("Some of network relations are filtered out as short-living. " +
-					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +
-					"STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml " +
-					"under process_config.filters.short_lived_network_relations.enabled or increase the qualifier seconds using" +
-					"process_config.filters.short_lived_network_relations.qualifier_secs.")
-			})
-			log.Debugf("Filter relation: %s (%v) based on it's short-lived nature; ",
-				relationID, conn, cfg.ShortLivedNetworkRelationQualifierSecs,
-			)
-			continue
-		}
-		var natladdr, natraddr *model.Addr
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsZero() {
-			natraddr = &model.Addr{
-				Ip:   conn.IPTranslation.ReplSrcIP.String(),
-				Port: int32(conn.IPTranslation.ReplSrcPort),
-			}
-		}
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP.IsZero() {
-			natladdr = &model.Addr{
-				Ip:   conn.IPTranslation.ReplDstIP.String(),
-				Port: int32(conn.IPTranslation.ReplDstPort),
-			}
-		}
-
-		// although fields are called Source and Dest, they are in fact local/remote
-		localAddr := &model.Addr{
-			Ip:   conn.Source.String(),
-			Port: int32(conn.SPort),
-		}
-		remoteAddr := &model.Addr{
-			Ip:   conn.Dest.String(),
-			Port: int32(conn.DPort),
-		}
-
-		if conn.Direction != network.OUTGOING && conn.Direction != network.INCOMING {
-			log.Warnf("unexpected connection direction %s for %v", conn.Direction.String(), conn)
-		}
-
+		var httpMetricsCount, httpObservationsCount float64 = 0, 0
 		metrics := make([]*model.ConnectionMetric, 0)
 		observations := make([]*model.HTTPTraceObservation, 0)
 		appProto := ""
 
 		for _, co := range getConnectionKeys(conn) {
 			metrics = append(metrics, httpMetrics[co]...)
+			observations = append(observations, httpObservations[co]...)
 
-			if !isHeaderProxyContainer(process) {
-				observations = append(observations, httpObservations[co]...)
-			}
+			httpMetricsCount += float64(len(httpMetrics[co]))
+			httpObservationsCount += float64(len(httpObservations[co]))
 
 			// Not deleting from httpObservations, because the same observations might be attached to both client and server
 			// side of a connection.
-			delete(unsentObservations, co)
-
+			delete(uncorrelatedObservations, co)
+			delete(uncorrelatedHttpMetrics, co)
 			if len(observations) > 0 {
-				log.Debugf("Sent connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
+				log.Debugf("Correlated connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
 			}
-
 		}
 
 		if len(metrics) > 0 || len(observations) > 0 {
@@ -334,6 +317,77 @@ func (c *ConnectionsCheck) formatConnections(
 			},
 		})
 
+		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
+		process, ok := processes[conn.Pid]
+		if !ok {
+			httpMetricNoProcess += httpMetricsCount
+			httpObservationNoProcess += httpObservationsCount
+			connectionProcessedCounter.WithLabelValues("no_process").Inc()
+			log.Debugf("Filter connection: %v is out because process %d is not observed (gone or just started)", conn, conn.Pid)
+			continue
+		}
+		pidCreateTime := process.CreateTime
+
+		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
+		relationID := CreateNetworkRelationIdentifier(namespace, conn)
+
+		// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
+		relationCache, ok := c.cache.IsNetworkRelationCached(relationID)
+		// put it in the cache for the next run
+		c.cache.PutNetworkRelationCache(relationID)
+
+		if cfg.EnableShortLivedNetworkRelationFilter &&
+			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
+			httpMetricShortLived += httpMetricsCount
+			httpObservationShortLived += httpObservationsCount
+			connectionProcessedCounter.WithLabelValues("short_living").Inc()
+			logShortLivingNoticeOnce.Do(func() {
+				log.Infof("Some of network relations are filtered out as short-living. " +
+					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +
+					"STS_NETWORK_RELATION_FILTER_SHORT_LIVED_QUALIFIER_SECS environment variable to 0, disable it in agent.yaml " +
+					"under process_config.filters.short_lived_network_relations.enabled or increase the qualifier seconds using" +
+					"process_config.filters.short_lived_network_relations.qualifier_secs.")
+			})
+			log.Debugf("Filter relation: %s (%v) based on it's short-lived nature; ",
+				relationID, conn, cfg.ShortLivedNetworkRelationQualifierSecs,
+			)
+			continue
+		}
+
+		if conn.Direction != network.OUTGOING && conn.Direction != network.INCOMING {
+			log.Warnf("unexpected connection direction %s for %v", conn.Direction.String(), conn)
+		}
+
+		// Get adresses
+		var natladdr, natraddr *model.Addr
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsZero() {
+			natraddr = &model.Addr{
+				Ip:   conn.IPTranslation.ReplSrcIP.String(),
+				Port: int32(conn.IPTranslation.ReplSrcPort),
+			}
+		}
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP.IsZero() {
+			natladdr = &model.Addr{
+				Ip:   conn.IPTranslation.ReplDstIP.String(),
+				Port: int32(conn.IPTranslation.ReplDstPort),
+			}
+		}
+
+		// although fields are called Source and Dest, they are in fact local/remote
+		localAddr := &model.Addr{
+			Ip:   conn.Source.String(),
+			Port: int32(conn.SPort),
+		}
+		remoteAddr := &model.Addr{
+			Ip:   conn.Dest.String(),
+			Port: int32(conn.DPort),
+		}
+
+		filteredObservations := make([]*model.HTTPTraceObservation, 0)
+		if !isHeaderProxyContainer(process) {
+			filteredObservations = observations
+		}
+
 		cxs = append(cxs, &model.Connection{
 			Pid:                    int32(conn.Pid),
 			PidCreateTime:          pidCreateTime,
@@ -350,21 +404,25 @@ func (c *ConnectionsCheck) formatConnections(
 			ConnectionIdentifier:   relationID,
 			ApplicationProtocol:    appProto,
 			Metrics:                metrics,
-			HttpObservations:       observations,
+			HttpObservations:       filteredObservations,
 		})
 
-		connectionCounter.WithLabelValues("reported").Inc()
+		connectionProcessedCounter.WithLabelValues("reported").Inc()
+		httpMetricCorrelated += httpMetricsCount
+		httpObservationCorrelated += httpObservationsCount
+
 		// put it in the cache for the next run
 		c.cache.PutNetworkRelationCache(relationID)
 	}
 
 	// Figure out which observations were not in the root namespace
-	var unsentNonRootObservations int
+	var unsentNonRootObservations = 0
+	var unsentNonRootHttpMetrics = 0
 	rootHandle, err := util.GetRootNetNamespace(util.GetProcRoot())
 	if err == nil {
 		ino, err := util.GetInoForNs(rootHandle)
 		if err == nil {
-			for k, v := range unsentObservations {
+			for k, v := range uncorrelatedObservations {
 				if k.NetNs != ino {
 					log.Debugf("Unsent non-root observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
 					unsentNonRootObservations++
@@ -372,16 +430,35 @@ func (c *ConnectionsCheck) formatConnections(
 				}
 				log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
 			}
+
+			for k, _ := range uncorrelatedHttpMetrics {
+				if k.NetNs != ino {
+					unsentNonRootHttpMetrics++
+					continue
+				}
+			}
 		} else {
 			unsentNonRootObservations = -1
+			unsentNonRootHttpMetrics = -1
 		}
 	} else {
 		unsentNonRootObservations = -1
+		unsentNonRootHttpMetrics = -1
 	}
 
-	log.Debugf("Unsent non-root observations: %d, unsent observations: %d", unsentNonRootObservations, len(unsentObservations))
+	httpMetricProcessedCounter.WithLabelValues("no_process").Set(httpMetricNoProcess)
+	httpMetricProcessedCounter.WithLabelValues("relation_short_lived").Set(httpMetricShortLived)
+	httpMetricProcessedCounter.WithLabelValues("correlated").Set(httpMetricCorrelated)
+	httpMetricProcessedCounter.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootHttpMetrics))
 
-	return cxs, connsPods
+	httpObservationProcessedCounter.WithLabelValues("no_process").Set(httpObservationNoProcess)
+	httpObservationProcessedCounter.WithLabelValues("relation_short_lived").Set(httpObservationShortLived)
+	httpObservationProcessedCounter.WithLabelValues("correlated").Set(httpObservationCorrelated)
+	httpObservationProcessedCounter.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootObservations))
+
+	log.Debugf("Unsent non-root observations: %d, unsent observations: %d", unsentNonRootObservations, len(uncorrelatedObservations))
+
+	return cxs, connPods
 }
 
 type connKey struct {

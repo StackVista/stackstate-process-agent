@@ -67,9 +67,12 @@ func (p *CachedPods) GetContainerToPodMap(ctx context.Context) map[string]*kubel
 	// add new pods to the state
 	for _, pod := range pods {
 		for _, container := range pod.Status.Containers {
-			p.containerIDToPod[kubelet.TrimRuntimeFromCID(container.ID)] = &podEntry{
-				pod:      pod,
-				lastSeen: now,
+			trimmedID := kubelet.TrimRuntimeFromCID(container.ID)
+			if trimmedID != "" {
+				p.containerIDToPod[trimmedID] = &podEntry{
+					pod:      pod,
+					lastSeen: now,
+				}
 			}
 		}
 	}

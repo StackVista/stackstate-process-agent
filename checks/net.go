@@ -173,21 +173,21 @@ func (cp *connectionsPodsIndex) addPodWithPID(pod *kubelet.Pod, pid int32) {
 }
 
 var (
-	connectionProcessedCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+	connectionProcessedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "stackstate_process_agent",
 		Subsystem: "connections",
 		Name:      "processed",
 		Help:      "Connections processed by the connections check and the processing result",
 	}, []string{"result"})
 
-	httpMetricProcessedCounter = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	httpMetricProcessedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "stackstate_process_agent",
 		Subsystem: "http_metric",
 		Name:      "processed",
 		Help:      "Http metrics processed by the connections check and the processing result",
 	}, []string{"result"})
 
-	httpObservationProcessedCounter = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	httpObservationProcessedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "stackstate_process_agent",
 		Subsystem: "http_observation",
 		Name:      "processed",
@@ -268,6 +268,7 @@ func (c *ConnectionsCheck) formatConnections(
 		uncorrelatedHTTPMetrics[k] = v
 	}
 
+	var connectionNoProcess, connectionShortLived, connectionCorrelated float64 = 0, 0, 0
 	var httpMetricNoProcess, httpMetricShortLived, httpMetricCorrelated float64 = 0, 0, 0
 	var httpObservationNoProcess, httpObservationShortLived, httpObservationCorrelated float64 = 0, 0, 0
 
@@ -322,7 +323,7 @@ func (c *ConnectionsCheck) formatConnections(
 		if !ok {
 			httpMetricNoProcess += httpMetricsCount
 			httpObservationNoProcess += httpObservationsCount
-			connectionProcessedCounter.WithLabelValues("no_process").Inc()
+			connectionNoProcess++
 			log.Debugf("Filter connection: %v is out because process %d is not observed (gone or just started)", conn, conn.Pid)
 			continue
 		}
@@ -340,7 +341,7 @@ func (c *ConnectionsCheck) formatConnections(
 			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
 			httpMetricShortLived += httpMetricsCount
 			httpObservationShortLived += httpObservationsCount
-			connectionProcessedCounter.WithLabelValues("short_living").Inc()
+			connectionShortLived++
 			logShortLivingNoticeOnce.Do(func() {
 				log.Infof("Some of network relations are filtered out as short-living. " +
 					"It means that we observed this / similar network relations less than %d seconds. If this behaviour is not desired set the " +
@@ -407,9 +408,9 @@ func (c *ConnectionsCheck) formatConnections(
 			HttpObservations:       filteredObservations,
 		})
 
-		connectionProcessedCounter.WithLabelValues("reported").Inc()
 		httpMetricCorrelated += httpMetricsCount
 		httpObservationCorrelated += httpObservationsCount
+		connectionCorrelated++
 
 		// put it in the cache for the next run
 		c.cache.PutNetworkRelationCache(relationID)
@@ -446,15 +447,19 @@ func (c *ConnectionsCheck) formatConnections(
 		unsentNonRootHTTPMetrics = -1
 	}
 
-	httpMetricProcessedCounter.WithLabelValues("no_process").Set(httpMetricNoProcess)
-	httpMetricProcessedCounter.WithLabelValues("relation_short_lived").Set(httpMetricShortLived)
-	httpMetricProcessedCounter.WithLabelValues("correlated").Set(httpMetricCorrelated)
-	httpMetricProcessedCounter.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootHTTPMetrics))
+	httpMetricProcessedGauge.WithLabelValues("no_process").Set(httpMetricNoProcess)
+	httpMetricProcessedGauge.WithLabelValues("relation_short_lived").Set(httpMetricShortLived)
+	httpMetricProcessedGauge.WithLabelValues("correlated").Set(httpMetricCorrelated)
+	httpMetricProcessedGauge.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootHTTPMetrics))
 
-	httpObservationProcessedCounter.WithLabelValues("no_process").Set(httpObservationNoProcess)
-	httpObservationProcessedCounter.WithLabelValues("relation_short_lived").Set(httpObservationShortLived)
-	httpObservationProcessedCounter.WithLabelValues("correlated").Set(httpObservationCorrelated)
-	httpObservationProcessedCounter.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootObservations))
+	httpObservationProcessedGauge.WithLabelValues("no_process").Set(httpObservationNoProcess)
+	httpObservationProcessedGauge.WithLabelValues("relation_short_lived").Set(httpObservationShortLived)
+	httpObservationProcessedGauge.WithLabelValues("correlated").Set(httpObservationCorrelated)
+	httpObservationProcessedGauge.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootObservations))
+
+	connectionProcessedGauge.WithLabelValues("no_process").Set(connectionNoProcess)
+	connectionProcessedGauge.WithLabelValues("relation_short_lived").Set(connectionShortLived)
+	connectionProcessedGauge.WithLabelValues("correlated").Set(connectionCorrelated)
 
 	log.Debugf("Unsent non-root observations: %d, unsent observations: %d", unsentNonRootObservations, len(uncorrelatedObservations))
 

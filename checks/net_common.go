@@ -59,17 +59,11 @@ func endpointKeyNoPort(e *endpointID) string {
 }
 
 // CreateNetworkRelationIdentifier returns an identification for the relation this connection may contribute to
-func CreateNetworkRelationIdentifier(namespace string, conn network.ConnectionStats) (string, error) {
+func CreateNetworkRelationIdentifier(namespace string, conn network.ConnectionStats) string {
 	isV6 := conn.Family == network.AFINET6
-	localEndpoint, err := makeEndpointID(namespace, conn.Source, isV6, conn.SPort)
-	if err != nil {
-		return "", err
-	}
-	remoteEndpoint, err := makeEndpointID(namespace, conn.Dest, isV6, conn.DPort)
-	if err != nil {
-		return "", err
-	}
-	return createRelationIdentifier(localEndpoint, remoteEndpoint, conn.Direction), nil
+	localEndpoint := makeEndpointID(namespace, conn.Source, isV6, conn.SPort)
+	remoteEndpoint := makeEndpointID(namespace, conn.Dest, isV6, conn.DPort)
+	return createRelationIdentifier(localEndpoint, remoteEndpoint, conn.Direction)
 }
 
 // connectionRelationIdentifier returns an identification for the relation this connection may contribute to
@@ -88,8 +82,8 @@ func createRelationIdentifier(localEndpoint, remoteEndpoint *endpointID, directi
 }
 
 // makeEndpointID returns a endpointID if the ip is valid and the hostname as the scope for local ips
-func makeEndpointID(namespace string, addr util.Address, isV6 bool, port uint16) (*endpointID, error) {
-	endpoint := &endpointID{
+func makeEndpointID(namespace string, addr util.Address, isV6 bool, port uint16) *endpointID {
+	return &endpointID{
 		Namespace: namespace,
 		Endpoint: &endpoint{
 			ip: &ip{
@@ -99,8 +93,6 @@ func makeEndpointID(namespace string, addr util.Address, isV6 bool, port uint16)
 			Port: port,
 		},
 	}
-
-	return endpoint, nil
 }
 
 // Represents the namespace part of connection identity. The connection namespace

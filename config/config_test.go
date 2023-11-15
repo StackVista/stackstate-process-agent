@@ -605,7 +605,7 @@ func TestStackStateMaxHttpStatsBufferPresent(t *testing.T) {
 	err := yaml.Unmarshal(
 		[]byte(`
 network_tracer_config:
-  http_stats_buffer_size: '200000'
+  http_stats_buffer_size: 200000
 `), &ddy)
 	assert.NoError(err)
 

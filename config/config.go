@@ -42,6 +42,8 @@ type NetworkTracerConfig struct {
 	EnableHTTPTracing bool
 	// Max number of http stats buffered
 	MaxHTTPStatsBuffered int
+	// Max number of http observations buffered
+	MaxHTTPObservationsBuffered int
 }
 
 // APIEndpoint is a single endpoint where process data will be submitted.
@@ -213,11 +215,12 @@ func NewDefaultAgentConfig() *AgentConfig {
 		NetworkTracerInitRetryDuration: 5 * time.Second,
 		NetworkTracerInitRetryAmount:   3,
 		NetworkTracer: &NetworkTracerConfig{
-			EnableProtocolInspection: true,
-			EbpfDebuglogEnabled:      false,
-			EbpfArtifactDir:          "/opt/stackstate-agent/ebpf",
-			EnableHTTPTracing:        false,
-			MaxHTTPStatsBuffered:     100000,
+			EnableProtocolInspection:    true,
+			EbpfDebuglogEnabled:         false,
+			EbpfArtifactDir:             "/opt/stackstate-agent/ebpf",
+			EnableHTTPTracing:           false,
+			MaxHTTPStatsBuffered:        100000,
+			MaxHTTPObservationsBuffered: 100000,
 		},
 
 		// Check config
@@ -478,6 +481,10 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if maxStats, err := strconv.Atoi(os.Getenv("STS_HTTP_STATS_BUFFER_SIZE")); err == nil && maxStats != 0 {
 		c.NetworkTracer.MaxHTTPStatsBuffered = maxStats
+	}
+
+	if maxObs, err := strconv.Atoi(os.Getenv("STS_HTTP_OBS_BUFFER_SIZE")); err == nil && maxObs != 0 {
+		c.NetworkTracer.MaxHTTPObservationsBuffered = maxObs
 	}
 
 	var patterns []string

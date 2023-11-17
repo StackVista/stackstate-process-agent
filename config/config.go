@@ -483,7 +483,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.NetworkTracer.MaxHTTPStatsBuffered = maxStats
 	}
 
-	if maxObs, err := strconv.Atoi(os.Getenv("STS_HTTP_OBS_BUFFER_SIZE")); err == nil && maxObs != 0 {
+	if maxObs, err := strconv.Atoi(os.Getenv("STS_HTTP_OBSERVATIONS_BUFFER_SIZE")); err == nil && maxObs != 0 {
 		c.NetworkTracer.MaxHTTPObservationsBuffered = maxObs
 	}
 

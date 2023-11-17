@@ -674,7 +674,7 @@ func TestEnvOverrides(t *testing.T) {
 	os.Setenv("STS_HTTP_TRACING_ENABLED", "true")
 	os.Setenv("STS_EBPF_DEBUG_LOG_ENABLED", "true")
 	os.Setenv("STS_HTTP_STATS_BUFFER_SIZE", "150000")
-	os.Setenv("STS_HTTP_OBS_BUFFER_SIZE", "160000")
+	os.Setenv("STS_HTTP_OBSERVATIONS_BUFFER_SIZE", "160000")
 
 	agentConfig, _ := NewAgentConfig(nil)
 

@@ -136,8 +136,10 @@ type YamlAgentConfig struct {
 		// A string indicating the enabled state of the protocol inspection.
 		ProtocolInspectionEnabled string `yaml:"protocol_inspection_enabled"`
 		// A string indicating the enabled state of the protocol inspection.
-		HTTPTracingEnabled string `yaml:"http_tracing_enabled"`
-		HTTPMetrics        struct {
+		HTTPTracingEnabled          string `yaml:"http_tracing_enabled"`
+		MaxHTTPStatsBuffered        int    `yaml:"http_stats_buffer_size"`
+		MaxHTTPObservationsBuffered int    `yaml:"http_observations_buffer_size"`
+		HTTPMetrics                 struct {
 			// Specifies which algorithm to use to collapse measurements: collapsing_lowest_dense, collapsing_highest_dense, unbounded
 			SketchType string `yaml:"sketch_type"`
 			// A maximum number of bins of the ddSketch we use to store percentiles
@@ -409,6 +411,12 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	}
 	if httpTracingEnabled, err := isAffirmative(networkConf.Network.HTTPTracingEnabled); err == nil {
 		agentConf.NetworkTracer.EnableHTTPTracing = httpTracingEnabled
+	}
+	if networkConf.Network.MaxHTTPStatsBuffered != 0 {
+		agentConf.NetworkTracer.MaxHTTPStatsBuffered = networkConf.Network.MaxHTTPStatsBuffered
+	}
+	if networkConf.Network.MaxHTTPObservationsBuffered != 0 {
+		agentConf.NetworkTracer.MaxHTTPObservationsBuffered = networkConf.Network.MaxHTTPObservationsBuffered
 	}
 	if networkConf.Network.NetworkMaxConnections != 0 {
 		agentConf.NetworkTracerMaxConnections = networkConf.Network.NetworkMaxConnections

@@ -11,8 +11,7 @@ ENV DOCKER_STS_AGENT=true \
     CURL_CA_BUNDLE=/opt/stackstate-agent/embedded/ssl/certs/cacert.pem
 
 # make sure we have recent dependencies
-RUN apt-get update \
-  # CVE-fixing time!
+RUN apt-get update && apt-get upgrade -y \
   && apt-get install -y util-linux ncurses-bin ncurses-base libncursesw5:amd64 \
   # https://security-tracker.debian.org/tracker/CVE-2018-15686
   && apt-get install -y libudev1 libsystemd0 \

@@ -781,18 +781,19 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time
 
 	for connKey, statsByTags := range regroupedStats {
 		for tagsKey, stats := range statsByTags {
+			data := tagsKey.toMap()
 			requestCount, latencies := aggregateStats(stats)
 			result[connKey] = append(result[connKey],
 				makeConnectionMetricWithNumber(
-					httpRequestsDelta, tagsKey.toMap(),
+					httpRequestsDelta, data,
 					float64(requestCount),
 				),
 				makeConnectionMetricWithNumber(
-					httpRequestsPerSecond, tagsKey.toMap(),
+					httpRequestsPerSecond, data,
 					calculateNormalizedRate(uint64(requestCount), duration),
 				),
 				makeConnectionMetricWithHistogram(
-					httpResponseTime, tagsKey.toMap(),
+					httpResponseTime, data,
 					latencies,
 				),
 			)

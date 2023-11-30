@@ -55,6 +55,8 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		EnableHTTPMonitoring:        cfg.NetworkTracer.EnableProtocolInspection,
 		EnableHTTPSMonitoring:       cfg.NetworkTracer.EnableProtocolInspection,
 		EnableHTTPTracing:           cfg.NetworkTracer.EnableHTTPTracing,
+		ProbeDebugLog:               cfg.NetworkTracer.ProbeDebugLog,
+		ProbeLogBufferSizeBytes:     cfg.NetworkTracer.ProbeLogBufferSizeBytes,
 		MaxHTTPStatsBuffered:        cfg.NetworkTracer.MaxHTTPStatsBuffered,        // 100000,
 		MaxHTTPObservationsBuffered: cfg.NetworkTracer.MaxHTTPObservationsBuffered, // 100000 is the default from datadog
 

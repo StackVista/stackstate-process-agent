@@ -136,9 +136,13 @@ type YamlAgentConfig struct {
 		// A string indicating the enabled state of the protocol inspection.
 		ProtocolInspectionEnabled string `yaml:"protocol_inspection_enabled"`
 		// A string indicating the enabled state of the protocol inspection.
-		HTTPTracingEnabled          string `yaml:"http_tracing_enabled"`
-		MaxHTTPStatsBuffered        int    `yaml:"http_stats_buffer_size"`
-		MaxHTTPObservationsBuffered int    `yaml:"http_observations_buffer_size"`
+		HTTPTracingEnabled string `yaml:"http_tracing_enabled"`
+		// ProbeDebugLog logging when loading probe
+		ProbeDebugLog string `yaml:"probe_debug_log_enabled"`
+		// ProbeLogBufferSizeBytes increase the probe log buffer for debugging purposes
+		ProbeLogBufferSizeBytes     int `yaml:"probe_log_buffer_size_bytes"`
+		MaxHTTPStatsBuffered        int `yaml:"http_stats_buffer_size"`
+		MaxHTTPObservationsBuffered int `yaml:"http_observations_buffer_size"`
 		HTTPMetrics                 struct {
 			// Specifies which algorithm to use to collapse measurements: collapsing_lowest_dense, collapsing_highest_dense, unbounded
 			SketchType string `yaml:"sketch_type"`
@@ -411,6 +415,12 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	}
 	if httpTracingEnabled, err := isAffirmative(networkConf.Network.HTTPTracingEnabled); err == nil {
 		agentConf.NetworkTracer.EnableHTTPTracing = httpTracingEnabled
+	}
+	if probeLogEnabled, err := isAffirmative(networkConf.Network.ProbeDebugLog); err == nil {
+		agentConf.NetworkTracer.ProbeDebugLog = probeLogEnabled
+	}
+	if networkConf.Network.ProbeLogBufferSizeBytes != 0 {
+		agentConf.NetworkTracer.ProbeLogBufferSizeBytes = networkConf.Network.ProbeLogBufferSizeBytes
 	}
 	if networkConf.Network.MaxHTTPStatsBuffered != 0 {
 		agentConf.NetworkTracer.MaxHTTPStatsBuffered = networkConf.Network.MaxHTTPStatsBuffered

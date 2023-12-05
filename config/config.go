@@ -34,8 +34,8 @@ var (
 type NetworkTracerConfig struct {
 	// Enables protocol inspection from eBPF code
 	EnableProtocolInspection bool
-	// Enables redirection of ebpf code debug messages as logs of the process agent
-	EbpfDebuglogEnabled bool
+	// Enables protocol inspection from eBPF code
+	EnableHTTPSInspection bool
 	// Location of the ebpf
 	EbpfArtifactDir string
 	// Enabling http tracing using x-reqeust-id headers
@@ -220,7 +220,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 		NetworkTracerInitRetryAmount:   3,
 		NetworkTracer: &NetworkTracerConfig{
 			EnableProtocolInspection:    true,
-			EbpfDebuglogEnabled:         false,
+			EnableHTTPSInspection:       true,
 			EbpfArtifactDir:             "/opt/stackstate-agent/ebpf",
 			EnableHTTPTracing:           false,
 			ProbeDebugLog:               false,
@@ -481,6 +481,10 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.NetworkTracer.EnableProtocolInspection = ok
 	}
 
+	if ok, err := isAffirmative(os.Getenv("STS_HTTPS_INSPECTION_ENABLED")); err == nil {
+		c.NetworkTracer.EnableHTTPSInspection = ok
+	}
+
 	if ok, err := isAffirmative(os.Getenv("STS_HTTP_TRACING_ENABLED")); err == nil {
 		c.NetworkTracer.EnableHTTPTracing = ok
 	}
@@ -562,10 +566,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if v := os.Getenv("STS_MAX_CONNECTIONS_PER_MESSAGE"); v != "" {
 		maxConnections, _ := strconv.Atoi(v)
 		c.MaxConnectionsPerMessage = maxConnections
-	}
-
-	if ok, _ := isAffirmative(os.Getenv("STS_EBPF_DEBUG_LOG_ENABLED")); ok {
-		c.NetworkTracer.EbpfDebuglogEnabled = true
 	}
 
 	if v, err := strconv.Atoi(os.Getenv("STS_NETWORK_TRACER_INIT_RETRY_AMOUNT")); err == nil {

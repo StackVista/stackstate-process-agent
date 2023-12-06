@@ -53,8 +53,10 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		ProtocolClassificationEnabled: cfg.NetworkTracer.EnableProtocolInspection,
 
 		EnableHTTPMonitoring:        cfg.NetworkTracer.EnableProtocolInspection,
-		EnableHTTPSMonitoring:       cfg.NetworkTracer.EnableProtocolInspection,
+		EnableHTTPSMonitoring:       cfg.NetworkTracer.EnableProtocolInspection && cfg.NetworkTracer.EnableHTTPSInspection,
 		EnableHTTPTracing:           cfg.NetworkTracer.EnableHTTPTracing,
+		ProbeDebugLog:               cfg.NetworkTracer.ProbeDebugLog,
+		ProbeLogBufferSizeBytes:     cfg.NetworkTracer.ProbeLogBufferSizeBytes,
 		MaxHTTPStatsBuffered:        cfg.NetworkTracer.MaxHTTPStatsBuffered,        // 100000,
 		MaxHTTPObservationsBuffered: cfg.NetworkTracer.MaxHTTPObservationsBuffered, // 100000 is the default from datadog
 
@@ -125,7 +127,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 // EBPFConfig creates a config with ebpf-related settings
 func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 	return ebpf.Config{
-		BPFDebug:                 cfg.NetworkTracer.EbpfDebuglogEnabled,
+		BPFDebug:                 false,
 		BPFDir:                   cfg.NetworkTracer.EbpfArtifactDir,
 		JavaDir:                  "", // Dummy value, we do not support java TLS right now (does it work on k8s?)
 		ExcludedBPFLinuxVersions: []string{},

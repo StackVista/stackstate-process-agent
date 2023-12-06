@@ -5,7 +5,6 @@ vendor.new/
 download/
 
 .vscode
-.idea
 .bashrc
 *.exe
 *.syso

@@ -672,7 +672,6 @@ func TestEnvOverrides(t *testing.T) {
 	os.Setenv("STS_PROTOCOL_INSPECTION_ENABLED", "false")
 	os.Setenv("STS_NETWORK_TRACING_ENABLED", "true")
 	os.Setenv("STS_HTTP_TRACING_ENABLED", "true")
-	os.Setenv("STS_EBPF_DEBUG_LOG_ENABLED", "true")
 	os.Setenv("STS_HTTP_STATS_BUFFER_SIZE", "150000")
 	os.Setenv("STS_HTTP_OBSERVATIONS_BUFFER_SIZE", "160000")
 
@@ -683,7 +682,6 @@ func TestEnvOverrides(t *testing.T) {
 	assert.Equal(502, agentConfig.MaxConnectionsPerMessage)
 	assert.Equal(false, agentConfig.NetworkTracer.EnableProtocolInspection)
 	assert.Equal(true, agentConfig.EnableNetworkTracing)
-	assert.Equal(true, agentConfig.NetworkTracer.EbpfDebuglogEnabled)
 	assert.Equal(true, agentConfig.NetworkTracer.EnableHTTPTracing)
 	assert.Equal(150000, agentConfig.NetworkTracer.MaxHTTPStatsBuffered)
 	assert.Equal(160000, agentConfig.NetworkTracer.MaxHTTPObservationsBuffered)

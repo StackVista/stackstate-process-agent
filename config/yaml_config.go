@@ -129,16 +129,20 @@ type YamlAgentConfig struct {
 		NetworkTracerInitRetryDuration int `yaml:"network_tracer_retry_init_duration_sec"`
 		// An integer indicating the amount of retries to use for initializing the network tracer.
 		NetworkTracerInitRetryAmount int `yaml:"network_tracer_retry_init_amount"`
-		// Whenever debugging statements of eBPF code of network tracer should be redirected to the agent log
-		EBPFDebuglogEnabled string `yaml:"ebpf_debuglog_enabled"`
 		// Location of the ebpf code
 		EBPFArtifactDir string `yaml:"ebpf_artifact_dir"`
 		// A string indicating the enabled state of the protocol inspection.
 		ProtocolInspectionEnabled string `yaml:"protocol_inspection_enabled"`
+		// A string indicating the enabled state of https protocol inspection
+		HTTPSInspectionEnabled string `yaml:"https_inspection_enabled"`
 		// A string indicating the enabled state of the protocol inspection.
-		HTTPTracingEnabled          string `yaml:"http_tracing_enabled"`
-		MaxHTTPStatsBuffered        int    `yaml:"http_stats_buffer_size"`
-		MaxHTTPObservationsBuffered int    `yaml:"http_observations_buffer_size"`
+		HTTPTracingEnabled string `yaml:"http_tracing_enabled"`
+		// ProbeDebugLog logging when loading probe
+		ProbeDebugLog string `yaml:"probe_debug_log_enabled"`
+		// ProbeLogBufferSizeBytes increase the probe log buffer for debugging purposes
+		ProbeLogBufferSizeBytes     int `yaml:"probe_log_buffer_size_bytes"`
+		MaxHTTPStatsBuffered        int `yaml:"http_stats_buffer_size"`
+		MaxHTTPObservationsBuffered int `yaml:"http_observations_buffer_size"`
 		HTTPMetrics                 struct {
 			// Specifies which algorithm to use to collapse measurements: collapsing_lowest_dense, collapsing_highest_dense, unbounded
 			SketchType string `yaml:"sketch_type"`
@@ -403,14 +407,20 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	if networkConf.Network.LogFile != "" {
 		agentConf.LogFile = networkConf.Network.LogFile
 	}
-	if enabled, err := isAffirmative(networkConf.Network.EBPFDebuglogEnabled); err == nil {
-		agentConf.NetworkTracer.EbpfDebuglogEnabled = enabled
-	}
 	if protMetrEnabled, err := isAffirmative(networkConf.Network.ProtocolInspectionEnabled); err == nil {
 		agentConf.NetworkTracer.EnableProtocolInspection = protMetrEnabled
 	}
+	if httpsProtEnabled, err := isAffirmative(networkConf.Network.HTTPSInspectionEnabled); err == nil {
+		agentConf.NetworkTracer.EnableHTTPSInspection = httpsProtEnabled
+	}
 	if httpTracingEnabled, err := isAffirmative(networkConf.Network.HTTPTracingEnabled); err == nil {
 		agentConf.NetworkTracer.EnableHTTPTracing = httpTracingEnabled
+	}
+	if probeLogEnabled, err := isAffirmative(networkConf.Network.ProbeDebugLog); err == nil {
+		agentConf.NetworkTracer.ProbeDebugLog = probeLogEnabled
+	}
+	if networkConf.Network.ProbeLogBufferSizeBytes != 0 {
+		agentConf.NetworkTracer.ProbeLogBufferSizeBytes = networkConf.Network.ProbeLogBufferSizeBytes
 	}
 	if networkConf.Network.MaxHTTPStatsBuffered != 0 {
 		agentConf.NetworkTracer.MaxHTTPStatsBuffered = networkConf.Network.MaxHTTPStatsBuffered

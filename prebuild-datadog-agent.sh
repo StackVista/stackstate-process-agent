@@ -136,6 +136,7 @@ runPrebuildInDocker() {
   checkoutSource
 
   docker run \
+    --platform linux/amd64 \ # To run emulated on Apple Silicon
     -e "OUTPUT_USER_ID=$(id -u "${USER}")" \
     -e "OUTPUT_GROUP_ID=$(id -g "${USER}")" \
     -v "$SOURCE_DIR":/source-datadog-agent \

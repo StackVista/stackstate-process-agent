@@ -78,6 +78,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# First make sure all dependencies are downloaded
+echo "Downloading go files"
+go mod download
+
 ALL_ARTIFACTS_DIR="$DIR/prebuild_artifacts"
 GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Dir }}' -m github.com/DataDog/datadog-agent)
 
@@ -136,6 +140,7 @@ runPrebuildInDocker() {
   checkoutSource
 
   docker run \
+    --platform linux/amd64 \
     -e "OUTPUT_USER_ID=$(id -u "${USER}")" \
     -e "OUTPUT_GROUP_ID=$(id -g "${USER}")" \
     -v "$SOURCE_DIR":/source-datadog-agent \

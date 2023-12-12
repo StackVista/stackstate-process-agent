@@ -11,6 +11,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
@@ -106,7 +107,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
 	var clientObservations, serverObservations int
 	for _, conn := range formattedConnections {
-		if conn.Direction == model.ConnectionDirection_incoming || (conn.Direction != model.ConnectionDirection_outgoing && network.IsEphemeralPort(int(conn.Raddr.Port))) {
+		if conn.Direction == model.ConnectionDirection_incoming || (conn.Direction != model.ConnectionDirection_outgoing && network.IsPortInEphemeralRange(network.AFINET, network.TCP, uint16(conn.Raddr.Port)) == network.EphemeralTrue) {
 			serverObservations += len(conn.HttpObservations)
 		} else {
 			clientObservations += len(conn.HttpObservations)
@@ -419,9 +420,9 @@ func (c *ConnectionsCheck) formatConnections(
 	// Figure out which observations were not in the root namespace
 	var unsentNonRootObservations = 0
 	var unsentNonRootHTTPMetrics = 0
-	rootHandle, err := util.GetRootNetNamespace(util.GetProcRoot())
+	rootHandle, err := kernel.GetRootNetNamespace(kernel.ProcFSRoot())
 	if err == nil {
-		ino, err := util.GetInoForNs(rootHandle)
+		ino, err := kernel.GetInoForNs(rootHandle)
 		if err == nil {
 			for k, v := range uncorrelatedObservations {
 				if k.NetNs != ino {
@@ -481,7 +482,7 @@ func getXLatedConnectionKey(conn network.ConnectionStats) connKey {
 	var sport, dport uint16
 
 	connIsIncoming := conn.Direction == network.INCOMING
-	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(sport))
+	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsPortInEphemeralRange(network.AFINET, network.TCP, sport) == network.EphemeralTrue
 
 	if connIsIncoming || connLooksLikeIncoming {
 		saddr, sport = network.GetNATRemoteAddress(conn)
@@ -506,7 +507,7 @@ func getConnectionKey(conn network.ConnectionStats) connKey {
 
 	connIsIncoming := conn.Direction == network.INCOMING
 	// This mimics the logic from the http probe to assign the http server to the non-ephemeral port.
-	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsEphemeralPort(int(conn.SPort))
+	connLooksLikeIncoming := conn.Direction != network.OUTGOING && network.IsPortInEphemeralRange(network.AFINET, network.TCP, conn.SPort) == network.EphemeralTrue
 
 	if connIsIncoming || connLooksLikeIncoming {
 		saddr = conn.Dest
@@ -559,7 +560,7 @@ func getConnectionKeyForStats(key http.Key) connKey {
 	}
 }
 
-func statusCodeClassToString(class int) string {
+func statusCodeClassToString(class uint16) string {
 	switch class {
 	case 100:
 		return "1xx"
@@ -750,15 +751,15 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time
 			connStats = appendStats(connStats, stat, aggStatsKey{
 				statusCode: statusCodeGroup,
 				method:     httpKey.Method.String(),
-				path:       httpKey.Path.Content,
+				path:       httpKey.Path.Content.Get(),
 			})
 		}
 		return connStats
 	}
 
 	for statKey, statsByCode := range httpStats {
-		for statusCodeClass := 100; statusCodeClass <= 500; statusCodeClass += 100 {
-			stat := statsByCode.Stats(statusCodeClass)
+		for statusCodeClass := uint16(100); statusCodeClass <= 500; statusCodeClass += 100 {
+			stat := statsByCode.Data[statusCodeClass]
 			// Okay here it goes. When there is not data, we still want to produce a '0' line, so we produce the empty data.
 			if stat == nil {
 				stat = &http.RequestStat{}

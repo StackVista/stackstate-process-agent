@@ -29,7 +29,7 @@ replace (
 	golang.org/x/net => golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
 )
 
-replace github.com/DataDog/datadog-agent => /home/bram/stackvista/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent2
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20231212150431-3282a0feca68
 
 require (
 	github.com/DataDog/agent-payload/v5 v5.0.97
@@ -191,7 +191,7 @@ require (
 	k8s.io/component-base v0.27.6 // indirect
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
 	k8s.io/metrics v0.27.6 // indirect
-	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
+	k8s.io/utils v0.0.0-20230505201702-9f6742963106
 	sigs.k8s.io/controller-runtime v0.11.2 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
@@ -218,7 +218,6 @@ require (
 	github.com/CycloneDX/cyclonedx-go v0.7.1 // indirect
 	github.com/DataDog/aptly v1.5.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/gohai v0.49.1-rc.1 // indirect
-	github.com/DataDog/datadog-agent/pkg/proto v0.49.1-rc.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.49.1-rc.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/security/secl v0.49.1-rc.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/cgroups v0.49.1-rc.1 // indirect

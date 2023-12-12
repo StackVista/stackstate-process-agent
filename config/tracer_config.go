@@ -3,7 +3,6 @@ package config
 import (
 	"github.com/DataDog/datadog-agent/pkg/ebpf"
 	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
-	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	log "github.com/cihub/seelog"
 	"time"
@@ -22,21 +21,21 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		NPMEnabled:               true,
 		ServiceMonitoringEnabled: true,
 
-		CollectTCPConns:  true,
-		TCPConnTimeout:   2 * time.Minute,
-		TCPClosedTimeout: 1 * time.Second,
+		CollectTCPv4Conns: true,
+		TCPConnTimeout:    2 * time.Minute,
+		TCPClosedTimeout:  1 * time.Second,
 
-		CollectUDPConns:  false,
-		UDPConnTimeout:   defaultUDPTimeoutSeconds * time.Second,
-		UDPStreamTimeout: defaultUDPStreamTimeoutSeconds * time.Second,
+		CollectUDPv4Conns: false,
+		UDPConnTimeout:    defaultUDPTimeoutSeconds * time.Second,
+		UDPStreamTimeout:  defaultUDPStreamTimeoutSeconds * time.Second,
 
-		CollectIPv6Conns:               true,
+		CollectTCPv6Conns:              true,
 		OffsetGuessThreshold:           defaultOffsetThreshold,
 		ExcludedSourceConnections:      map[string][]string{},
 		ExcludedDestinationConnections: map[string][]string{},
 
-		MaxTrackedConnections:          uint(cfg.NetworkTracerMaxConnections),
-		MaxClosedConnectionsBuffered:   cfg.NetworkTracerMaxConnections,
+		MaxTrackedConnections:          uint32(cfg.NetworkTracerMaxConnections),
+		MaxClosedConnectionsBuffered:   uint32(cfg.NetworkTracerMaxConnections),
 		ClosedConnectionFlushThreshold: 0,
 		ClosedChannelSize:              500,
 		MaxConnectionsStateBuffered:    75000,
@@ -52,8 +51,15 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		ProtocolClassificationEnabled: cfg.NetworkTracer.EnableProtocolInspection,
 
-		EnableHTTPMonitoring:        cfg.NetworkTracer.EnableProtocolInspection,
-		EnableHTTPSMonitoring:       cfg.NetworkTracer.EnableProtocolInspection && cfg.NetworkTracer.EnableHTTPSInspection,
+		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection,
+		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableHTTPSInspection,
+
+		EnableKafkaMonitoring:     false,
+		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableHTTPSInspection,
+		EnableIstioMonitoring:     false,
+		EnableGoTLSSupport:        false,
+		EnableJavaTLSSupport:      false,
+
 		EnableHTTPTracing:           cfg.NetworkTracer.EnableHTTPTracing,
 		ProbeDebugLog:               cfg.NetworkTracer.ProbeDebugLog,
 		ProbeLogBufferSizeBytes:     cfg.NetworkTracer.ProbeLogBufferSizeBytes,
@@ -82,10 +88,6 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		HTTPMapCleanerInterval: 300 * time.Second,
 		HTTPIdleConnectionTTL:  30 * time.Second,
-
-		// Service Monitoring
-		EnableJavaTLSSupport: false,
-		EnableGoTLSSupport:   false,
 	}
 
 	if c.HTTPNotificationThreshold >= c.MaxTrackedHTTPConnections {
@@ -101,16 +103,16 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 	}
 
 	if !kernel.IsIPv6Enabled() {
-		c.CollectIPv6Conns = false
+		c.CollectTCPv6Conns = false
 		log.Info("network tracer IPv6 tracing disabled by system")
-	} else if !c.CollectIPv6Conns {
+	} else if !c.CollectTCPv6Conns {
 		log.Info("network tracer IPv6 tracing disabled by configuration")
 	}
 
-	if !c.CollectUDPConns {
+	if !c.CollectUDPv4Conns {
 		log.Info("network tracer UDP tracing disabled by configuration")
 	}
-	if !c.CollectTCPConns {
+	if !c.CollectTCPv4Conns {
 		log.Info("network tracer TCP tracing disabled by configuration")
 	}
 	if !c.DNSInspection {
@@ -132,7 +134,7 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 		JavaDir:                  "", // Dummy value, we do not support java TLS right now (does it work on k8s?)
 		ExcludedBPFLinuxVersions: []string{},
 		EnableTracepoints:        false,
-		ProcRoot:                 util.GetProcRoot(),
+		ProcRoot:                 kernel.ProcFSRoot(),
 
 		EnableCORE: true,
 		BTFPath:    "", // No btf support for now

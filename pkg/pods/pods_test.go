@@ -98,6 +98,10 @@ func (k *kubeutilMock) GetLocalPodList(_ context.Context) ([]*kubelet.Pod, error
 	return k.pods, nil
 }
 
+func (k *kubeutilMock) GetLocalPodListWithMetadata(_ context.Context) (*kubelet.PodList, error) {
+	panic("implement me")
+}
+
 func (k *kubeutilMock) GetLocalStatsSummary(_ context.Context) (*kubeletv1alpha1.Summary, error) {
 	//TODO implement me
 	panic("implement me")
@@ -114,7 +118,7 @@ func (k *kubeutilMock) GetNodename(_ context.Context) (string, error) {
 	panic("implement me")
 }
 
-func (k *kubeutilMock) ForceGetLocalPodList(_ context.Context) ([]*kubelet.Pod, error) {
+func (k *kubeutilMock) ForceGetLocalPodList(_ context.Context) (*kubelet.PodList, error) {
 	//TODO implement me
 	panic("implement me")
 }

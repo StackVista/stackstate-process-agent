@@ -110,7 +110,7 @@ else
 fi
 
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/artifacts/$DEPENDENCY_VERSION"
-DOCKER_IMAGE=artifactory.tooling.stackstate.io/docker-virtual/stackstate/datadog_build_system-probe_x64:5151a592
+DOCKER_IMAGE=system_probe_datadog_main:latest
 
 checkoutSource() {
   if [ ! -d "$SOURCE_DIR" ]; then

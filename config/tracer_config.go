@@ -52,7 +52,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		ProtocolClassificationEnabled: cfg.NetworkTracer.EnableProtocolInspection,
 
 		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection,
-		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableHTTPSInspection,
+		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && cfg.NetworkTracer.EnableHTTPSInspection,
 
 		EnableKafkaMonitoring:     false,
 		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableHTTPSInspection,
@@ -67,10 +67,12 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		MaxHTTPObservationsBuffered: cfg.NetworkTracer.MaxHTTPObservationsBuffered, // 100000 is the default from datadog
 
 		MaxTrackedHTTPConnections: 1024,
+		MaxUSMConcurrentRequests:  1024,
 		HTTPNotificationThreshold: 512,
 		HTTPMaxRequestFragment:    160,
 
 		EnableConntrack:              true,
+		EnableEbpfConntracker:        true,
 		ConntrackMaxStateSize:        131072,
 		ConntrackRateLimit:           500,
 		ConntrackRateLimitInterval:   3 * time.Second,
@@ -136,7 +138,7 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 		EnableTracepoints:        false,
 		ProcRoot:                 kernel.ProcFSRoot(),
 
-		EnableCORE: true,
+		EnableCORE: false,
 		BTFPath:    "", // No btf support for now
 
 		// Runtime compilation is disabled for now

@@ -3,4 +3,4 @@
 # This script launches into a docker container with the current directory mounted to debug builds
 set -x
 
-docker run -v "$PWD:/source" -it quay.io/stackstate/datadog_build_deb_x64:stac-20573 bash
+docker run -v "$PWD:/source" -it quay.io/stackstate/datadog_build_deb_x64:c3847b73 bash

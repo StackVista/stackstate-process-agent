@@ -218,6 +218,7 @@ require (
 	github.com/CycloneDX/cyclonedx-go v0.7.1 // indirect
 	github.com/DataDog/aptly v1.5.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/gohai v0.49.1-rc.1 // indirect
+	github.com/DataDog/datadog-agent/pkg/proto v0.49.1-rc.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.49.1-rc.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/security/secl v0.49.1-rc.1 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/cgroups v0.49.1-rc.1 // indirect

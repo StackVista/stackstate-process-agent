@@ -52,7 +52,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		ProtocolClassificationEnabled: cfg.NetworkTracer.EnableProtocolInspection,
 
 		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection,
-		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && cfg.NetworkTracer.EnableHTTPSInspection,
+		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection,
 
 		EnableKafkaMonitoring:     false,
 		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableHTTPSInspection,

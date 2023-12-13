@@ -48,6 +48,8 @@ dependencies:
   extends: [ .linux_builder, .go_process_agent_cache ]
   stage: prebuild
   needs: []
+  tags:
+    - sts-k8s-xl-runner
   script:
     - mkdir -p .go
     - go mod download

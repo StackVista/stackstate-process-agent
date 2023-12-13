@@ -69,6 +69,8 @@ prebuild_agent:
   stage: prebuild
   needs: [ dependencies ]
   image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:stac-20573
+  tags:
+    - sts-k8s-xl-runner
   script:
     - ./prebuild-datadog-agent.sh --generate-no-docker
   artifacts:
@@ -98,6 +100,8 @@ build_linux:
       - $CI_PROJECT_DIR/process-agent
       - $CI_PROJECT_DIR/ebpf-object-files
     expire_in: 2 week
+  tags:
+    - sts-k8s-xl-runner
   retry:
     max: 2
     when:
@@ -110,6 +114,8 @@ test:
   script:
     - printenv
     - rake ci
+  tags:
+    - sts-k8s-xl-runner
   retry:
     max: 2
     when:

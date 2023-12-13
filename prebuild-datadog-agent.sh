@@ -110,7 +110,7 @@ else
 fi
 
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/artifacts/$DEPENDENCY_VERSION"
-DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:stac-20573
+DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:c3847b73
 
 checkoutSource() {
   if [ ! -d "$SOURCE_DIR" ]; then

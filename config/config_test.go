@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/process/util"
-
 	"github.com/DataDog/gopsutil/process"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
@@ -347,7 +345,7 @@ func TestDefaultConfig(t *testing.T) {
 
 	os.Setenv("DOCKER_STS_AGENT", "yes")
 	agentConfig = NewDefaultAgentConfig()
-	if util.PathExists("/host") {
+	if pathExists("/host") {
 		assert.Equal(os.Getenv("HOST_PROC"), "/host/proc")
 		assert.Equal(os.Getenv("HOST_SYS"), "/host/sys")
 	} else {

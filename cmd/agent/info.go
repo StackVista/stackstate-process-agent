@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 )
@@ -149,9 +148,14 @@ func publishQueueSize() interface{} {
 	return infoQueueSize
 }
 
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
+}
+
 func publishContainerID() interface{} {
 	cgroupFile := "/proc/self/cgroup"
-	if !util.PathExists(cgroupFile) {
+	if pathExists(cgroupFile) {
 		return nil
 	}
 	f, err := os.Open(cgroupFile)

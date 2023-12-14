@@ -2,14 +2,13 @@ package config
 
 import (
 	"fmt"
+	"github.com/DataDog/datadog-agent/pkg/util/filesystem"
 	"net/url"
 	"strings"
 	"time"
 
 	log "github.com/cihub/seelog"
 	"gopkg.in/yaml.v2"
-
-	"github.com/DataDog/datadog-agent/pkg/process/util"
 )
 
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration
@@ -189,8 +188,8 @@ func NewYamlIfExists(configPath string) (*YamlAgentConfig, error) {
 	defaultNewArgs := true
 	yamlConf.Process.Windows.AddNewArgs = &defaultNewArgs
 
-	if util.PathExists(configPath) {
-		lines, err := util.ReadLines(configPath)
+	if pathExists(configPath) {
+		lines, err := filesystem.ReadLines(configPath)
 		if err != nil {
 			return nil, fmt.Errorf("read error: %s", err)
 		}

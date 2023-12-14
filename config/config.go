@@ -8,6 +8,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/hostname"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
+	"k8s.io/utils/strings/slices"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/process/util"
 	log "github.com/cihub/seelog"
 )
 
@@ -148,7 +148,7 @@ type AgentConfig struct {
 
 // CheckIsEnabled returns a bool indicating if the given check name is enabled.
 func (a AgentConfig) CheckIsEnabled(checkName string) bool {
-	return util.StringInSlice(a.EnabledChecks, checkName)
+	return slices.Contains(a.EnabledChecks, checkName)
 }
 
 // CheckInterval returns the interval for the given check name, defaulting to 10s if not found.
@@ -259,7 +259,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 	// Set default values for proc/sys paths if unset.
 	// Don't set this is /host is not mounted to use context within container.
 	// Generally only applicable for container-only cases like Fargate.
-	if IsContainerized() && util.PathExists("/host") {
+	if IsContainerized() && pathExists("/host") {
 		if v := os.Getenv("HOST_PROC"); v == "" {
 			os.Setenv("HOST_PROC", "/host/proc")
 		}
@@ -273,6 +273,11 @@ func NewDefaultAgentConfig() *AgentConfig {
 	}
 
 	return ac
+}
+
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }
 
 func isRunningInKubernetes() bool {

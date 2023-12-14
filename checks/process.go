@@ -4,6 +4,7 @@ package checks
 
 import (
 	ddmodel "github.com/DataDog/agent-payload/v5/process"
+	"github.com/DataDog/datadog-agent/pkg/process/util/containers"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
@@ -11,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
 	"github.com/StackVista/stackstate-process-agent/config"
@@ -31,7 +31,7 @@ type ProcessCheck struct {
 
 	sysInfo      *model.SystemInfo
 	lastCPUTime  cpu.TimesStat
-	lastCtrRates map[string]*util.ContainerRateMetrics
+	lastCtrRates map[string]*containers.ContainerRateMetrics
 	lastRun      time.Time
 
 	// Last time we did a refresh of the published processes/containers
@@ -109,10 +109,10 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 
 	// Retrieve containers
 	var ctrList []*ddmodel.Container
-	var lastRates map[string]*util.ContainerRateMetrics
+	var lastRates map[string]*containers.ContainerRateMetrics
 	var cntError error
 	var pidToCid map[int]string
-	ctrList, lastRates, pidToCid, cntError = util.GetSharedContainerProvider().GetContainers(2*time.Second, p.lastCtrRates)
+	ctrList, lastRates, pidToCid, cntError = containers.GetSharedContainerProvider().GetContainers(2*time.Second, p.lastCtrRates)
 	if cntError == nil {
 		p.lastCtrRates = lastRates
 	} else {

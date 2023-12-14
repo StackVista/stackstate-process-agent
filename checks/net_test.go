@@ -666,11 +666,11 @@ func TestHTTPAggregation_SingleReq(t *testing.T) {
 
 	conn1req1 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", true, http.MethodGet)
+		[]byte("/page"), true, http.MethodGet, 0)
 
 	conn1Key := getConnectionKeyForStats(conn1req1)
 
-	var stats http.RequestStats
+	var stats = http.NewRequestStats(true)
 	stats.AddRequest(200, msToNs(100.0), 0, nil)
 	stats.AddRequest(400, msToNs(2.0), 0, nil)
 	stats.AddRequest(400, msToNs(4.0), 0, nil)
@@ -678,7 +678,7 @@ func TestHTTPAggregation_SingleReq(t *testing.T) {
 	stats.AddRequest(400, msToNs(8.0), 0, nil)
 
 	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
-		conn1req1: &stats,
+		conn1req1: stats,
 	}, 2*time.Second, true)
 
 	assert.Len(t, metrics, 1)
@@ -727,19 +727,19 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 
 	conn1req1 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", true, http.MethodGet)
+		[]byte("/page"), true, http.MethodGet, 0)
 	conn1req2 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", true, http.MethodPost)
+		[]byte("/page"), true, http.MethodPost, 0)
 	conn1req3 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/otherpath", true, http.MethodGet)
+		[]byte("/otherpath"), true, http.MethodGet, 0)
 	conn2req4 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
-		"/page", true, http.MethodGet)
+		[]byte("/page"), true, http.MethodGet, 0)
 	conn2req5 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
-		"/page", true, http.MethodPost)
+		[]byte("/page"), true, http.MethodPost, 0)
 
 	conn1Key := getConnectionKeyForStats(conn1req1)
 	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req2))
@@ -748,7 +748,10 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 	assert.Equal(t, conn2Key, getConnectionKeyForStats(conn2req5))
 	assert.NotEqual(t, conn1Key, conn2Key)
 
-	var conn1req2Stats, conn1req3Stats, conn1req1Stats, conn2req4Stats http.RequestStats
+	conn1req2Stats := http.NewRequestStats(true)
+	conn1req3Stats := http.NewRequestStats(true)
+	conn1req1Stats := http.NewRequestStats(true)
+	conn2req4Stats := http.NewRequestStats(true)
 
 	conn1req2Stats.AddRequest(300, msToNs(90000), 0, nil)
 	conn1req2Stats.AddRequest(500, msToNs(60000), 0, nil)
@@ -780,10 +783,10 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 	conn2req4Stats.AddRequest(400, msToNs(24000), 0, nil)
 
 	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
-		conn1req2: &conn1req2Stats,
-		conn1req3: &conn1req3Stats,
-		conn1req1: &conn1req1Stats,
-		conn2req4: &conn2req4Stats,
+		conn1req2: conn1req2Stats,
+		conn1req3: conn1req3Stats,
+		conn1req1: conn1req1Stats,
+		conn2req4: conn2req4Stats,
 	}, 2*time.Second, true)
 
 	assert.Equal(t, len(metrics), 2)
@@ -878,19 +881,19 @@ func TestHTTPObservations(t *testing.T) {
 
 	conn1req1 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", true, http.MethodGet)
+		[]byte("/page"), true, http.MethodGet, 0)
 	conn1req2 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", true, http.MethodPost)
+		[]byte("/page"), true, http.MethodPost, 0)
 	conn1req3 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/otherpath", true, http.MethodGet)
+		[]byte("/otherpath"), true, http.MethodGet, 0)
 	conn2req4 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
-		"/page", true, http.MethodGet)
+		[]byte("/page"), true, http.MethodGet, 0)
 	conn2req5 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
-		"/page", true, http.MethodPost)
+		[]byte("/page"), true, http.MethodPost, 0)
 
 	conn1Key := getConnectionKeyForStats(conn1req1)
 	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req2))
@@ -1008,11 +1011,11 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 
 	conn1req1 := http.NewKey(
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
-		"/page", true, http.MethodGet)
+		[]byte("/page"), true, http.MethodGet, 0)
 
 	conn1Key := getConnectionKeyForStats(conn1req1)
 
-	var conn1req1Stats http.RequestStats
+	conn1req1Stats := http.NewRequestStats(true)
 	conn1req1Stats.AddRequest(200, msToNs(100), 0, nil)
 	conn1req1Stats.AddRequest(400, msToNs(2), 0, nil)
 	conn1req1Stats.AddRequest(400, msToNs(4), 0, nil)
@@ -1020,7 +1023,7 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 	conn1req1Stats.AddRequest(400, msToNs(8), 0, nil)
 
 	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
-		conn1req1: &conn1req1Stats,
+		conn1req1: conn1req1Stats,
 	}, 2*time.Second, false)
 
 	assert.Len(t, metrics, 1)

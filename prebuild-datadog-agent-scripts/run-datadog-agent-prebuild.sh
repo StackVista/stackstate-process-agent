@@ -4,27 +4,27 @@
 
 set -ex
 
-if [ "$1" = "rerun" ]; then
-  rm -rf "$WORKDIR" || true
+if ! type "rsync" > /dev/null; then
+  apt install rsync -y --no-install-recommends
 fi
 
 # This command assumes the datadog agent to be mounted at /source-datadog-agent. To avoid outputting to that directory,
 # we make a clone before running any commands
-mkdir $WORKDIR
-cp -a "$SOURCEDIR"/. $WORKDIR
+mkdir -p $WORKDIR
+rsync -au "$SOURCEDIR"/. $WORKDIR
 chown -R root:root $WORKDIR
 cd $WORKDIR
 
 # Adding a faux tag to make the build pass on the rpo with no tags
 git config user.email "you@example.com"
 git config user.name "Your Name"
-git tag -a 7.0.0 -m 7.0.0
+git tag -a 7.0.0 -m 7.0.0 || true
 
 # This command will create system-probe. Running the go:generate as well as invoking the precompilation of the ebpf files
 invoke system-probe.build
 
-llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/http-debug.o > $OUTPUTDIR/dump_debug.txt
-llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/http.o > $OUTPUTDIR/dump.txt
+llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm-debug.o > $OUTPUTDIR/usm_debug.txt
+llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm.o > $OUTPUTDIR/usm.txt
 
 # Output the generated gofiles (including relative paths) to the output directory
 mkdir -p "$OUTPUTDIR/gofiles"

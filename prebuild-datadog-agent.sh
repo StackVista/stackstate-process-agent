@@ -110,7 +110,7 @@ else
 fi
 
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/artifacts/$DEPENDENCY_VERSION"
-DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:c3847b73
+DOCKER_IMAGE=local-system-probee
 
 checkoutSource() {
   if [ ! -d "$SOURCE_DIR" ]; then
@@ -199,7 +199,7 @@ if [ "$ACTION" = "generate" ]; then
   runPrebuildInDocker /scripts/run-datadog-agent-prebuild.sh
 elif [ "$ACTION" = "generate-no-docker" ]; then
   echo "Generating code in the current environment"
-  if [ -d "$DEPENDENCY_ARTIFACTS_DIR" ]; then
+  if [ ! -z $(ls -A "$DEPENDENCY_ARTIFACTS_DIR") ]; then
     echo "Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
     exit 0
   fi
@@ -245,9 +245,11 @@ elif [ "$ACTION" = "install-ebpf-root" ]; then
   sudo chown -R root:root "$DIR/ebpf-object-files-root/"
   set +x
 elif [ "$ACTION" = "clean" ]; then
-  echo "Cleaning prebuild files from $PREBUILD_ARTIFACTS_DIR"
-  # Only delete contents, otherwise the container loses the reference to the directory
-  rm -rf "$ALL_ARTIFACTS_DIR/*"
+  echo "Cleaning prebuild files from $ALL_ARTIFACTS_DIR"
+
+  docker rm -f datadog-prebuild-container
+
+  rm -rf $ALL_ARTIFACTS_DIR/*
   rm -rf ebpf-object-files
 
   if [ -d "$DIR/ebpf-object-files-root/" ]; then

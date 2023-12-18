@@ -135,16 +135,22 @@ runPrebuildNoDocker() {
   set +x
 }
 
-runPrebuildInDocker() {
+createPrebuildDockerContainer() {
   set -x
-  checkoutSource
+
+  # Remove the container if it exists
+  # Clean up any stopped (or failed) containers
+  docker rm -f datadog-prebuild-container || true
 
   docker run \
+    -d \
+    --name datadog-prebuild-container \
     --platform linux/amd64 \
     -e "OUTPUT_USER_ID=$(id -u "${USER}")" \
     -e "OUTPUT_GROUP_ID=$(id -g "${USER}")" \
     -v "$SOURCE_DIR":/source-datadog-agent \
     -e SOURCEDIR="/source-datadog-agent" \
+    -e DD_ENABLE_RUNTIME_COMPILER=true \
     -v "$DEPENDENCY_ARTIFACTS_DIR":/output \
     -e OUTPUTDIR="/output" \
     -e WORKDIR="/workdir-datadog-agent" \
@@ -156,6 +162,28 @@ runPrebuildInDocker() {
     --privileged \
     --pid host \
     --cap-add all \
+    "$DOCKER_IMAGE" \
+    sleep infinity
+  set +x
+}
+
+runPrebuildInDocker() {
+  # Create a docker container if it does not exist yet
+  # Runs in the context of the current directory
+  # You are responsible for cleaning up the container
+  set -x
+  checkoutSource
+
+   # Check if a docker container exists with the name datadog-prebuild-container
+  # This is supposed to be in the running state
+  if [ "$(docker ps -q -f name=datadog-prebuild-container)" = "" ]; then
+    echo "No prebuild container found, creating"
+    createPrebuildDockerContainer
+  fi
+
+  docker exec \
+    -it \
+    datadog-prebuild-container \
     "$@"
   set +x
 }
@@ -168,7 +196,7 @@ if [ "$ACTION" = "generate" ]; then
   fi
 
   mkdir -p "$DEPENDENCY_ARTIFACTS_DIR"
-  runPrebuildInDocker "$DOCKER_IMAGE" /scripts/run-datadog-agent-prebuild.sh
+  runPrebuildInDocker /scripts/run-datadog-agent-prebuild.sh
 elif [ "$ACTION" = "generate-no-docker" ]; then
   echo "Generating code in the current environment"
   if [ -d "$DEPENDENCY_ARTIFACTS_DIR" ]; then
@@ -218,7 +246,8 @@ elif [ "$ACTION" = "install-ebpf-root" ]; then
   set +x
 elif [ "$ACTION" = "clean" ]; then
   echo "Cleaning prebuild files from $PREBUILD_ARTIFACTS_DIR"
-  rm -rf "$ALL_ARTIFACTS_DIR"
+  # Only delete contents, otherwise the container loses the reference to the directory
+  rm -rf "$ALL_ARTIFACTS_DIR/*"
   rm -rf ebpf-object-files
 
   if [ -d "$DIR/ebpf-object-files-root/" ]; then
@@ -226,11 +255,11 @@ elif [ "$ACTION" = "clean" ]; then
   fi
 elif [ "$ACTION" = "test" ]; then
   echo "Running tests"
-  runPrebuildInDocker "$DOCKER_IMAGE" /scripts/run-datadog-agent-test.sh
-elif [ "$ACTION" = "shell" ]; then
+  runPrebuildInDocker /scripts/run-datadog-agent-test.sh
   echo "Launching generate shell"
+elif [ "$ACTION" = "shell" ]; then
   echo "From the shell it is possible to run the scripts in the /scripts directory to regenerate artifacts or run tests."
-  runPrebuildInDocker -it "$DOCKER_IMAGE" /bin/bash
+  runPrebuildInDocker /bin/bash
 elif [ -z "$ACTION" ]; then
   echo "No argument was passed"
   printUsage

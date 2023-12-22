@@ -6,10 +6,6 @@ set -ex
 
 apt update
 
-# Required for runtime eBPF compilation
-# The headers need to match the kernel version of the host, not the container
-apt install linux-headers-$(uname -r) -y --no-install-recommends
-
 if ! type "rsync" > /dev/null; then
   apt install rsync -y --no-install-recommends
 fi

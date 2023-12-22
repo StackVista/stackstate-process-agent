@@ -30,8 +30,8 @@ git tag -a 7.0.0 -m 7.0.0 || true
 invoke system-probe.build
 
 # Not available if we use runtime compilation
-# llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm-debug.o > $OUTPUTDIR/usm_debug.txt
-# llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm.o > $OUTPUTDIR/usm.txt
+llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm-debug.o > $OUTPUTDIR/usm_debug.txt
+llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm.o > $OUTPUTDIR/usm.txt
 
 # Output the generated gofiles (including relative paths) to the output directory
 ls -lha $OUTPUTDIR

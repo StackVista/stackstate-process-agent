@@ -3,10 +3,10 @@
 # Actual docker image construction #
 ####################################
 
-FROM ubuntu:jammy-20230308
+FROM ubuntu
 LABEL maintainer="StackState <info@stackstate.com>"
 ENV DOCKER_STS_AGENT=true \
-	DOCKER_DD_AGENT=true \
+    DOCKER_DD_AGENT=true \
     PATH=/opt/stackstate-agent/bin/agent/:/opt/stackstate-agent/embedded/bin/:$PATH \
     CURL_CA_BUNDLE=/opt/stackstate-agent/embedded/ssl/certs/cacert.pem
 
@@ -16,6 +16,8 @@ RUN apt-get update && apt-get upgrade -y \
   # https://security-tracker.debian.org/tracker/CVE-2018-15686
   && apt-get install -y libudev1 libsystemd0 \
   && apt-get install -y ca-certificates \
+  && apt-get install -y wget \
+  && apt-get install -y clang-14 \
   # https://security-tracker.debian.org/tracker/CVE-2016-2779
   && rm -f /usr/sbin/runuser \
   # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-6954
@@ -49,6 +51,10 @@ RUN  adduser --system --no-create-home --disabled-password --ingroup root stacks
 COPY ebpf-object-files /opt/stackstate-agent/ebpf
 ENV STS_SYSTEM_PROBE_BPF_DIR /opt/stackstate-agent/ebpf
 ENV DD_SYSTEM_PROBE_BPF_DIR /opt/stackstate-agent/ebpf
+
+RUN mkdir -p /opt/datadog-agent/embedded/bin/
+RUN ln -s $(which clang-14) /opt/datadog-agent/embedded/bin/clang-bpf
+RUN ln -s $(which llc-14) /opt/datadog-agent/embedded/bin/llc-bpf
 
 #   - copy default config files
 COPY DockerFiles/agent/stackstate*.yaml /etc/stackstate-agent/

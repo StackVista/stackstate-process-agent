@@ -80,3 +80,5 @@ process_config:
 network_tracer_config:
   network_tracing_enabled: 'true'
   initial_connections_from_proc: 'true'
+system_probe_config:
+  enable_runtime_compiler: 'true'

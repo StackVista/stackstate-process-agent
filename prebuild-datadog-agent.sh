@@ -79,8 +79,8 @@ while [ $# -gt 0 ]; do
 done
 
 # First make sure all dependencies are downloaded
-echo "Downloading go files"
-go mod download
+# echo "Downloading go files"
+# go mod download
 
 ALL_ARTIFACTS_DIR="$DIR/prebuild_artifacts"
 GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Dir }}' -m github.com/DataDog/datadog-agent)

@@ -153,7 +153,7 @@ runPrebuildInDocker() {
     -e HOST_PROC=/host/proc \
     -v /sys:/host/sys \
     -e HOST_SYS=/host/sys \
-    -v /etc:/host/etc \
+    -v /etc:/host/etc:ro \
     -e HOST_ETC=/host/etc \
     --privileged \
     --pid host \

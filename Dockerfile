@@ -16,15 +16,26 @@ RUN apt-get update && apt-get upgrade -y \
   # https://security-tracker.debian.org/tracker/CVE-2018-15686
   && apt-get install -y libudev1 libsystemd0 \
   && apt-get install -y ca-certificates \
+  && apt-get install -y curl \
+  && apt-get install -y wget \
+  && apt-get install -y xz-utils \
+  && apt-get install -y iproute2 \
+  && apt-get install -y conntrack \
   # https://security-tracker.debian.org/tracker/CVE-2016-2779
   && rm -f /usr/sbin/runuser \
   # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-6954
   && rm -f /usr/lib/x86_64-linux-gnu/libdb-5.3.so
 
-# useful tools for network debugging
-RUN apt-get install -y iproute2 conntrack
+# install clang from the website since the package manager can change at any time
+RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz" -O /tmp/clang.tar.xz  -o /dev/null
+RUN echo "6b3cc55d3ef413be79785c4dc02828ab3bd6b887872b143e3091692fc6acefe7  /tmp/clang.tar.xz" | sha256sum --check
+RUN mkdir -p /opt/clang
+RUN tar xf /tmp/clang.tar.xz --no-same-owner -C /opt/clang --strip-components=1
+ENV PATH "/opt/clang/bin:${PATH}"
 
-RUN apt-get install -y curl
+RUN mkdir -p /opt/datadog-agent/embedded/bin
+RUN ln -s $(which clang) /opt/datadog-agent/embedded/bin/clang-bpf
+RUN ln -s $(which llc) /opt/datadog-agent/embedded/bin/llc-bpf
 
 # cleanup image's filesystem
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -63,6 +74,5 @@ HEALTHCHECK --interval=2m --timeout=5s --retries=2 \
 
 # Leave following directories RW to allow use of kubernetes readonlyrootfs flag
 VOLUME ["/etc/stackstate-agent", "/var/log/stackstate", "/tmp"]
-
 
 CMD ["/init-process.sh"]

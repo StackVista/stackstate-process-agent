@@ -1,11 +1,12 @@
 package config
 
 import (
+	"time"
+
 	"github.com/DataDog/datadog-agent/pkg/ebpf"
 	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	log "github.com/cihub/seelog"
-	"time"
 )
 
 // TracerConfig creates a config for the network tracer
@@ -71,14 +72,15 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		HTTPNotificationThreshold: 512,
 		HTTPMaxRequestFragment:    160,
 
-		EnableConntrack:              true,
-		EnableEbpfConntracker:        true,
-		ConntrackMaxStateSize:        131072,
-		ConntrackRateLimit:           500,
-		ConntrackRateLimitInterval:   3 * time.Second,
-		EnableConntrackAllNamespaces: true,
-		IgnoreConntrackInitFailure:   false,
-		ConntrackInitTimeout:         10 * time.Second,
+		EnableConntrack:                 true,
+		EnableEbpfConntracker:           true,
+		AllowNetlinkConntrackerFallback: true,
+		ConntrackMaxStateSize:           131072,
+		ConntrackRateLimit:              500,
+		ConntrackRateLimitInterval:      3 * time.Second,
+		EnableConntrackAllNamespaces:    true,
+		IgnoreConntrackInitFailure:      false,
+		ConntrackInitTimeout:            10 * time.Second,
 
 		EnableGatewayLookup: true,
 
@@ -141,15 +143,14 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 		EnableCORE: false,
 		BTFPath:    "", // No btf support for now
 
-		// Runtime compilation is disabled for now
-		EnableRuntimeCompiler:        false,
-		RuntimeCompilerOutputDir:     "",
-		EnableKernelHeaderDownload:   false,
-		KernelHeadersDirs:            []string{},
-		KernelHeadersDownloadDir:     "",
-		AptConfigDir:                 "",
-		YumReposDir:                  "",
-		ZypperReposDir:               "",
+		EnableRuntimeCompiler:        true,
+		RuntimeCompilerOutputDir:     "/opt/stackstate-agent/runtime-compiler-output",
+		EnableKernelHeaderDownload:   true,
+		KernelHeadersDirs:            []string{"/opt/stackstate-agent/kernel-headers"},
+		KernelHeadersDownloadDir:     "/tmp",
+		AptConfigDir:                 "/etc/apt",
+		YumReposDir:                  "/etc/yum.repos.d",
+		ZypperReposDir:               "/etc/zypp/repos.d",
 		AllowPrecompiledFallback:     false,
 		AllowRuntimeCompiledFallback: false,
 

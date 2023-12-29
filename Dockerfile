@@ -27,15 +27,16 @@ RUN apt-get update && apt-get upgrade -y \
   && rm -f /usr/lib/x86_64-linux-gnu/libdb-5.3.so
 
 # install clang from the website since the package manager can change at any time
-RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz" -O /tmp/clang.tar.xz  -o /dev/null
-RUN echo "6b3cc55d3ef413be79785c4dc02828ab3bd6b887872b143e3091692fc6acefe7  /tmp/clang.tar.xz" | sha256sum --check
-RUN mkdir -p /opt/clang
-RUN tar xf /tmp/clang.tar.xz --no-same-owner -C /opt/clang --strip-components=1
-ENV PATH "/opt/clang/bin:${PATH}"
-
-RUN mkdir -p /opt/datadog-agent/embedded/bin
-RUN ln -s $(which clang) /opt/datadog-agent/embedded/bin/clang-bpf
-RUN ln -s $(which llc) /opt/datadog-agent/embedded/bin/llc-bpf
+# Disabled for now because we do not do runtime compilation, but we might reenable this in the future (for debugging purpose)
+#RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz" -O /tmp/clang.tar.xz  -o /dev/null
+#RUN echo "6b3cc55d3ef413be79785c4dc02828ab3bd6b887872b143e3091692fc6acefe7  /tmp/clang.tar.xz" | sha256sum --check
+#RUN mkdir -p /opt/clang
+#RUN tar xf /tmp/clang.tar.xz --no-same-owner -C /opt/clang --strip-components=1
+#ENV PATH "/opt/clang/bin:${PATH}"
+#
+#RUN mkdir -p /opt/datadog-agent/embedded/bin
+#RUN ln -s $(which clang) /opt/datadog-agent/embedded/bin/clang-bpf
+#RUN ln -s $(which llc) /opt/datadog-agent/embedded/bin/llc-bpf
 
 # cleanup image's filesystem
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

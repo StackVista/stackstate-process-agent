@@ -46,4 +46,4 @@ invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --sk
 # invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --skip-linters  --run="\(^TestHTTPSViaLibraryIntegration\)\|\(^TestHTTPSViaLibraryIntegration\)"
 
 # Run an individual test
-# invoke test --build-include=linux_bpf,test --targets=./pkg/process/monitor/. --cpus=1 --skip-linters --test-run-name="^TestProcessMonitorInNamespace$"
+# invoke test --build-include=linux_bpf,test --targets=./pkg/network/usm/. --cpus=1 --skip-linters --test-run-name="TestHTTP/prebuilt/TestHTTPMonitorInstructionCounts"

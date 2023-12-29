@@ -143,7 +143,7 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 		EnableCORE: false,
 		BTFPath:    "", // No btf support for now
 
-		EnableRuntimeCompiler:        true,
+		EnableRuntimeCompiler:        false,
 		RuntimeCompilerOutputDir:     "/opt/stackstate-agent/runtime-compiler-output",
 		EnableKernelHeaderDownload:   true,
 		KernelHeadersDirs:            []string{"/opt/stackstate-agent/kernel-headers"},
@@ -151,7 +151,7 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 		AptConfigDir:                 "/etc/apt",
 		YumReposDir:                  "/etc/yum.repos.d",
 		ZypperReposDir:               "/etc/zypp/repos.d",
-		AllowPrecompiledFallback:     false,
+		AllowPrecompiledFallback:     true,
 		AllowRuntimeCompiledFallback: false,
 
 		AttachKprobesWithKprobeEventsABI: false,

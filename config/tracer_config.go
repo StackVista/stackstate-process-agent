@@ -145,13 +145,13 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 
 		EnableRuntimeCompiler:        false,
 		RuntimeCompilerOutputDir:     "/opt/stackstate-agent/runtime-compiler-output",
-		EnableKernelHeaderDownload:   true,
+		EnableKernelHeaderDownload:   false,
 		KernelHeadersDirs:            []string{"/opt/stackstate-agent/kernel-headers"},
 		KernelHeadersDownloadDir:     "/tmp",
 		AptConfigDir:                 "/etc/apt",
 		YumReposDir:                  "/etc/yum.repos.d",
 		ZypperReposDir:               "/etc/zypp/repos.d",
-		AllowPrecompiledFallback:     true,
+		AllowPrecompiledFallback:     false,
 		AllowRuntimeCompiledFallback: false,
 
 		AttachKprobesWithKprobeEventsABI: false,

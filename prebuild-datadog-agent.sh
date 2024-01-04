@@ -155,6 +155,8 @@ runPrebuildInDocker() {
     -e HOST_SYS=/host/sys \
     -v /etc:/host/etc:ro \
     -e HOST_ETC=/host/etc \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    --network host \
     --privileged \
     --pid host \
     --cap-add all \

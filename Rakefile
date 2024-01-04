@@ -95,7 +95,7 @@ task :fmt do
 end
 
 task :lint do
-  sh "go install github.com/mgechev/revive@latest"
+  sh "go install github.com/mgechev/revive@v1.3.4"
   packages = `go list ./... | grep -v vendor`.split("\n")
   packages.each do |pkg|
     puts "revive -formatter stylish -config revive-recommended.toml #{pkg}"

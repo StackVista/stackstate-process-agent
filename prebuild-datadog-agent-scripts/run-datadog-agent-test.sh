@@ -8,6 +8,11 @@ if ! type "rsync" > /dev/null; then
   apt install rsync -y --no-install-recommends
 fi
 
+if ! test -f /usr/local/bin/docker-compose; then
+   curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+   chmod +x /usr/local/bin/docker-compose
+fi
+
 # This command assumes the datadog agent to be mounted at /source-datadog-agent. To avoid outputting to that directory,
 # we make a clone before running any commands
 mkdir -p $WORKDIR
@@ -40,6 +45,7 @@ invoke test --build-include=linux_bpf,test --targets=./pkg/network/protocols/htt
 invoke test --build-include=linux_bpf,test --targets=./pkg/process/monitor/. --cpus=1 --skip-linters
 # Only openssl was proven to work, still need to prove gnutls
 invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --skip-linters  --test-run-name="^TestHTTPSObservationViaLibraryIntegration$"
+invoke test --build-include=linux_bpf,test --cpus=1 --targets=./pkg/network/tracer/. --skip-linters --test-run-name="^TestUSMSuite/prebuilt/TestProtocolClassification/without_nat/mongo$"
 
 # Does not work yet, needs runtime compilation
 # invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --skip-linters  --run="^TestHTTPGoTLSAttachProbes$"

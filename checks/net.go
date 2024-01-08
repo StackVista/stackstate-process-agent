@@ -101,7 +101,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 
 	containerToPod := c.podsCache.GetContainerToPodMap(context.TODO())
 
-	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, httpStats, httpObservations, containerToPod)
+	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, httpStats, httpObservations, containerToPod)
 	c.prevCheckTime = currentTime
 
 	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
@@ -247,7 +247,6 @@ func (c *ConnectionsCheck) collectConnPods(processes map[uint32]*model.Process, 
 func (c *ConnectionsCheck) formatConnections(
 	cfg *config.AgentConfig,
 	conns []network.ConnectionStats,
-	prevCheckTimeDiff time.Duration,
 	httpMetrics map[connKey][]*model.ConnectionMetric,
 	httpObservations map[connKey][]*model.HTTPTraceObservation,
 	containerToPod map[string]*kubelet.Pod,
@@ -330,9 +329,8 @@ func (c *ConnectionsCheck) formatConnections(
 		}
 		pidCreateTime := process.CreateTime
 
-		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
-		relationID := CreateNetworkRelationIdentifier(namespace, conn)
-
+		// Filtering for short-lived relations.
+		relationID := CreateNetworkRelationIdentifier(cfg, conn)
 		// Check to see if we have this relation cached and whether we have observed it for the configured time, otherwise skip
 		relationCache, ok := c.cache.IsNetworkRelationCached(relationID)
 		// put it in the cache for the next run
@@ -391,22 +389,19 @@ func (c *ConnectionsCheck) formatConnections(
 		}
 
 		cxs = append(cxs, &model.Connection{
-			Pid:                    int32(conn.Pid),
-			PidCreateTime:          pidCreateTime,
-			Family:                 formatFamily(conn.Family),
-			Type:                   formatType(conn.Type),
-			Laddr:                  localAddr,
-			Raddr:                  remoteAddr,
-			Natladdr:               natladdr,
-			Natraddr:               natraddr,
-			BytesSentPerSecond:     float32(calculateNormalizedRate(conn.Last.SentBytes, prevCheckTimeDiff)),
-			BytesReceivedPerSecond: float32(calculateNormalizedRate(conn.Last.RecvBytes, prevCheckTimeDiff)),
-			Direction:              calculateDirection(conn.Direction),
-			Namespace:              namespace,
-			ConnectionIdentifier:   relationID,
-			ApplicationProtocol:    appProto,
-			Metrics:                metrics,
-			HttpObservations:       filteredObservations,
+			Pid:                 int32(conn.Pid),
+			PidCreateTime:       pidCreateTime,
+			Family:              formatFamily(conn.Family),
+			Type:                formatType(conn.Type),
+			Laddr:               localAddr,
+			Raddr:               remoteAddr,
+			Natladdr:            natladdr,
+			Natraddr:            natraddr,
+			Direction:           calculateDirection(conn.Direction),
+			NetNs:               conn.NetNS,
+			ApplicationProtocol: appProto,
+			Metrics:             metrics,
+			HttpObservations:    filteredObservations,
 		})
 
 		httpMetricCorrelated += httpMetricsCount

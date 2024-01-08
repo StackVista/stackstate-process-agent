@@ -112,25 +112,12 @@ func amendConnectionStats(stats network.ConnectionStats, sent, received uint64) 
 	return stats
 }
 
-func makeConnectionStatsNoNs(pid uint32, local, remote string, localPort, remotePort uint16) network.ConnectionStats {
-	return network.ConnectionStats{
-		Pid:       pid,
-		Type:      network.TCP,
-		Family:    network.AFINET,
-		Direction: network.OUTGOING,
-		Source:    util.AddressFromString(local),
-		SPort:     localPort,
-		Dest:      util.AddressFromString(remote),
-		DPort:     remotePort,
-	}
-}
-
 func TestNetworkRelationCacheExpiration(t *testing.T) {
 	cache := NewNetworkRelationCache(100 * time.Millisecond)
-	hostname := "example.org"
+	cfg := &config.AgentConfig{HostName: "example.org"}
 	addStats := func(conns ...network.ConnectionStats) {
 		for _, conn := range conns {
-			relationID := CreateNetworkRelationIdentifier(hostname, conn)
+			relationID := CreateNetworkRelationIdentifier(cfg, conn)
 			cache.PutNetworkRelationCache(relationID)
 		}
 	}
@@ -183,7 +170,7 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 
 	// fill in the relation cache
 	for _, conn := range connStats {
-		err := fillNetworkRelationCache(cfg.HostName, c.cache, conn, now.Add(-5*time.Minute).Unix(), now.Unix())
+		err := fillNetworkRelationCache(cfg, c.cache, conn, now.Add(-5*time.Minute).Unix(), now.Unix())
 		assert.NoError(t, err)
 	}
 
@@ -195,7 +182,7 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 		// pid 4 filtered by process blacklisting, so we expect no connections for pid 4
 	}
 
-	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
+	connections, _ := c.formatConnections(cfg, connStats, nil, nil, nil)
 
 	assert.Len(t, connections, 3)
 
@@ -225,7 +212,7 @@ func TestPodsIndexFormatted(t *testing.T) {
 
 	// fill in the relation cache
 	for _, conn := range connStats {
-		err := fillNetworkRelationCache(cfg.HostName, c.cache, conn, now.Add(-5*time.Minute).Unix(), now.Unix())
+		err := fillNetworkRelationCache(cfg, c.cache, conn, now.Add(-5*time.Minute).Unix(), now.Unix())
 		assert.NoError(t, err)
 	}
 
@@ -275,7 +262,7 @@ func TestPodsIndexFormatted(t *testing.T) {
 		Pids:      []int32{2, 3},
 	}
 
-	_, podsIndex := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, containerToPod)
+	_, podsIndex := c.formatConnections(cfg, connStats, nil, nil, containerToPod)
 
 	assert.Len(t, podsIndex.pidToPodUID, 3)
 	assert.Equal(t, "pod-a-uid", podsIndex.pidToPodUID[1])
@@ -289,7 +276,7 @@ func TestPodsIndexFormatted(t *testing.T) {
 	assert.Equal(t, expectedPodB, podsIndex.pods["pod-b-uid"])
 }
 
-func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
+func TestNetworkConnectionScopeKubernetes(t *testing.T) {
 	testClusterName := "test-cluster"
 	cfg := config.NewDefaultAgentConfig()
 	cfg.ClusterName = testClusterName
@@ -311,8 +298,7 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 
 	// fill in the relation cache
 	for _, conn := range connStats {
-		namespace := formatNamespace(cfg.ClusterName, cfg.HostName, conn)
-		err := fillNetworkRelationCache(namespace, c.cache, conn, now.Add(-5*time.Minute).Unix(), now.Unix())
+		err := fillNetworkRelationCache(cfg, c.cache, conn, now.Add(-5*time.Minute).Unix(), now.Unix())
 		assert.NoError(t, err)
 	}
 
@@ -324,12 +310,9 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 		4: {Pid: 4, CreateTime: now.Add(-5 * time.Minute).Unix()},
 	}
 
-	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
+	connections, _ := c.formatConnections(cfg, connStats, nil, nil, nil)
 
 	assert.Len(t, connections, 4)
-	for _, c := range connections {
-		assert.Contains(t, c.Namespace, testClusterName)
-	}
 
 	// clear the changes to Process.lastProcState
 	Process.lastProcState = make(map[int32]*model.Process, 0)
@@ -366,7 +349,7 @@ func TestRelationCache(t *testing.T) {
 	assert.Zero(t, c.cache.ItemCount(), "Cache should be empty before running")
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	firstRun, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
+	firstRun, _ := c.formatConnections(cfg, connStats, nil, nil, nil)
 	assert.Zero(t, len(firstRun), "Connections should be empty when the cache is not present")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -374,13 +357,13 @@ func TestRelationCache(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _ := c.formatConnections(cfg, connStats, 10*time.Second, nil, nil, nil)
+	secondRun, _ := c.formatConnections(cfg, connStats, nil, nil, nil)
 	assert.Equal(t, 4, len(secondRun), "Connections should contain 4 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
 	// delete last connection from the connection stats slice, expect it to be excluded from the connection list, but not the cache
 	connStats = connStats[:len(connStats)-1]
-	thirdRun, _ := c.formatConnections(cfg, connStats, 5*time.Second, nil, nil, nil)
+	thirdRun, _ := c.formatConnections(cfg, connStats, nil, nil, nil)
 	assert.Equal(t, 3, len(thirdRun), "Connections should contain 3 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -406,20 +389,6 @@ const (
 	PID2CONN1SEND2 = uint64(13240)
 	PID2CONN1RECV2 = uint64(21320)
 
-	PID1CONN1SEND3 = uint64(123400)
-	PID1CONN1RECV3 = uint64(12300)
-	PID1CONN2SEND3 = uint64(432100)
-	PID1CONN2RECV3 = uint64(143200)
-	PID2CONN1SEND3 = uint64(132400)
-	PID2CONN1RECV3 = uint64(213200)
-
-	PID1CONN1SEND4 = uint64(1234)
-	PID1CONN1RECV4 = uint64(123)
-	PID1CONN2SEND4 = uint64(4321)
-	PID1CONN2RECV4 = uint64(1432)
-	PID2CONN1SEND4 = uint64(1324)
-	PID2CONN1RECV4 = uint64(2132)
-
 	PID1CONN1SEND2DELTA = float64(PID1CONN1SEND2 - PID1CONN1SEND1)
 	PID1CONN2SEND2DELTA = float64(PID1CONN2SEND2 - PID1CONN2SEND1)
 	PID2CONN1SEND2DELTA = float64(PID2CONN1SEND2 - PID2CONN1SEND1)
@@ -427,15 +396,6 @@ const (
 	PID1CONN1RECV2DELTA = float64(PID1CONN1RECV2 - PID1CONN1RECV1)
 	PID1CONN2RECV2DELTA = float64(PID1CONN2RECV2 - PID1CONN2RECV1)
 	PID2CONN1RECV2DELTA = float64(PID2CONN1RECV2 - PID2CONN1RECV1)
-
-	TIME2                = float32(10)
-	PID1CONN1SEND2EXPECT = float32(PID1CONN1SEND2DELTA) / TIME2
-	PID1CONN2SEND2EXPECT = float32(PID1CONN2SEND2DELTA) / TIME2
-	PID2CONN1SEND2EXPECT = float32(PID2CONN1SEND2DELTA) / TIME2
-
-	PID1CONN1RECV2EXPECT = float32(PID1CONN1RECV2DELTA) / TIME2
-	PID1CONN2RECV2EXPECT = float32(PID1CONN2RECV2DELTA) / TIME2
-	PID2CONN1RECV2EXPECT = float32(PID2CONN1RECV2DELTA) / TIME2
 )
 
 func TestRelationCacheOrdering(t *testing.T) {
@@ -473,7 +433,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	}
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
+	c.formatConnections(cfg, connStats, nil, nil, nil)
 
 	connStats = []network.ConnectionStats{
 		amendConnectionStats(connStats[0], PID1CONN1SEND2, PID1CONN1RECV2),
@@ -486,7 +446,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil, nil, nil)
+	secondRun, _ := c.formatConnections(cfg, connStats, nil, nil, nil)
 
 	assert.Equal(t, PID1CONN1SEND2DELTA, getConnectionMetricNumber(t, secondRun[0].Metrics, bytesSentDelta), bytesSentDelta)
 	assert.Equal(t, PID1CONN2SEND2DELTA, getConnectionMetricNumber(t, secondRun[1].Metrics, bytesSentDelta), bytesSentDelta)
@@ -495,14 +455,6 @@ func TestRelationCacheOrdering(t *testing.T) {
 	assert.Equal(t, PID1CONN1RECV2DELTA, getConnectionMetricNumber(t, secondRun[0].Metrics, bytesReceivedDelta), bytesReceivedDelta)
 	assert.Equal(t, PID1CONN2RECV2DELTA, getConnectionMetricNumber(t, secondRun[1].Metrics, bytesReceivedDelta), bytesReceivedDelta)
 	assert.Equal(t, PID2CONN1RECV2DELTA, getConnectionMetricNumber(t, secondRun[2].Metrics, bytesReceivedDelta), bytesReceivedDelta)
-
-	assert.Equal(t, PID1CONN1SEND2EXPECT, secondRun[0].BytesSentPerSecond, "BytesSentPerSecond")
-	assert.Equal(t, PID1CONN2SEND2EXPECT, secondRun[1].BytesSentPerSecond, "BytesSentPerSecond")
-	assert.Equal(t, PID2CONN1SEND2EXPECT, secondRun[2].BytesSentPerSecond, "BytesSentPerSecond")
-
-	assert.Equal(t, PID1CONN1RECV2EXPECT, secondRun[0].BytesReceivedPerSecond, "BytesReceivedPerSecond")
-	assert.Equal(t, PID1CONN2RECV2EXPECT, secondRun[1].BytesReceivedPerSecond, "BytesReceivedPerSecond")
-	assert.Equal(t, PID2CONN1RECV2EXPECT, secondRun[2].BytesReceivedPerSecond, "BytesReceivedPerSecond")
 
 	c.cache.Flush()
 }
@@ -531,7 +483,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			name: fmt.Sprintf("Should not filter a relation that has been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
 			prepCache: func(c *NetworkRelationCache) {
-				err := fillNetworkRelationCache(cfg.HostName, c, connStats[0], lastRun.Add(-5*time.Minute).Unix(), lastRun.Unix())
+				err := fillNetworkRelationCache(cfg, c, connStats[0], lastRun.Add(-5*time.Minute).Unix(), lastRun.Unix())
 				assert.NoError(t, err)
 			},
 			expected:                         true,
@@ -543,7 +495,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			prepCache: func(c *NetworkRelationCache) {
 				// use a "similar" connection; thus we observed a similar connection in the previous run
 				conn := makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 54321, 8080)
-				err := fillNetworkRelationCache(cfg.HostName, c, conn, lastRun.Add(-5*time.Minute).Unix(), lastRun.Unix())
+				err := fillNetworkRelationCache(cfg, c, conn, lastRun.Add(-5*time.Minute).Unix(), lastRun.Unix())
 				assert.NoError(t, err)
 			},
 			expected:                         true,
@@ -553,7 +505,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			name: fmt.Sprintf("Should filter a relation that has not been observed longer than the short-lived qualifier "+
 				"duration: %d", cfg.ShortLivedProcessQualifierSecs),
 			prepCache: func(c *NetworkRelationCache) {
-				err := fillNetworkRelationCache(cfg.HostName, c, connStats[0], lastRun.Add(-5*time.Second).Unix(), lastRun.Unix())
+				err := fillNetworkRelationCache(cfg, c, connStats[0], lastRun.Add(-5*time.Second).Unix(), lastRun.Unix())
 				assert.NoError(t, err)
 			},
 			expected:                         false,
@@ -562,7 +514,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 		{
 			name: fmt.Sprintf("Should not filter a relation when the networkRelationShortLivedEnabled is set to false"),
 			prepCache: func(c *NetworkRelationCache) {
-				err := fillNetworkRelationCache(cfg.HostName, c, connStats[0], lastRun.Add(-5*time.Second).Unix(), lastRun.Unix())
+				err := fillNetworkRelationCache(cfg, c, connStats[0], lastRun.Add(-5*time.Second).Unix(), lastRun.Unix())
 				assert.NoError(t, err)
 			},
 			expected:                         true,
@@ -581,21 +533,20 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			// fill in the relation cache
 			tc.prepCache(c.cache)
 
-			connections, _ := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), nil, nil, nil)
+			connections, _ := c.formatConnections(cfg, connStats, nil, nil, nil)
 			var rIDs []string
-			for _, conn := range connections {
-				rIDs = append(rIDs, conn.ConnectionIdentifier)
+			for _, conn := range connStats {
+				rIDs = append(rIDs, CreateNetworkRelationIdentifier(cfg, conn))
 			}
 
 			conn := connStats[0]
-			relationID := CreateNetworkRelationIdentifier(cfg.HostName, conn)
+			relationID := CreateNetworkRelationIdentifier(cfg, conn)
 
 			if tc.expected {
 				assert.Len(t, connections, 1, "The connection should be present in the returned payload for the Connection Check")
 				assert.Contains(t, rIDs, relationID, "%s should not be filtered from the relation identifiers for the Connection Check", relationID)
 			} else {
 				assert.Len(t, connections, 0, "The connection should be filtered in the returned payload for the Connection Check")
-				assert.NotContains(t, rIDs, relationID, "%s should be filtered from the relation identifiers for the Connection Check", relationID)
 			}
 
 			c.cache.Flush()
@@ -603,17 +554,17 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 	}
 }
 
-func TestFormatNamespace(t *testing.T) {
-	assert.Equal(t, "", formatNamespace("", "h", makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080)))
-	assert.Equal(t, "c", formatNamespace("c", "h", makeProcessConnection(1, "10.0.0.1", "10.0.0.2", 12345, 8080)))
-	assert.Equal(t, "c", formatNamespace("c", "h", makeProcessConnection(1, "127.0.0.1", "10.0.0.2", 12345, 8080)))
-	assert.Equal(t, "c", formatNamespace("c", "h", makeProcessConnection(1, "10.0.0.1", "127.0.0.1", 12345, 8080)))
-	assert.Equal(t, "c:h:1", formatNamespace("c", "h", makeProcessConnection(1, "127.0.0.1", "127.0.0.1", 12345, 8080)))
-	assert.Equal(t, "c:h", formatNamespace("c", "h", makeConnectionStatsNoNs(1, "127.0.0.1", "127.0.0.1", 12345, 8080)))
+func TestMakeAddressScope(t *testing.T) {
+	cfg := &config.AgentConfig{ClusterName: "c", HostName: "h"}
+
+	assert.Equal(t, "", makeAddressScope(cfg, 1, util.AddressFromString("8.8.8.8")))
+	assert.Equal(t, "c", makeAddressScope(cfg, 1, util.AddressFromString("10.0.0.2")))
+	assert.Equal(t, "c:h:1", makeAddressScope(cfg, 1, util.AddressFromString("127.0.0.1")))
+	assert.Equal(t, "c:h", makeAddressScope(cfg, 0, util.AddressFromString("127.0.0.1")))
 }
 
-func fillNetworkRelationCache(hostname string, c *NetworkRelationCache, conn network.ConnectionStats, firstObserved, _ int64) error {
-	relationID := CreateNetworkRelationIdentifier(hostname, conn)
+func fillNetworkRelationCache(cfg *config.AgentConfig, c *NetworkRelationCache, conn network.ConnectionStats, firstObserved, _ int64) error {
+	relationID := CreateNetworkRelationIdentifier(cfg, conn)
 
 	cachedRelation := &NetworkRelationCacheItem{
 		FirstObserved: firstObserved,
@@ -903,7 +854,7 @@ func TestHTTPObservations(t *testing.T) {
 	assert.NotEqual(t, conn1Key, conn2Key)
 
 	observations := aggregateHTTPTraceObservations([]http.TransactionObservation{
-		http.TransactionObservation{
+		{
 			LatencyNs: msToNs(800),
 			Status:    200,
 			Key:       conn1req1,
@@ -912,7 +863,7 @@ func TestHTTPObservations(t *testing.T) {
 				Type: http.TraceIdRequest,
 			},
 		},
-		http.TransactionObservation{
+		{
 			LatencyNs: msToNs(800),
 			Status:    400,
 			Key:       conn1req2,
@@ -921,7 +872,7 @@ func TestHTTPObservations(t *testing.T) {
 				Type: http.TraceIdResponse,
 			},
 		},
-		http.TransactionObservation{
+		{
 			LatencyNs: msToNs(800),
 			Status:    200,
 			Key:       conn1req3,
@@ -930,7 +881,7 @@ func TestHTTPObservations(t *testing.T) {
 				Type: http.TraceIdRequest,
 			},
 		},
-		http.TransactionObservation{
+		{
 			LatencyNs: msToNs(800),
 			Status:    501,
 			Key:       conn2req4,
@@ -939,7 +890,7 @@ func TestHTTPObservations(t *testing.T) {
 				Type: http.TraceIdBoth,
 			},
 		},
-		http.TransactionObservation{
+		{
 			LatencyNs: msToNs(450),
 			Status:    200,
 			Key:       conn2req5,
@@ -948,7 +899,7 @@ func TestHTTPObservations(t *testing.T) {
 				Type: http.TraceIdResponse,
 			},
 		},
-		http.TransactionObservation{
+		{
 			LatencyNs: msToNs(450),
 			Status:    200,
 			Key:       conn2req5,
@@ -964,22 +915,22 @@ func TestHTTPObservations(t *testing.T) {
 
 	// no more metrics for conn1
 	assert.EqualValues(t, map[connKey][]*model.HTTPTraceObservation{
-		conn1Key: []*model.HTTPTraceObservation{
-			&model.HTTPTraceObservation{
+		conn1Key: {
+			{
 				LatencySec:     0.8,
 				TraceDirection: model.TraceDirection_request,
 				TraceId:        []byte("traceId"),
 				Method:         model.HTTPMethod_GET,
 				Response:       200,
 			},
-			&model.HTTPTraceObservation{
+			{
 				LatencySec:     0.8,
 				TraceDirection: model.TraceDirection_response,
 				TraceId:        []byte("traceId"),
 				Method:         model.HTTPMethod_POST,
 				Response:       400,
 			},
-			&model.HTTPTraceObservation{
+			{
 				LatencySec:     0.8,
 				TraceDirection: model.TraceDirection_request,
 				TraceId:        v4trace,
@@ -987,15 +938,15 @@ func TestHTTPObservations(t *testing.T) {
 				Response:       200,
 			},
 		},
-		conn2Key: []*model.HTTPTraceObservation{
-			&model.HTTPTraceObservation{
+		conn2Key: {
+			{
 				LatencySec:     0.8,
 				TraceDirection: model.TraceDirection_both,
 				TraceId:        v1trace,
 				Method:         model.HTTPMethod_GET,
 				Response:       501,
 			},
-			&model.HTTPTraceObservation{
+			{
 				LatencySec:     0.45,
 				TraceDirection: model.TraceDirection_response,
 				TraceId:        v1trace,

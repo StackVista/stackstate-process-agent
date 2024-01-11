@@ -127,7 +127,7 @@ func makeAddressScope(cfg *config.AgentConfig, netNs uint32, addr util.Address) 
 	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
 	var ns = scope{"", "", ""}
 
-	if addr.IsLoopback() {
+	if addr.IsLoopback() || addr.IsLinkLocalUnicast() {
 		// Loopback address, qualify with cluster, host, netns.
 		ns.ClusterName = cfg.ClusterName
 		ns.HostName = cfg.HostName

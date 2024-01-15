@@ -114,7 +114,7 @@ DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:c3847b73
 
 checkoutSource() {
   if [ ! -d "$SOURCE_DIR" ]; then
-    echo "datadog-agent was not cloned, cloning"
+    echo "datadog-agent was not cloned at ${SOURCE_DIR}, cloning"
     mkdir -p "$ALL_ARTIFACTS_DIR/checkout"
     GIT_VERSION=$(echo "$DEPENDENCY_VERSION" | cut -d'-' -f 3)
     (cd "$ALL_ARTIFACTS_DIR/checkout" &&

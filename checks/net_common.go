@@ -41,7 +41,7 @@ type endpointID struct {
 	Endpoint *endpoint
 }
 
-// endpointKey returns a endpointID as namespace:endpoint-ip-address:endpoint-port
+// endpointKey returns a endpointID as scope:endpoint-ip-address:endpoint-port
 func endpointKey(e *endpointID) string {
 	var values []string
 	values = append(values, e.Scope)
@@ -57,7 +57,7 @@ func endpointKey(e *endpointID) string {
 	return strings.Join(values, ":")
 }
 
-// endpointKeyNoPort returns a endpointID as scope:namespace:endpoint-ip-address
+// endpointKeyNoPort returns a endpointID as scope:endpoint-ip-address
 func endpointKeyNoPort(e *endpointID) string {
 	var values []string
 	values = append(values, e.Scope)
@@ -98,8 +98,8 @@ func makeEndpointID(cfg *config.AgentConfig, netNs uint32, addr util.Address, is
 	}
 }
 
-// Represents the namespace part of connection identity. The connection namespace
-// determines its locality (e.g. the scope in which the network resides)
+// Represents the scope part of connection identity. The connection scope
+// determines its locality (e.g. the scope in which a network address resides)
 type scope struct {
 	ClusterName      string
 	HostName         string
@@ -124,7 +124,7 @@ func (ns scope) toString() string {
 // hence we need to add the scope context to make it globally unique. The primary information used for this is the address
 // range (loopback/provate/public) aswell as contextual information that was retrieved or configured (cluster/hostname).
 func makeAddressScope(cfg *config.AgentConfig, netNs uint32, addr util.Address) string {
-	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
+	// check if we're running in kubernetes, prepend the scope with the kubernetes / openshift cluster name
 	var ns = scope{"", "", ""}
 
 	if addr.IsLoopback() || addr.IsLinkLocalUnicast() {

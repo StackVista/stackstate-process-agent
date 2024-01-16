@@ -3,17 +3,18 @@ package checks
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"sort"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/DataDog/sketches-go/ddsketch"
 	"github.com/pborman/uuid"
-	"math"
-	"sort"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/patrickmn/go-cache"
 
@@ -668,7 +669,7 @@ func TestHTTPAggregation_SingleReq(t *testing.T) {
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
 		[]byte("/page"), true, http.MethodGet, 0)
 
-	conn1Key := getConnectionKeyForStats(conn1req1)
+	conn1Key := getConnectionKeyForHTTPStats(conn1req1)
 
 	var stats = http.NewRequestStats(true)
 	stats.AddRequest(200, msToNs(100.0), 0, nil)
@@ -741,11 +742,11 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
 		[]byte("/page"), true, http.MethodPost, 0)
 
-	conn1Key := getConnectionKeyForStats(conn1req1)
-	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req2))
-	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req3))
-	conn2Key := getConnectionKeyForStats(conn2req4)
-	assert.Equal(t, conn2Key, getConnectionKeyForStats(conn2req5))
+	conn1Key := getConnectionKeyForHTTPStats(conn1req1)
+	assert.Equal(t, conn1Key, getConnectionKeyForHTTPStats(conn1req2))
+	assert.Equal(t, conn1Key, getConnectionKeyForHTTPStats(conn1req3))
+	conn2Key := getConnectionKeyForHTTPStats(conn2req4)
+	assert.Equal(t, conn2Key, getConnectionKeyForHTTPStats(conn2req5))
 	assert.NotEqual(t, conn1Key, conn2Key)
 
 	conn1req2Stats := http.NewRequestStats(true)
@@ -895,11 +896,11 @@ func TestHTTPObservations(t *testing.T) {
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("2.3.4.5"), 12345, 80,
 		[]byte("/page"), true, http.MethodPost, 0)
 
-	conn1Key := getConnectionKeyForStats(conn1req1)
-	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req2))
-	assert.Equal(t, conn1Key, getConnectionKeyForStats(conn1req3))
-	conn2Key := getConnectionKeyForStats(conn2req4)
-	assert.Equal(t, conn2Key, getConnectionKeyForStats(conn2req5))
+	conn1Key := getConnectionKeyForHTTPStats(conn1req1)
+	assert.Equal(t, conn1Key, getConnectionKeyForHTTPStats(conn1req2))
+	assert.Equal(t, conn1Key, getConnectionKeyForHTTPStats(conn1req3))
+	conn2Key := getConnectionKeyForHTTPStats(conn2req4)
+	assert.Equal(t, conn2Key, getConnectionKeyForHTTPStats(conn2req5))
 	assert.NotEqual(t, conn1Key, conn2Key)
 
 	observations := aggregateHTTPTraceObservations([]http.TransactionObservation{
@@ -1013,7 +1014,7 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
 		[]byte("/page"), true, http.MethodGet, 0)
 
-	conn1Key := getConnectionKeyForStats(conn1req1)
+	conn1Key := getConnectionKeyForHTTPStats(conn1req1)
 
 	conn1req1Stats := http.NewRequestStats(true)
 	conn1req1Stats.AddRequest(200, msToNs(100), 0, nil)

@@ -123,6 +123,15 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 
 	containerToPod := c.podsCache.GetContainerToPodMap(context.TODO())
 
+	log.Debugf("Protocol map: %v", protocolMap)
+	log.Debugf("collected %d connection data", len(connectionStats))
+	for key, metrics := range connectionStats {
+		log.Debugf("connection data for %s", key)
+		for _, metric := range metrics {
+			log.Debugf("\t%v", metric)
+		}
+	}
+
 	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, aggregatedInterval, connectionStats, httpObservations, containerToPod, protocolMap)
 	c.prevCheckTime = currentTime
 
@@ -139,13 +148,6 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	log.Infof("collected %d connections and %d http client observations and %d http server trace observations in %s", len(formattedConnections), clientObservations, serverObservations, time.Since(start))
 	for _, conn := range formattedConnections {
 		log.Debugf("%v", conn)
-	}
-	log.Debugf("collected %d connection data", len(connectionStats))
-	for key, metrics := range connectionStats {
-		log.Debugf("connection data for %s", key)
-		for _, metric := range metrics {
-			log.Debugf("\t%v", metric)
-		}
 	}
 
 	log.Infof("collected %d pods for connections", len(connsPods.pods))

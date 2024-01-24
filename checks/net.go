@@ -97,13 +97,13 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	protocolMap := map[connKey]string{}
 
 	// Add aggregated HTTP stats to the connection stats
-	for k, v := range aggregateHTTPStats(conns.HTTP, aggregatedInterval, false) {
+	for k, v := range aggregateHTTPStats(conns.HTTP, false) {
 		connectionStats[k] = v
 		protocolMap[k] = "http"
 	}
 
 	// Add aggregated Mongo stats to the connection stats
-	for k, v := range aggregateMongoStats(conns.Mongo, aggregatedInterval) {
+	for k, v := range aggregateMongoStats(conns.Mongo) {
 
 		if _, exists := connectionStats[k]; exists {
 			log.Warnf("Found both mongo and http stats for connection key %v", k)
@@ -774,7 +774,7 @@ func aggregateHTTPTraceObservations(httpObservations []http.TransactionObservati
 	return result
 }
 
-func aggregateMongoStats(mongoStats map[mongo.Key]*mongo.RequestStat, duration time.Duration) map[connKey][]*model.ConnectionMetric {
+func aggregateMongoStats(mongoStats map[mongo.Key]*mongo.RequestStat) map[connKey][]*model.ConnectionMetric {
 	result := map[connKey][]*model.ConnectionMetric{}
 
 	// Currently, there are no additional tags for mongo stats
@@ -801,7 +801,7 @@ func aggregateMongoStats(mongoStats map[mongo.Key]*mongo.RequestStat, duration t
 	return result
 }
 
-func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time.Duration, sendForPath bool) map[connKey][]*model.ConnectionMetric {
+func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, sendForPath bool) map[connKey][]*model.ConnectionMetric {
 	result := map[connKey][]*model.ConnectionMetric{}
 
 	// regrouping statistic

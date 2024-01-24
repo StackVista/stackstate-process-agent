@@ -196,7 +196,7 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 		// pid 4 filtered by process blacklisting, so we expect no connections for pid 4
 	}
 
-	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
+	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil, nil)
 
 	assert.Len(t, connections, 3)
 
@@ -276,7 +276,7 @@ func TestPodsIndexFormatted(t *testing.T) {
 		Pids:      []int32{2, 3},
 	}
 
-	_, podsIndex := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, containerToPod)
+	_, podsIndex := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, containerToPod, nil)
 
 	assert.Len(t, podsIndex.pidToPodUID, 3)
 	assert.Equal(t, "pod-a-uid", podsIndex.pidToPodUID[1])
@@ -325,7 +325,7 @@ func TestNetworkConnectionNamespaceKubernetes(t *testing.T) {
 		4: {Pid: 4, CreateTime: now.Add(-5 * time.Minute).Unix()},
 	}
 
-	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
+	connections, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil, nil)
 
 	assert.Len(t, connections, 4)
 	for _, c := range connections {
@@ -367,7 +367,7 @@ func TestRelationCache(t *testing.T) {
 	assert.Zero(t, c.cache.ItemCount(), "Cache should be empty before running")
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	firstRun, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
+	firstRun, _ := c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil, nil)
 	assert.Zero(t, len(firstRun), "Connections should be empty when the cache is not present")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -375,13 +375,13 @@ func TestRelationCache(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _ := c.formatConnections(cfg, connStats, 10*time.Second, nil, nil, nil)
+	secondRun, _ := c.formatConnections(cfg, connStats, 10*time.Second, nil, nil, nil, nil)
 	assert.Equal(t, 4, len(secondRun), "Connections should contain 4 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
 	// delete last connection from the connection stats slice, expect it to be excluded from the connection list, but not the cache
 	connStats = connStats[:len(connStats)-1]
-	thirdRun, _ := c.formatConnections(cfg, connStats, 5*time.Second, nil, nil, nil)
+	thirdRun, _ := c.formatConnections(cfg, connStats, 5*time.Second, nil, nil, nil, nil)
 	assert.Equal(t, 3, len(thirdRun), "Connections should contain 3 elements")
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
@@ -474,7 +474,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	}
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
-	c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil)
+	c.formatConnections(cfg, connStats, 15*time.Second, nil, nil, nil, nil)
 
 	connStats = []network.ConnectionStats{
 		amendConnectionStats(connStats[0], PID1CONN1SEND2, PID1CONN1RECV2),
@@ -487,7 +487,7 @@ func TestRelationCacheOrdering(t *testing.T) {
 	time.Sleep(cfg.ShortLivedNetworkRelationQualifierSecs)
 
 	// second run with filled in cache; expect all processes.
-	secondRun, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil, nil, nil)
+	secondRun, _ := c.formatConnections(cfg, connStats, time.Duration(TIME2)*time.Second, nil, nil, nil, nil)
 
 	assert.Equal(t, PID1CONN1SEND2DELTA, getConnectionMetricNumber(t, secondRun[0].Metrics, bytesSentDelta), bytesSentDelta)
 	assert.Equal(t, PID1CONN2SEND2DELTA, getConnectionMetricNumber(t, secondRun[1].Metrics, bytesSentDelta), bytesSentDelta)
@@ -582,7 +582,7 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 			// fill in the relation cache
 			tc.prepCache(c.cache)
 
-			connections, _ := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), nil, nil, nil)
+			connections, _ := c.formatConnections(cfg, connStats, time.Now().Sub(lastRun), nil, nil, nil, nil)
 			var rIDs []string
 			for _, conn := range connections {
 				rIDs = append(rIDs, conn.ConnectionIdentifier)
@@ -624,7 +624,7 @@ func fillNetworkRelationCache(hostname string, c *NetworkRelationCache, conn net
 }
 
 func TestFormatMetricsEmpty(t *testing.T) {
-	metrics := aggregateHTTPStats(nil, 1*time.Second, true)
+	metrics := aggregateHTTPStats(nil, true)
 	assert.Len(t, metrics, 0)
 }
 
@@ -680,7 +680,7 @@ func TestHTTPAggregation_SingleReq(t *testing.T) {
 
 	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
 		conn1req1: stats,
-	}, 2*time.Second, true)
+	}, true)
 
 	assert.Len(t, metrics, 1)
 	conn1Metrics := metrics[conn1Key]
@@ -699,29 +699,18 @@ func TestHTTPAggregation_SingleReq(t *testing.T) {
 	assertHTTPRequestsDeltaMetric(t, conn1Metrics[8], "5xx", "GET", "/page", 0)
 	assertHTTPRequestsDeltaMetric(t, conn1Metrics[9], "5xx", "", "", 0)
 
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[10], "1xx", "GET", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[11], "1xx", "", "", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[12], "2xx", "GET", "/page", 1.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[13], "2xx", "", "", 1.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[14], "3xx", "GET", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[15], "3xx", "", "", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[16], "4xx", "GET", "/page", 4/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[17], "4xx", "", "", 4/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[18], "5xx", "GET", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[19], "5xx", "", "", 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[10], "1xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[11], "1xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[12], "2xx", "GET", "/page", 100, 100, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[13], "2xx", "", "", 100, 100, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[14], "3xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[15], "3xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[16], "4xx", "GET", "/page", 2, 8, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[17], "4xx", "", "", 2, 8, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[18], "5xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[19], "5xx", "", "", 0, 0, 0)
 
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[20], "1xx", "GET", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[21], "1xx", "", "", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[22], "2xx", "GET", "/page", 100, 100, 1)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[23], "2xx", "", "", 100, 100, 1)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[24], "3xx", "GET", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[25], "3xx", "", "", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[26], "4xx", "GET", "/page", 2, 8, 4)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[27], "4xx", "", "", 2, 8, 4)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[28], "5xx", "GET", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[29], "5xx", "", "", 0, 0, 0)
-
-	assert.Len(t, conn1Metrics, 30)
+	assert.Len(t, conn1Metrics, 20)
 }
 
 func TestHTTPAggregation_MultipleReq(t *testing.T) {
@@ -788,7 +777,7 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 		conn1req3: conn1req3Stats,
 		conn1req1: conn1req1Stats,
 		conn2req4: conn2req4Stats,
-	}, 2*time.Second, true)
+	}, true)
 
 	assert.Equal(t, len(metrics), 2)
 	conn1Metrics := metrics[conn1Key]
@@ -820,62 +809,41 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 	assertHTTPRequestsDeltaMetric(t, conn1Metrics[18], "5xx", "GET", "/page", 0)
 	assertHTTPRequestsDeltaMetric(t, conn1Metrics[19], "5xx", "", "", 5)
 
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[20], "1xx", "POST", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[21], "1xx", "GET", "/otherpath", 1.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[22], "1xx", "GET", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[23], "1xx", "", "", (0+1.0+0)/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[24], "2xx", "POST", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[25], "2xx", "GET", "/otherpath", 2.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[26], "2xx", "GET", "/page", 1.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[27], "2xx", "", "", (0+2.0+1.0)/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[28], "3xx", "POST", "/page", 1.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[29], "3xx", "GET", "/otherpath", 4.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[30], "3xx", "GET", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[31], "3xx", "", "", (1.0+4.0+0)/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[32], "4xx", "POST", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[33], "4xx", "GET", "/otherpath", 5.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[34], "4xx", "GET", "/page", 3.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[35], "4xx", "", "", (0+5.0+3.0)/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[36], "5xx", "POST", "/page", 4.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[37], "5xx", "GET", "/otherpath", 1.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[38], "5xx", "GET", "/page", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[39], "5xx", "", "", (4.0+1.0+0)/2)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[20], "1xx", "POST", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[21], "1xx", "GET", "/otherpath", 60000, 60000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[22], "1xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[23], "1xx", "", "", 60000, 60000, 1)
 
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[40], "1xx", "POST", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[41], "1xx", "GET", "/otherpath", 60000, 60000, 1)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[42], "1xx", "GET", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[43], "1xx", "", "", 60000, 60000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[24], "2xx", "POST", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[25], "2xx", "GET", "/otherpath", 90000, 120000, 2)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[26], "2xx", "GET", "/page", 120000, 120000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[27], "2xx", "", "", 90000, 120000, 3)
 
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[44], "2xx", "POST", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[45], "2xx", "GET", "/otherpath", 90000, 120000, 2)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[46], "2xx", "GET", "/page", 120000, 120000, 1)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[47], "2xx", "", "", 90000, 120000, 3)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[28], "3xx", "POST", "/page", 90000, 90000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[29], "3xx", "GET", "/otherpath", 12000, 120000, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[30], "3xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[31], "3xx", "", "", 12000, 120000, 5)
 
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[48], "3xx", "POST", "/page", 90000, 90000, 1)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[49], "3xx", "GET", "/otherpath", 12000, 120000, 4)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[50], "3xx", "GET", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[51], "3xx", "", "", 12000, 120000, 5)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[32], "4xx", "POST", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[33], "4xx", "GET", "/otherpath", 60000, 120000, 5)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[34], "4xx", "GET", "/page", 60000, 120000, 3)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[35], "4xx", "", "", 60000, 120000, 8)
 
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[52], "4xx", "POST", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[53], "4xx", "GET", "/otherpath", 60000, 120000, 5)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[54], "4xx", "GET", "/page", 60000, 120000, 3)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[55], "4xx", "", "", 60000, 120000, 8)
-
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[56], "5xx", "POST", "/page", 60000, 120000, 4)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[57], "5xx", "GET", "/otherpath", 180000, 180000, 1)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[58], "5xx", "GET", "/page", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[59], "5xx", "", "", 60000, 180000, 5)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[36], "5xx", "POST", "/page", 60000, 120000, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[37], "5xx", "GET", "/otherpath", 180000, 180000, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[38], "5xx", "GET", "/page", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[39], "5xx", "", "", 60000, 180000, 5)
 
 	// no more metrics for conn1
-	assert.Equal(t, 60, len(conn1Metrics))
+	assert.Equal(t, 40, len(conn1Metrics))
 
 	// for the second connection we just check the number of metrics
 	// and be happy that it didn't influence the first connection's metrics
 	// number calculated as product of
 	//  * 1+1 - specific route and aggregated
 	//  * 5 - specific status code groups
-	//  * 3 - request count + rate + response time
-	assert.Equal(t, (1+1)*5*3, len(conn2Metrics))
+	//  * 2 - request count + response time
+	assert.Equal(t, (1+1)*5*2, len(conn2Metrics))
 }
 
 func TestHTTPObservations(t *testing.T) {
@@ -1025,7 +993,7 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 
 	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
 		conn1req1: conn1req1Stats,
-	}, 2*time.Second, false)
+	}, false)
 
 	assert.Len(t, metrics, 1)
 	conn1Metrics := metrics[conn1Key]
@@ -1039,19 +1007,13 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 	assertHTTPRequestsDeltaMetric(t, conn1Metrics[3], "4xx", "", "", 4)
 	assertHTTPRequestsDeltaMetric(t, conn1Metrics[4], "5xx", "", "", 0)
 
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[5], "1xx", "", "", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[6], "2xx", "", "", 1.0/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[7], "3xx", "", "", 0)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[8], "4xx", "", "", 4/2)
-	assertHTTPRequestsPerSecondConnectionMetric(t, conn1Metrics[9], "5xx", "", "", 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[5], "1xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[6], "2xx", "", "", 100, 100, 1)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[7], "3xx", "", "", 0, 0, 0)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[8], "4xx", "", "", 2, 8, 4)
+	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[9], "5xx", "", "", 0, 0, 0)
 
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[10], "1xx", "", "", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[11], "2xx", "", "", 100, 100, 1)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[12], "3xx", "", "", 0, 0, 0)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[13], "4xx", "", "", 2, 8, 4)
-	assertHTTPResponseTimeConnectionMetric(t, conn1Metrics[14], "5xx", "", "", 0, 0, 0)
-
-	assert.Len(t, conn1Metrics, 15)
+	assert.Len(t, conn1Metrics, 10)
 }
 
 func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, minMs, maxMs, total int) {
@@ -1090,10 +1052,6 @@ func assertHTTPResponseTimeConnectionMetric(t *testing.T, formattedMetric *model
 			assert.InEpsilon(t, maxSec, actualMax, 0.03, "Max doesn't match for status code `%s`", statusCode)
 		}
 	}
-}
-
-func assertHTTPRequestsPerSecondConnectionMetric(t *testing.T, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedRate float64) {
-	assertHTTPRequestsBaseMetric(t, "http_requests_per_second", formattedMetric, statusCode, method, path, expectedRate)
 }
 
 func assertHTTPRequestsBaseMetric(t *testing.T, expectedMetric string, formattedMetric *model.ConnectionMetric, statusCode, method, path string, expectedValue float64) {

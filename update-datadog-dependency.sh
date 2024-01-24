@@ -18,7 +18,7 @@ Usage: ./update-datadog-dependency.sh --local <path>|--branch <branch>|--help
 
 This script will update go.mod to point to a different remote
   -l/--local           -- Use a local directory as dependency
-  -b/--branch [branch] -- Use the given branch of github.com/StackVista/datadog-agent-upstream-for-process-agent as a dependency, defaults to stackstate-7.43.1
+  -b/--branch [branch] -- Use the given branch of github.com/StackVista/datadog-agent-upstream-for-process-agent as a dependency, defaults to stackstate-7.49.1
   -h/--help            -- Print this help page
 
 USAGE
@@ -36,7 +36,7 @@ while [ $# -gt 0 ]; do
     ;;
     -b|--branch)
       shift
-      BRANCH="${1:-stackstate-7.43.1}"
+      BRANCH="${1:-stackstate-7.49.1}"
       echo "Using branch ${BRANCH}"
       go mod edit -replace "github.com/DataDog/datadog-agent=github.com/StackVista/datadog-agent-upstream-for-process-agent@${BRANCH}"
       go mod tidy

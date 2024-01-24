@@ -508,6 +508,12 @@ type connKey struct {
 	NetNs     uint32
 }
 
+func (c connKey) String() string {
+	saddr := util.FromLowHigh(c.SrcIPLow, c.SrcIPHigh)
+	daddr := util.FromLowHigh(c.DstIPLow, c.DstIPHigh)
+	return fmt.Sprintf("%v:%d -> %v:%d @ %d", saddr, c.SrcPort, daddr, c.DstPort, c.NetNs)
+}
+
 func getXLatedConnectionKey(conn network.ConnectionStats) connKey {
 	var saddr, daddr util.Address
 	var sport, dport uint16

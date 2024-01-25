@@ -5,10 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/DataDog/datadog-agent/pkg/ebpf"
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/dns"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/mongo"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
@@ -18,7 +21,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"sync"
 
 	"strings"
 	"time"
@@ -90,7 +92,27 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 		aggregatedInterval = currentTime.Sub(c.prevCheckTime)
 	}
 
-	httpStats := aggregateHTTPStats(conns.HTTP, aggregatedInterval, false)
+	connectionStats := make(map[connKey][]*model.ConnectionMetric)
+
+	protocolMap := map[connKey]string{}
+
+	// Add aggregated HTTP stats to the connection stats
+	for k, v := range aggregateHTTPStats(conns.HTTP, false) {
+		connectionStats[k] = v
+		protocolMap[k] = "http"
+	}
+
+	// Add aggregated Mongo stats to the connection stats
+	for k, v := range aggregateMongoStats(conns.Mongo) {
+
+		if _, exists := connectionStats[k]; exists {
+			log.Warnf("Found both mongo and http stats for connection key %v", k)
+		}
+
+		connectionStats[k] = v
+		protocolMap[k] = "mongo"
+	}
+
 	httpObservations := aggregateHTTPTraceObservations(conns.HTTPObservations)
 
 	dnsMap := map[string][]dns.Hostname{}
@@ -101,7 +123,16 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 
 	containerToPod := c.podsCache.GetContainerToPodMap(context.TODO())
 
-	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, httpStats, httpObservations, containerToPod)
+	log.Debugf("Protocol map: %v", protocolMap)
+	log.Debugf("collected %d connection data", len(connectionStats))
+	for key, metrics := range connectionStats {
+		log.Debugf("connection data for %s", key)
+		for _, metric := range metrics {
+			log.Debugf("\t%v", metric)
+		}
+	}
+
+	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, connectionStats, httpObservations, containerToPod, protocolMap)
 	c.prevCheckTime = currentTime
 
 	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
@@ -117,13 +148,6 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	log.Infof("collected %d connections and %d http client observations and %d http server trace observations in %s", len(formattedConnections), clientObservations, serverObservations, time.Since(start))
 	for _, conn := range formattedConnections {
 		log.Debugf("%v", conn)
-	}
-	log.Debugf("collected %d http data", len(httpStats))
-	for key, metrics := range httpStats {
-		log.Debugf("http data for %s", key)
-		for _, metric := range metrics {
-			log.Debugf("\t%v", metric)
-		}
 	}
 
 	log.Infof("collected %d pods for connections", len(connsPods.pods))
@@ -174,21 +198,21 @@ func (cp *connectionsPodsIndex) addPodWithPID(pod *kubelet.Pod, pid int32) {
 }
 
 var (
-	connectionProcessedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	connectionsProcessedCounter = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "stackstate_process_agent",
 		Subsystem: "connections",
 		Name:      "processed",
 		Help:      "Connections processed by the connections check and the processing result",
 	}, []string{"result"})
 
-	httpMetricProcessedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	connectionMetricsProcessedCounter = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "stackstate_process_agent",
-		Subsystem: "http_metric",
+		Subsystem: "connection_metrics",
 		Name:      "processed",
-		Help:      "Http metrics processed by the connections check and the processing result",
+		Help:      "Connection metrics processed by the connections check and the processing result",
 	}, []string{"result"})
 
-	httpObservationProcessedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	httpObservationsProcessedCounter = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "stackstate_process_agent",
 		Subsystem: "http_observation",
 		Name:      "processed",
@@ -247,9 +271,10 @@ func (c *ConnectionsCheck) collectConnPods(processes map[uint32]*model.Process, 
 func (c *ConnectionsCheck) formatConnections(
 	cfg *config.AgentConfig,
 	conns []network.ConnectionStats,
-	httpMetrics map[connKey][]*model.ConnectionMetric,
+	connectionMetrics map[connKey][]*model.ConnectionMetric,
 	httpObservations map[connKey][]*model.HTTPTraceObservation,
 	containerToPod map[string]*kubelet.Pod,
+	protocolMap map[connKey]string,
 ) ([]*model.Connection, *connectionsPodsIndex) {
 	// Process create-times required to construct unique process hash keys on the backend
 	// attention! There is a conns.Conns[0].PidCreateTime, it is always zero, so we do have to look up the actual value
@@ -263,38 +288,43 @@ func (c *ConnectionsCheck) formatConnections(
 		uncorrelatedObservations[k] = v
 	}
 
-	uncorrelatedHTTPMetrics := make(map[connKey][]*model.ConnectionMetric)
-	for k, v := range httpMetrics {
-		uncorrelatedHTTPMetrics[k] = v
+	uncorrelatedConnectionMetrics := make(map[connKey][]*model.ConnectionMetric)
+	for k, v := range connectionMetrics {
+		uncorrelatedConnectionMetrics[k] = v
 	}
 
 	var connectionNoProcess, connectionShortLived, connectionCorrelated float64 = 0, 0, 0
-	var httpMetricNoProcess, httpMetricShortLived, httpMetricCorrelated float64 = 0, 0, 0
+	var connectionMetricNoProcess, connectionMetricShortLived, connectionMetricCorrelated float64 = 0, 0, 0
 	var httpObservationNoProcess, httpObservationShortLived, httpObservationCorrelated float64 = 0, 0, 0
 
 	for _, conn := range conns {
-		var httpMetricsCount, httpObservationsCount float64 = 0, 0
+		var connectionMetricsCount, httpObservationsCount float64 = 0, 0
 		metrics := make([]*model.ConnectionMetric, 0)
 		observations := make([]*model.HTTPTraceObservation, 0)
 		appProto := ""
 
 		for _, co := range getConnectionKeys(conn) {
-			metrics = append(metrics, httpMetrics[co]...)
+			metrics = append(metrics, connectionMetrics[co]...)
 			observations = append(observations, httpObservations[co]...)
 
-			httpMetricsCount += float64(len(httpMetrics[co]))
+			connectionMetricsCount += float64(len(connectionMetrics[co]))
 			httpObservationsCount += float64(len(httpObservations[co]))
+
+			if protocol, found := protocolMap[co]; found {
+				// In theory, there is no guarantee that all keys will have the same protocol
+				appProto = protocol
+			}
 
 			// Not deleting from httpObservations, because the same observations might be attached to both client and server
 			// side of a connection.
 			delete(uncorrelatedObservations, co)
-			delete(uncorrelatedHTTPMetrics, co)
+			delete(uncorrelatedConnectionMetrics, co)
 			if len(observations) > 0 {
 				log.Debugf("Correlated connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
 			}
 		}
 
-		if len(metrics) > 0 || len(observations) > 0 {
+		if len(observations) > 0 {
 			appProto = "http"
 		}
 
@@ -321,7 +351,7 @@ func (c *ConnectionsCheck) formatConnections(
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		process, ok := processes[conn.Pid]
 		if !ok {
-			httpMetricNoProcess += httpMetricsCount
+			connectionMetricNoProcess += connectionMetricsCount
 			httpObservationNoProcess += httpObservationsCount
 			connectionNoProcess++
 			log.Debugf("Filter connection: %v is out because process %d is not observed (gone or just started)", conn, conn.Pid)
@@ -338,7 +368,7 @@ func (c *ConnectionsCheck) formatConnections(
 
 		if cfg.EnableShortLivedNetworkRelationFilter &&
 			(!ok || isRelationShortLived(relationCache.FirstObserved, cfg)) {
-			httpMetricShortLived += httpMetricsCount
+			connectionMetricShortLived += connectionMetricsCount
 			httpObservationShortLived += httpObservationsCount
 			connectionShortLived++
 			logShortLivingNoticeOnce.Do(func() {
@@ -404,7 +434,7 @@ func (c *ConnectionsCheck) formatConnections(
 			HttpObservations:    filteredObservations,
 		})
 
-		httpMetricCorrelated += httpMetricsCount
+		connectionMetricCorrelated += connectionMetricsCount
 		httpObservationCorrelated += httpObservationsCount
 		connectionCorrelated++
 
@@ -413,8 +443,9 @@ func (c *ConnectionsCheck) formatConnections(
 	}
 
 	// Figure out which observations were not in the root namespace
+	// It is unlikely that we will be able to correlate connections from the root namespace
 	var unsentNonRootObservations = 0
-	var unsentNonRootHTTPMetrics = 0
+	var unsentNonRootConnectionMetrics = 0
 	rootHandle, err := kernel.GetRootNetNamespace(kernel.ProcFSRoot())
 	if err == nil {
 		ino, err := kernel.GetInoForNs(rootHandle)
@@ -428,34 +459,34 @@ func (c *ConnectionsCheck) formatConnections(
 				log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
 			}
 
-			for k := range uncorrelatedHTTPMetrics {
+			for k := range uncorrelatedConnectionMetrics {
 				if k.NetNs != ino {
-					unsentNonRootHTTPMetrics++
+					unsentNonRootConnectionMetrics++
 					continue
 				}
 			}
 		} else {
 			unsentNonRootObservations = -1
-			unsentNonRootHTTPMetrics = -1
+			unsentNonRootConnectionMetrics = -1
 		}
 	} else {
 		unsentNonRootObservations = -1
-		unsentNonRootHTTPMetrics = -1
+		unsentNonRootConnectionMetrics = -1
 	}
 
-	httpMetricProcessedGauge.WithLabelValues("no_process").Set(httpMetricNoProcess)
-	httpMetricProcessedGauge.WithLabelValues("relation_short_lived").Set(httpMetricShortLived)
-	httpMetricProcessedGauge.WithLabelValues("correlated").Set(httpMetricCorrelated)
-	httpMetricProcessedGauge.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootHTTPMetrics))
+	connectionMetricsProcessedCounter.WithLabelValues("no_process").Add(connectionMetricNoProcess)
+	connectionMetricsProcessedCounter.WithLabelValues("relation_short_lived").Add(connectionMetricShortLived)
+	connectionMetricsProcessedCounter.WithLabelValues("correlated").Add(connectionMetricCorrelated)
+	connectionMetricsProcessedCounter.WithLabelValues("uncorrelated_non_root").Add(float64(unsentNonRootConnectionMetrics))
 
-	httpObservationProcessedGauge.WithLabelValues("no_process").Set(httpObservationNoProcess)
-	httpObservationProcessedGauge.WithLabelValues("relation_short_lived").Set(httpObservationShortLived)
-	httpObservationProcessedGauge.WithLabelValues("correlated").Set(httpObservationCorrelated)
-	httpObservationProcessedGauge.WithLabelValues("uncorrelated_non_root").Set(float64(unsentNonRootObservations))
+	httpObservationsProcessedCounter.WithLabelValues("no_process").Add(httpObservationNoProcess)
+	httpObservationsProcessedCounter.WithLabelValues("relation_short_lived").Add(httpObservationShortLived)
+	httpObservationsProcessedCounter.WithLabelValues("correlated").Add(httpObservationCorrelated)
+	httpObservationsProcessedCounter.WithLabelValues("uncorrelated_non_root").Add(float64(unsentNonRootObservations))
 
-	connectionProcessedGauge.WithLabelValues("no_process").Set(connectionNoProcess)
-	connectionProcessedGauge.WithLabelValues("relation_short_lived").Set(connectionShortLived)
-	connectionProcessedGauge.WithLabelValues("correlated").Set(connectionCorrelated)
+	connectionsProcessedCounter.WithLabelValues("no_process").Add(connectionNoProcess)
+	connectionsProcessedCounter.WithLabelValues("relation_short_lived").Add(connectionShortLived)
+	connectionsProcessedCounter.WithLabelValues("correlated").Add(connectionCorrelated)
 
 	log.Debugf("Unsent non-root observations: %d, unsent observations: %d", unsentNonRootObservations, len(uncorrelatedObservations))
 
@@ -470,6 +501,12 @@ type connKey struct {
 	DstIPLow  uint64
 	DstPort   uint16
 	NetNs     uint32
+}
+
+func (c connKey) String() string {
+	saddr := util.FromLowHigh(c.SrcIPLow, c.SrcIPHigh)
+	daddr := util.FromLowHigh(c.DstIPLow, c.DstIPHigh)
+	return fmt.Sprintf("%v:%d -> %v:%d @ %d", saddr, c.SrcPort, daddr, c.DstPort, c.NetNs)
 }
 
 func getXLatedConnectionKey(conn network.ConnectionStats) connKey {
@@ -543,7 +580,19 @@ func getConnectionKeys(conn network.ConnectionStats) []connKey {
 	return keys
 }
 
-func getConnectionKeyForStats(key http.Key) connKey {
+func getConnectionKeyForHTTPStats(key http.Key) connKey {
+	return connKey{
+		SrcIPHigh: key.SrcIPHigh,
+		SrcIPLow:  key.SrcIPLow,
+		SrcPort:   key.SrcPort,
+		DstIPHigh: key.DstIPHigh,
+		DstIPLow:  key.DstIPLow,
+		DstPort:   key.DstPort,
+		NetNs:     key.NetNs,
+	}
+}
+
+func getConnectionKeyForMongoStats(key mongo.Key) connKey {
 	return connKey{
 		SrcIPHigh: key.SrcIPHigh,
 		SrcIPLow:  key.SrcIPLow,
@@ -586,13 +635,15 @@ const (
 	bytesSentDelta     metricName = "bytes_sent_delta"
 	bytesReceivedDelta metricName = "bytes_received_delta"
 
-	httpResponseTime      metricName = "http_response_time_seconds"
-	httpRequestsPerSecond metricName = "http_requests_per_second"
-	httpRequestsDelta     metricName = "http_requests_delta"
+	httpResponseTime  metricName = "http_response_time_seconds"
+	httpRequestsDelta metricName = "http_requests_delta"
 
 	httpStatusCodeTag = "code"
 	httpPathTag       = "path"
 	httpMethodTag     = "method"
+
+	mongoResponseTime  metricName = "mongo_response_time_seconds"
+	mongoRequestsDelta metricName = "mongo_requests_delta"
 )
 
 func emptySketch() *ddsketch.DDSketch {
@@ -652,7 +703,7 @@ func aggregateHTTPTraceObservations(httpObservations []http.TransactionObservati
 	result := map[connKey][]*model.HTTPTraceObservation{}
 
 	for _, observation := range httpObservations {
-		connKey := getConnectionKeyForStats(observation.Key)
+		connKey := getConnectionKeyForHTTPStats(observation.Key)
 
 		connObservations := result[connKey]
 
@@ -718,7 +769,34 @@ func aggregateHTTPTraceObservations(httpObservations []http.TransactionObservati
 	return result
 }
 
-func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time.Duration, sendForPath bool) map[connKey][]*model.ConnectionMetric {
+func aggregateMongoStats(mongoStats map[mongo.Key]*mongo.RequestStat) map[connKey][]*model.ConnectionMetric {
+	result := map[connKey][]*model.ConnectionMetric{}
+
+	// Currently, there are no additional tags for mongo stats
+	tags := map[string]string{}
+
+	for mongoKey, stat := range mongoStats {
+		connKey := getConnectionKeyForMongoStats(mongoKey)
+		scaled := emptySketch()
+		scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), nsToS)
+		requestCount := scaled.GetCount()
+
+		result[connKey] = append(result[connKey],
+			makeConnectionMetricWithNumber(
+				mongoRequestsDelta, tags,
+				float64(requestCount),
+			),
+			makeConnectionMetricWithHistogram(
+				mongoResponseTime, tags,
+				scaled,
+			),
+		)
+	}
+
+	return result
+}
+
+func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, sendForPath bool) map[connKey][]*model.ConnectionMetric {
 	result := map[connKey][]*model.ConnectionMetric{}
 
 	// regrouping statistic
@@ -764,7 +842,7 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time
 			if statusCodeGroup == "" {
 				continue
 			}
-			connKey := getConnectionKeyForStats(statKey)
+			connKey := getConnectionKeyForHTTPStats(statKey)
 			connStats := regroupedStats[connKey]
 
 			connStats = appendStatsForStatusGroup(connStats, statusCodeGroup, statKey, stat)
@@ -783,10 +861,6 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, duration time
 				makeConnectionMetricWithNumber(
 					httpRequestsDelta, data,
 					float64(requestCount),
-				),
-				makeConnectionMetricWithNumber(
-					httpRequestsPerSecond, data,
-					calculateNormalizedRate(uint64(requestCount), duration),
 				),
 				makeConnectionMetricWithHistogram(
 					httpResponseTime, data,

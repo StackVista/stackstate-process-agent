@@ -471,12 +471,12 @@ func (c *ConnectionsCheck) formatConnections(
 				}
 			}
 		} else {
-			unsentNonRootObservations = -1
-			unsentNonRootConnectionMetrics = -1
+			unsentNonRootObservations = 0
+			unsentNonRootConnectionMetrics = 0
 		}
 	} else {
-		unsentNonRootObservations = -1
-		unsentNonRootConnectionMetrics = -1
+		unsentNonRootObservations = 0
+		unsentNonRootConnectionMetrics = 0
 	}
 
 	connectionMetricsProcessedCounter.WithLabelValues("no_process").Add(connectionMetricNoProcess)

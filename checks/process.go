@@ -136,7 +136,7 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 		return nil, nil
 	}
 
-	var messages []model.MessageBody
+	var messages = make([]model.MessageBody, 0, 0)
 
 	processes, topUsage, whiteListedLongLiving := p.fmtProcesses(cfg, procs, pidToCid, cpuTimes[0], p.lastCPUTime, p.lastRun)
 
@@ -147,12 +147,16 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 
 	containers, multiMetrics := retrieveMetricsAndFormat(cfg, ctrList)
 
-	if cfg.EnableIncrementalPublishing && featureFlags.FeatureEnabled(features.IncrementalTopology) && time.Now().Before(p.lastRefresh.Add(cfg.IncrementalPublishingRefreshInterval)) {
+	// Always send increment (to allow for low-latency deletes)
+	if cfg.EnableIncrementalPublishing && featureFlags.FeatureEnabled(features.IncrementalTopology) {
 		log.Debug("Sending process status increment")
 		messages = p.fmtIncrement(cfg, groupID, buildIncrement(processes, containers, p.lastProcState, p.lastCtrState))
-	} else {
+	}
+
+	// Sometimes also add the full snapshot, in case some of the data was lost
+	if (!cfg.EnableIncrementalPublishing) || (!featureFlags.FeatureEnabled(features.IncrementalTopology)) || time.Now().After(p.lastRefresh.Add(cfg.IncrementalPublishingRefreshInterval)) {
 		log.Debug("Sending process status snapshot")
-		messages = p.fmtSnapshot(cfg, groupID, processes, containers)
+		messages = append(messages, p.fmtSnapshot(cfg, groupID, processes, containers)...)
 		p.lastRefresh = time.Now()
 	}
 

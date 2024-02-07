@@ -40,6 +40,7 @@ export STS_TEST_RUN=true
 
 # Selected test suites for testing
 echo "Running suites"
+
 invoke test --build-include=linux_bpf,test --targets=./pkg/network/protocols/http/.,./pkg/network/protocols/mongo/.,./pkg/network/usm/.,./pkg/network/. --skip-linters
 # These tests need to run without concurrency
 invoke test --build-include=linux_bpf,test --targets=./pkg/process/monitor/. --cpus=1 --skip-linters
@@ -58,3 +59,8 @@ invoke test --build-include=linux_bpf,test --cpus=1 --targets=./pkg/network/trac
 # To also run the TLS test, provide a MONGODB_URI for a TLS-enabled instance, e.g.:
 # export MONGODB_URI="mongodb+srv://user:pass@my-cluster.mongodb.com/?retryWrites=true&w=majority"
 invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --cpus=1 --skip-linters --test-run-name=".*Mongo.*"
+
+# Run the tests for AMQP
+# There is also a TLS test available, but it needs manual intervention as of now.
+# See TestAMQPOverTLSStats in tracker_usm_linux_test.go
+invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --cpus=1 --skip-linters --test-run-name="^TestAMQPStats$"

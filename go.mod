@@ -2,6 +2,8 @@ module github.com/StackVista/stackstate-process-agent
 
 go 1.20
 
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240208122803-f3c1cc27b624
+
 // From datadog-agent-upstream-for-process-agent, replaces done in that go mod file need to be done here too
 replace github.com/pahanini/go-grpc-bidirectional-streaming-example v0.0.0-20211027164128-cc6111af44be => github.com/DataDog/go-grpc-bidirectional-streaming-example v0.0.0-20221024060302-b9cf785c02fe
 
@@ -418,6 +420,7 @@ require (
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	github.com/spdx/tools-golang v0.3.1-0.20230104082527-d6f58551be3f // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
+	github.com/streadway/amqp v1.1.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
@@ -498,5 +501,3 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.13.9 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
-
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240124161633-7b2e23d3fe95

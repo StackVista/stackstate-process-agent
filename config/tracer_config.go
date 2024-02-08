@@ -60,6 +60,9 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		EnableMongoMonitoring: cfg.NetworkTracer.EnableProtocolInspection,
 		MaxMongoStatsBuffered: 100000,
 
+		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection,
+		MaxAMQPStatsBuffered: 100000,
+
 		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableHTTPSInspection,
 		EnableIstioMonitoring:     false,
 		EnableGoTLSSupport:        false,

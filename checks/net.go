@@ -10,6 +10,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/ebpf"
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/dns"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/amqp"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/mongo"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
@@ -111,6 +112,17 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 
 		connectionStats[k] = v
 		protocolMap[k] = "mongo"
+	}
+
+	// Add aggregated AMQP stats to the connection stats
+	for k, v := range aggregateAMQPStats(conns.AMQP) {
+
+		if _, exists := connectionStats[k]; exists {
+			log.Warnf("Found both AMQP and other stats for connection key %v", k)
+		}
+
+		connectionStats[k] = v
+		protocolMap[k] = "amqp"
 	}
 
 	httpObservations := aggregateHTTPTraceObservations(conns.HTTPObservations)
@@ -609,6 +621,18 @@ func getConnectionKeyForMongoStats(key mongo.Key) connKey {
 	}
 }
 
+func getConnectionKeyForAMQPStats(key amqp.Key) connKey {
+	return connKey{
+		SrcIPHigh: key.SrcIPHigh,
+		SrcIPLow:  key.SrcIPLow,
+		SrcPort:   key.SrcPort,
+		DstIPHigh: key.DstIPHigh,
+		DstIPLow:  key.DstIPLow,
+		DstPort:   key.DstPort,
+		NetNs:     key.NetNs,
+	}
+}
+
 func statusCodeClassToString(class uint16) string {
 	switch class {
 	case 100:
@@ -649,6 +673,9 @@ const (
 
 	mongoResponseTime  metricName = "mongo_response_time_seconds"
 	mongoRequestsDelta metricName = "mongo_requests_delta"
+
+	amqpMessagesDeliveredDelta metricName = "amqp_messages_delivered_delta"
+	amqpMessagesPublishedDelta metricName = "amqp_messages_published_delta"
 )
 
 func emptySketch() *ddsketch.DDSketch {
@@ -794,6 +821,31 @@ func aggregateMongoStats(mongoStats map[mongo.Key]*mongo.RequestStat) map[connKe
 			makeConnectionMetricWithHistogram(
 				mongoResponseTime, tags,
 				scaled,
+			),
+		)
+	}
+
+	return result
+}
+
+func aggregateAMQPStats(amqpStats map[amqp.Key]*amqp.RequestStat) map[connKey][]*model.ConnectionMetric {
+	result := map[connKey][]*model.ConnectionMetric{}
+
+	for amqpKey, stat := range amqpStats {
+		connKey := getConnectionKeyForAMQPStats(amqpKey)
+		tags := map[string]string{
+			"exchange": amqpKey.ExchangeName,
+			"queue":    amqpKey.QueueName,
+		}
+
+		result[connKey] = append(result[connKey],
+			makeConnectionMetricWithNumber(
+				amqpMessagesDeliveredDelta, tags,
+				float64(stat.MessagesDelivered),
+			),
+			makeConnectionMetricWithNumber(
+				amqpMessagesPublishedDelta, tags,
+				float64(stat.MessagesPublished),
 			),
 		)
 	}

@@ -2,7 +2,7 @@ module github.com/StackVista/stackstate-process-agent
 
 go 1.20
 
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240207151412-e9f6857a70e6
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240208122803-f3c1cc27b624
 
 // From datadog-agent-upstream-for-process-agent, replaces done in that go mod file need to be done here too
 replace github.com/pahanini/go-grpc-bidirectional-streaming-example v0.0.0-20211027164128-cc6111af44be => github.com/DataDog/go-grpc-bidirectional-streaming-example v0.0.0-20221024060302-b9cf785c02fe

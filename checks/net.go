@@ -841,11 +841,11 @@ func aggregateAMQPStats(amqpStats map[amqp.Key]*amqp.RequestStat) map[connKey][]
 		result[connKey] = append(result[connKey],
 			makeConnectionMetricWithNumber(
 				amqpMessagesDeliveredDelta, tags,
-				stat.MessagesDelivered,
+				float64(stat.MessagesDelivered),
 			),
 			makeConnectionMetricWithNumber(
 				amqpMessagesPublishedDelta, tags,
-				stat.MessagesPublished,
+				float64(stat.MessagesPublished),
 			),
 		)
 	}

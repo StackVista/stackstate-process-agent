@@ -98,16 +98,27 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	protocolMap := map[connKey]string{}
 
 	// Add aggregated HTTP stats to the connection stats
-	for k, v := range aggregateHTTPStats(conns.HTTP, false) {
+	for k, v := range aggregateHTTPStats(conns.HTTP, cfg.HTTPStatsPerPath) {
 		connectionStats[k] = v
 		protocolMap[k] = "http"
+	}
+
+	// Add aggregated HTTP2 stats to the connection stats
+	for k, v := range aggregateHTTPStats(conns.HTTP2, cfg.HTTPStatsPerPath) {
+
+		if _, exists := connectionStats[k]; exists {
+			log.Warnf("Found both http2 and http stats for connection key %v", k)
+		}
+
+		connectionStats[k] = v
+		protocolMap[k] = "http" // http2 is just another version of http to us for now.
 	}
 
 	// Add aggregated Mongo stats to the connection stats
 	for k, v := range aggregateMongoStats(conns.Mongo) {
 
 		if _, exists := connectionStats[k]; exists {
-			log.Warnf("Found both mongo and http stats for connection key %v", k)
+			log.Warnf("Found both mongo and http (or http2) stats for connection key %v", k)
 		}
 
 		connectionStats[k] = v
@@ -367,7 +378,7 @@ func (c *ConnectionsCheck) formatConnections(
 			connectionMetricNoProcess += connectionMetricsCount
 			httpObservationNoProcess += httpObservationsCount
 			connectionNoProcess++
-			log.Debugf("Filter connection: %v is out because process %d is not observed (gone or just started)", conn, conn.Pid)
+			log.Debugf("Filter connection: %v is out because process %d (in net namespace %d) is not observed (gone or just started)", conn, conn.Pid, conn.NetNS)
 			continue
 		}
 		pidCreateTime := process.CreateTime

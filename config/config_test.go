@@ -1048,3 +1048,14 @@ func TestSkipKubeletTLSVerify_FromEnv(t *testing.T) {
 
 	os.Unsetenv("STS_SKIP_KUBELET_TLS_VERIFY")
 }
+
+func TestHTTPStatsPerPath_FromEnv(t *testing.T) {
+	os.Setenv("STS_HTTP_STATS_PER_PATH", "true")
+
+	conf, err := NewAgentConfig(nil)
+	assert.NoError(t, err)
+
+	assert.Equal(t, true, conf.HTTPStatsPerPath)
+
+	os.Unsetenv("STS_HTTP_STATS_PER_PATH")
+}

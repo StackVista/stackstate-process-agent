@@ -5,10 +5,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"github.com/DataDog/datadog-agent/pkg/util/hostname"
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
-	"k8s.io/utils/strings/slices"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,6 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/DataDog/datadog-agent/pkg/util/hostname"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
+	"k8s.io/utils/strings/slices"
 
 	log "github.com/cihub/seelog"
 )
@@ -144,6 +145,10 @@ type AgentConfig struct {
 	// Proxy
 	HTTPSProxy *url.URL
 	HTTPProxy  *url.URL
+
+	// Break down HTTP stats by path
+	// Careful: The path label can have a very high cardinality
+	HTTPStatsPerPath bool
 }
 
 // CheckIsEnabled returns a bool indicating if the given check name is enabled.
@@ -254,6 +259,9 @@ func NewDefaultAgentConfig() *AgentConfig {
 		// Proxy
 		HTTPSProxy: nil,
 		HTTPProxy:  nil,
+
+		// Break down HTTP stats by path
+		HTTPStatsPerPath: false,
 	}
 
 	// Set default values for proc/sys paths if unset.
@@ -636,6 +644,10 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if v := os.Getenv("STS_CRI_SOCKET_PATH"); v != "" {
 		c.CriSocketPath = v
+	}
+
+	if enabled, _ := isAffirmative(os.Getenv("STS_HTTP_STATS_PER_PATH")); enabled {
+		c.HTTPStatsPerPath = enabled
 	}
 
 	return c

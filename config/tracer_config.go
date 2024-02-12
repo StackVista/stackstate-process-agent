@@ -63,7 +63,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection,
 		MaxAMQPStatsBuffered: 100000,
 
-		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableHTTPSInspection,
+		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection,
 		EnableIstioMonitoring:     false,
 		EnableGoTLSSupport:        false,
 		EnableJavaTLSSupport:      false,

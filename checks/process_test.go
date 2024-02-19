@@ -647,7 +647,7 @@ func TestBuildIncrementContainersProcessKubernetesReplication(t *testing.T) {
 	}
 }
 
-func TestEnrichProcessWithKubernetesTags(t *testing.T) {
+func TestReplicateKubernetesLabelsToProcesses(t *testing.T) {
 
 	for _, tc := range []struct {
 		name              string
@@ -679,8 +679,8 @@ func TestEnrichProcessWithKubernetesTags(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			processes := enrichProcessWithKubernetesTags(tc.processes, tc.containers)
-			assert.EqualValues(t, tc.expectedProcesses, processes)
+			replicateKubernetesLabelsToProcesses(tc.processes, tc.containers)
+			assert.EqualValues(t, tc.expectedProcesses, tc.processes)
 		})
 	}
 }

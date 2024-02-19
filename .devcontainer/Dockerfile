@@ -46,6 +46,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends apt-utils && ap
         vim \
         rake
 
+# This is here for convenience to impersonate the host user. For now we run everything as root, because debugging tests can only be done as root in devcontainers
+ARG HOST_USER
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+# Create the user
+RUN groupadd --gid $USER_GID $HOST_USER \
+    && useradd --uid $USER_UID --gid $USER_GID -m $HOST_USER \
+    #
+    # [Optional] Add sudo support. Omit if you don't need to install software after connecting.
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $HOST_USER ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$HOST_USER \
+    && chmod 0440 /etc/sudoers.d/$HOST_USER
+
 # install clang from the website since the package manager can change at any time
 RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz" -O /tmp/clang.tar.xz  -o /dev/null
 RUN echo "6b3cc55d3ef413be79785c4dc02828ab3bd6b887872b143e3091692fc6acefe7  /tmp/clang.tar.xz" | sha256sum --check
@@ -100,14 +115,17 @@ RUN wget -O /tmp/golang.tar.gz https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.g
   && echo "$GO_SHA256_LINUX_AMD64  /tmp/golang.tar.gz" | sha256sum --check \
   && tar -C / -xzf /tmp/golang.tar.gz \
   && rm -f /tmp/golang.tar.gz
+
 ENV PATH "/go/bin:${PATH}"
 ENV PATH "${GOPATH}/bin:${PATH}"
 
-ENV ZPLUG_HOME=/root/.zplug
-RUN git clone https://github.com/zplug/zplug $ZPLUG_HOME
-COPY .zshrc /root/.zshrc
-RUN chmod +x /root/.zshrc
-RUN chsh root -s /usr/bin/zsh
-
 RUN curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
 RUN chmod +x /usr/local/bin/docker-compose
+
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+ENV HOST_PROC /host/proc
+ENV HOST_SYS /host/sys
+ENV HOST_ETC /host/etc
+ENV DD_SYSTEM_PROBE_BPF_DIR /workspaces/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/ebpf/bytecode/build/
+ENV STS_TEST_RUN true

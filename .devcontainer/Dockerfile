@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends apt-utils && ap
         vim \
         rake
 
+# This is here for convenience to impersonate the host user. For now we run everything as root, because debugging tests can only be done as root in devcontainers
 ARG HOST_USER
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
@@ -114,7 +115,6 @@ RUN wget -O /tmp/golang.tar.gz https://go.dev/dl/go$GO_VERSION.linux-amd64.tar.g
   && echo "$GO_SHA256_LINUX_AMD64  /tmp/golang.tar.gz" | sha256sum --check \
   && tar -C / -xzf /tmp/golang.tar.gz \
   && rm -f /tmp/golang.tar.gz
-RUN chown -R $HOST_USER /go
 
 ENV PATH "/go/bin:${PATH}"
 ENV PATH "${GOPATH}/bin:${PATH}"

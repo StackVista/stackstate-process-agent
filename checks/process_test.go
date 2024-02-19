@@ -680,6 +680,7 @@ func TestReplicateKubernetesLabelsToProcesses(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			replicateKubernetesLabelsToProcesses(tc.processes, tc.containers)
+			replicateKubernetesLabelsToProcesses(tc.processes, tc.containers) // Twice to show we only add the tag once
 			assert.EqualValues(t, tc.expectedProcesses, tc.processes)
 		})
 	}
@@ -693,6 +694,8 @@ func TestBuildIncrementContainerPrecedeProcesses(t *testing.T) {
 	pNow := []*model.Process{
 		makeProcess(1),
 	}
+
+	replicateKubernetesLabelsToProcesses(pNow, cNow)
 
 	commands := buildIncrement(pNow, cNow, make(map[int32]*model.Process), make(map[string]*model.Container))
 

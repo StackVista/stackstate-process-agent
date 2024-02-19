@@ -2,10 +2,12 @@
     "name": "ProcessAgentDev",
     "build": {
         "dockerfile": "Dockerfile",
-        "args": {}
+        "args": {
+            "HOST_USER": "${localEnv:USER}"
+        }
     },
     "runArgs": [
-        "--cap-add=SYS_PTRACE",
+        "--cap-add=all",
         "--security-opt", "seccomp=unconfined",
         "--privileged",
         "--net=host",
@@ -14,7 +16,10 @@
     "remoteUser": "root",
     "mounts": [
         "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind,consistency=cached",
-        "source=/sys/kernel/debug,target=/sys/kernel/debug,type=bind",  
+        "source=/sys/kernel/debug,target=/sys/kernel/debug,type=bind", 
+        "source=/etc,target=/host/etc,type=bind",
+        "source=/sys,target=/host/sys,type=bind",
+        "source=/proc,target=/host/proc,type=bind",
     ],
     "customizations": {
         "vscode": {

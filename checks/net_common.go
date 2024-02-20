@@ -4,16 +4,27 @@ import (
 	"fmt"
 	"github.com/DataDog/datadog-agent/pkg/network"
 	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
-	tracer "github.com/DataDog/datadog-agent/pkg/network/tracer"
+	"github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 
 	log "github.com/cihub/seelog"
-	"net"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// CreateNetworkRelationIdentifier returns an identification for the relation this connection may contribute to
+// this is a approximation of how StackState identifies multiple connections to belong to the same
+// relation. Because at this point we do not have any means to correlate, sometimes the identification is
+// 'widened', meaning that the relation is made less specific to avoid dropping data that we wanted to include.
+func CreateNetworkRelationIdentifier(cfg *config.AgentConfig, conn network.ConnectionStats) string {
+	isV6 := conn.Family == network.AFINET6
+	localEndpoint := makeEndpointID(cfg, conn.NetNS, conn.Source, isV6, conn.SPort)
+	remoteEndpoint := makeEndpointID(cfg, conn.NetNS, conn.Dest, isV6, conn.DPort)
+	return createRelationIdentifier(localEndpoint, remoteEndpoint, conn.Direction)
+}
 
 type ip struct {
 	Address string
@@ -26,14 +37,14 @@ type endpoint struct {
 }
 
 type endpointID struct {
-	Namespace string
-	Endpoint  *endpoint
+	Scope    string
+	Endpoint *endpoint
 }
 
-// endpointKey returns a endpointID as namespace:endpoint-ip-address:endpoint-port
+// endpointKey returns a endpointID as scope:endpoint-ip-address:endpoint-port
 func endpointKey(e *endpointID) string {
 	var values []string
-	values = append(values, e.Namespace)
+	values = append(values, e.Scope)
 
 	if e.Endpoint != nil && e.Endpoint.ip != nil {
 		values = append(values, e.Endpoint.ip.Address)
@@ -46,24 +57,16 @@ func endpointKey(e *endpointID) string {
 	return strings.Join(values, ":")
 }
 
-// endpointKeyNoPort returns a endpointID as scope:namespace:endpoint-ip-address
+// endpointKeyNoPort returns a endpointID as scope:endpoint-ip-address
 func endpointKeyNoPort(e *endpointID) string {
 	var values []string
-	values = append(values, e.Namespace)
+	values = append(values, e.Scope)
 
 	if e.Endpoint != nil && e.Endpoint.ip != nil {
 		values = append(values, e.Endpoint.ip.Address)
 	}
 
 	return strings.Join(values, ":")
-}
-
-// CreateNetworkRelationIdentifier returns an identification for the relation this connection may contribute to
-func CreateNetworkRelationIdentifier(namespace string, conn network.ConnectionStats) string {
-	isV6 := conn.Family == network.AFINET6
-	localEndpoint := makeEndpointID(namespace, conn.Source, isV6, conn.SPort)
-	remoteEndpoint := makeEndpointID(namespace, conn.Dest, isV6, conn.DPort)
-	return createRelationIdentifier(localEndpoint, remoteEndpoint, conn.Direction)
 }
 
 // connectionRelationIdentifier returns an identification for the relation this connection may contribute to
@@ -82,9 +85,9 @@ func createRelationIdentifier(localEndpoint, remoteEndpoint *endpointID, directi
 }
 
 // makeEndpointID returns a endpointID if the ip is valid and the hostname as the scope for local ips
-func makeEndpointID(namespace string, addr util.Address, isV6 bool, port uint16) *endpointID {
+func makeEndpointID(cfg *config.AgentConfig, netNs uint32, addr util.Address, isV6 bool, port uint16) *endpointID {
 	return &endpointID{
-		Namespace: namespace,
+		Scope: makeAddressScope(cfg, netNs, addr),
 		Endpoint: &endpoint{
 			ip: &ip{
 				Address: addr.String(),
@@ -95,15 +98,15 @@ func makeEndpointID(namespace string, addr util.Address, isV6 bool, port uint16)
 	}
 }
 
-// Represents the namespace part of connection identity. The connection namespace
-// determines its locality (e.g. the scope in which the network resides)
-type namespace struct {
+// Represents the scope part of connection identity. The connection scope
+// determines its locality (e.g. the scope in which a network address resides)
+type scope struct {
 	ClusterName      string
 	HostName         string
 	NetworkNamespace string
 }
 
-func (ns namespace) toString() string {
+func (ns scope) toString() string {
 	var fragments []string
 	if ns.ClusterName != "" {
 		fragments = append(fragments, ns.ClusterName)
@@ -117,35 +120,26 @@ func (ns namespace) toString() string {
 	return strings.Join(fragments, ":")
 }
 
-func makeNamespace(clusterName string, hostname string, connection network.ConnectionStats) namespace {
-	// check if we're running in kubernetes, prepend the namespace with the kubernetes / openshift cluster name
-	var ns = namespace{"", "", ""}
-	if clusterName != "" {
-		ns.ClusterName = clusterName
-	}
+// makeAddressScope Creates a scope in which a network address exists. Networking is always decentralized and local,
+// hence we need to add the scope context to make it globally unique. The primary information used for this is the address
+// range (loopback/provate/public) aswell as contextual information that was retrieved or configured (cluster/hostname).
+func makeAddressScope(cfg *config.AgentConfig, netNs uint32, addr util.Address) string {
+	// check if we're running in kubernetes, prepend the scope with the kubernetes / openshift cluster name
+	var ns = scope{"", "", ""}
 
-	if connection.Source.IsLoopback() && connection.Dest.IsLoopback() {
-		// For sure this is scoped to the host
-		ns.HostName = hostname
-		// Maybe even to a namespace on the host in case of k8s/docker containers
-		if connection.NetNS != 0 {
-			ns.NetworkNamespace = strconv.Itoa(int(connection.NetNS))
+	if addr.IsLoopback() || addr.IsLinkLocalUnicast() {
+		// Loopback address, qualify with cluster, host, netns.
+		ns.ClusterName = cfg.ClusterName
+		ns.HostName = cfg.HostName
+		if netNs != 0 {
+			ns.NetworkNamespace = strconv.FormatUint(uint64(netNs), 10)
 		}
-	}
+	} else if addr.IsPrivate() {
+		// Private address is scoped with the 'private network', which currently can only be the cluster name
+		ns.ClusterName = cfg.ClusterName
+	} // Otherwise the address is public, no scoping needed.
 
-	return ns
-}
-
-func formatNamespace(clusterName string, hostname string, connection network.ConnectionStats) string {
-	return makeNamespace(clusterName, hostname, connection).toString()
-}
-
-func isLoopback(ip string) bool {
-	ipAddress := net.ParseIP(ip)
-	if ipAddress == nil {
-		return false
-	}
-	return ipAddress.IsLoopback()
+	return ns.toString()
 }
 
 func formatFamily(f network.ConnectionFamily) model.ConnectionFamily {

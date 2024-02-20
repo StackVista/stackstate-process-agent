@@ -399,23 +399,24 @@ message Connection {
 	Addr laddr = 5; // Local address
 	Addr raddr = 6; // Remote address
 	// 7 is deprecated
-	float bytesSentPerSecond = 8;
-	float bytesReceivedPerSecond = 9;
+	// float bytesSentPerSecond = 8; deprecated
+	// float bytesReceivedPerSecond = 9; deprecated
 	ConnectionFamily family = 10;
 	ConnectionType type = 11;
 	int64 pidCreateTime = 12;
-	string namespace = 50; // local
+	// string namespace/scope = 50; // local deprecated
 	ConnectionDirection direction = 51;
-	string connectionIdentifier = 52;
+	// string connectionIdentifier = 52 is deprecated;
 	string applicationProtocol = 53;
 	repeated ConnectionMetric metrics = 54;
 	Addr natladdr = 55; // Translated local address
 	Addr natraddr = 56; // Translated remote address
 	repeated HTTPTraceObservation httpObservations = 57;
+	uint32 netNs = 58; // local
 }
 
 message Addr {
-	Host host = 1;
+	// Host host = 1; deprecated
 	string ip = 2;
 	int32 port = 3;
 }

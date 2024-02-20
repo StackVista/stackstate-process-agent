@@ -455,6 +455,8 @@ func (c *ConnectionsCheck) formatConnections(
 			ApplicationProtocol: appProto,
 			Metrics:             metrics,
 			HttpObservations:    filteredObservations,
+			InitialSeq:          conn.Initial_seq,
+			InitialAckSeq:       conn.Initial_ack_seq,
 		})
 
 		connectionMetricCorrelated += connectionMetricsCount

@@ -22,6 +22,7 @@ This script run the prebuild steps for the datadog agent dependency. Those steps
   -c/--clean      -- Clean the generated files
   -i/--install-go -- Install the prebuild go files
   --install-ebpf  -- Install the prebuild ebpf files to ./ebpf-object-files for further processing
+  --install-ebpf-from-dep  -- Install the prebuild ebpf files from the go sum dependency. Requires root, because typically those files are generated as root user.
   --install-ebpf-root -- Install the prebuild ebpf files to ./ebpf-object-files-root for use in the process-agent binary
   -t/--test       -- Run tests on the upstream datadog agent
   -s/--shell      -- Launch into a shell in which the prebuild files are built
@@ -48,6 +49,10 @@ while [ $# -gt 0 ]; do
     ;;
     --install-ebpf)
       ACTION="install-ebpf"
+      shift
+    ;;
+    --install-ebpf-from-dep)
+      ACTION="install-ebpf-from-dep"
       shift
     ;;
     --install-ebpf-root)
@@ -207,6 +212,20 @@ elif [ "$ACTION" = "install-ebpf" ]; then
   mkdir -p $DIR/ebpf-object-files
   rm -rf $DIR/ebpf-object-files/*
   cp -v -a "$DEPENDENCY_ARTIFACTS_DIR/ebpf"/* "$DIR/ebpf-object-files/"
+  set +x
+elif [ "$ACTION" = "install-ebpf-from-dep" ]; then
+  echo "Installing ebpf files from the dependent go module"
+  if [ ! -d "$GO_MOD_DEPENDENCY_DIR/pkg/ebpf/bytecode/build" ]; then
+    echo "No generated files found at $GO_MOD_DEPENDENCY_DIR/pkg/ebpf/bytecode/build, please make sure the files are generated"
+    exit 1
+  fi
+
+  set -x
+  mkdir -p $DIR/ebpf-object-files
+  rm -rf $DIR/ebpf-object-files/*
+  sudo cp -v -a "$GO_MOD_DEPENDENCY_DIR/pkg/ebpf/bytecode/build"/* "$DIR/ebpf-object-files/"
+  CURRENT_USER=$(whoami)
+  sudo chown "$CURRENT_USER:$CURRENT_USER" -R "$DIR/ebpf-object-files/"
   set +x
 elif [ "$ACTION" = "install-ebpf-root" ]; then
   echo "Installing ebpf files as root"

@@ -88,6 +88,11 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 		return nil, err
 	}
 
+	log.Debugf("Got traced connections: %d", len(conns.Conns))
+	for _, c := range conns.Conns {
+		log.Debugf("\t%v", c)
+	}
+
 	var aggregatedInterval time.Duration
 	if !c.prevCheckTime.IsZero() {
 		aggregatedInterval = currentTime.Sub(c.prevCheckTime)
@@ -168,9 +173,26 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 		}
 	}
 
+	initialSeqMissingCountOut := 0
+	initialSeqMissingCountIn := 0
+	initialSeqMissingCountNone := 0
 	log.Infof("collected %d connections and %d http client observations and %d http server trace observations in %s", len(formattedConnections), clientObservations, serverObservations, time.Since(start))
 	for _, conn := range formattedConnections {
+		if conn.InitialSeq == 0 && conn.InitialAckSeq == 0 {
+			if conn.Direction == model.ConnectionDirection_outgoing {
+				initialSeqMissingCountOut = initialSeqMissingCountOut + 1
+			} else if conn.Direction == model.ConnectionDirection_incoming {
+				initialSeqMissingCountIn = initialSeqMissingCountIn + 1
+			} else {
+				initialSeqMissingCountNone = initialSeqMissingCountNone + 1
+			}
+		}
+
 		log.Debugf("%v", conn)
+	}
+
+	if initialSeqMissingCountNone != 0 || initialSeqMissingCountIn != 0 || initialSeqMissingCountOut != 0 {
+		log.Infof("for %d outgoing, %d incoming and %d undirected connections the initial handshake was not observed", initialSeqMissingCountOut, initialSeqMissingCountIn, initialSeqMissingCountNone)
 	}
 
 	log.Infof("collected %d pods for connections", len(connsPods.pods))
@@ -321,6 +343,11 @@ func (c *ConnectionsCheck) formatConnections(
 	var httpObservationNoProcess, httpObservationShortLived, httpObservationCorrelated float64 = 0, 0, 0
 
 	for _, conn := range conns {
+		// Not interested in UDP connections
+		if conn.Type == network.UDP {
+			continue
+		}
+
 		var connectionMetricsCount, httpObservationsCount float64 = 0, 0
 		metrics := make([]*model.ConnectionMetric, 0)
 		observations := make([]*model.HTTPTraceObservation, 0)

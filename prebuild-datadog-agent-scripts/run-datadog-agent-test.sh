@@ -41,13 +41,7 @@ export STS_TEST_RUN=true
 # Selected test suites for testing
 echo "Running suites"
 
-invoke test --build-include=linux_bpf,test --targets=./pkg/network/protocols/http/.,./pkg/network/protocols/mongo/.,./pkg/network/usm/.,./pkg/network/. --skip-linters
-# These tests need to run without concurrency
-invoke test --build-include=linux_bpf,test --targets=./pkg/process/monitor/. --cpus=1 --skip-linters
-# Only openssl was proven to work, still need to prove gnutls
-invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --skip-linters  --test-run-name="^TestHTTPSObservationViaLibraryIntegration$"
 invoke test --build-include=linux_bpf,test --cpus=1 --targets=./pkg/network/tracer/. --skip-linters --test-run-name="^TestUSMSuite/prebuilt/TestProtocolClassification/without_nat/mongo$"
-invoke test --build-include=linux_bpf,test --cpus=1 --targets=./pkg/network/tracer/. --skip-linters --test-run-name="^TracerSuite/prebuilt/TestTCPInitialSeq"
 
 # Run the tests for MongoDB
 # To also run the TLS test, provide a MONGODB_URI for a TLS-enabled instance, e.g.:
@@ -58,6 +52,15 @@ invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --cp
 # There is also a TLS test available, but it needs manual intervention as of now.
 # See TestAMQPOverTLSStats in tracker_usm_linux_test.go
 invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --cpus=1 --skip-linters --test-run-name="^TestAMQPStats$"
+
+invoke test --build-include=linux_bpf,test --targets=./pkg/network/protocols/http/.,./pkg/network/protocols/mongo/.,./pkg/network/usm/.,./pkg/network/. --skip-linters
+# These tests need to run without concurrency
+invoke test --build-include=linux_bpf,test --targets=./pkg/process/monitor/. --cpus=1 --skip-linters
+# Only openssl was proven to work, still need to prove gnutls
+invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --skip-linters  --test-run-name="^TestHTTPSObservationViaLibraryIntegration$"
+
+invoke test --build-include=linux_bpf,test --cpus=1 --targets=./pkg/network/tracer/. --skip-linters --test-run-name="^TracerSuite/prebuilt/TestTCPInitialSeq"
+
 
 # Does not work yet, needs runtime compilation
 # invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --skip-linters  --run="^TestHTTPGoTLSAttachProbes$"

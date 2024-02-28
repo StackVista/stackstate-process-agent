@@ -185,7 +185,8 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 
 	connections, _ := c.formatConnections(cfg, connStats, nil, nil, nil, nil)
 
-	assert.Len(t, connections, 3)
+	// Connection will be reported but with pid 0
+	assert.Len(t, connections, 4)
 
 	pids := make([]int32, 0)
 	for _, conn := range connections {
@@ -193,6 +194,7 @@ func TestFilterConnectionsByProcess(t *testing.T) {
 	}
 
 	assert.NotContains(t, pids, 4)
+	assert.Contains(t, pids, int32(0))
 }
 
 func TestPodsIndexFormatted(t *testing.T) {
@@ -351,7 +353,10 @@ func TestRelationCache(t *testing.T) {
 
 	// first run on an empty cache; expect no process, but cache should be filled in now.
 	firstRun, _ := c.formatConnections(cfg, connStats, nil, nil, nil, nil)
-	assert.Zero(t, len(firstRun), "Connections should be empty when the cache is not present")
+	assert.Equal(t, 4, len(firstRun), "Connections should be there but pid 0")
+	for _, conn := range firstRun {
+		assert.Equal(t, int32(0), conn.Pid)
+	}
 	assert.Equal(t, 4, c.cache.ItemCount(), "Cache should contain 4 elements")
 
 	// wait for cfg.ShortLivedNetworkRelationQualifierSecs duration
@@ -548,7 +553,8 @@ func TestRelationShortLivedFiltering(t *testing.T) {
 				assert.Len(t, connections, 1, "The connection should be present in the returned payload for the Connection Check")
 				assert.Contains(t, rIDs, relationID, "%s should not be filtered from the relation identifiers for the Connection Check", relationID)
 			} else {
-				assert.Len(t, connections, 0, "The connection should be filtered in the returned payload for the Connection Check")
+				assert.Len(t, connections, 1, "The connection should be filtered in the returned payload for the Connection Check")
+				assert.Equal(t, int32(0), connections[0].Pid)
 			}
 
 			c.cache.Flush()

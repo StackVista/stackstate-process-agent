@@ -191,8 +191,8 @@ github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d h1:UrqY+r/O
 github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/StackExchange/wmi v1.2.1 h1:VIkavFPXSjcnS+O8yTq7NI32k0R5Aj+v39y29VYDOSA=
 github.com/StackExchange/wmi v1.2.1/go.mod h1:rcmrprowKIVzvc+NUiLncP2uuArMWLCbu9SBzvHz7e8=
-github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240228084259-53f2a5cc598f h1:POTQJPfaVq6ZjW+zplfDXSUdMU/nhy9Z3lUDw/A0wjE=
-github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240228084259-53f2a5cc598f/go.mod h1:b87zqQerXQiLND+Ma6sRteu/wX0Uk6DAkKtSFJegF4c=
+github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240228123452-e43abb11f4a5 h1:vwiXNf35SLxkIiWUWlWNj0Usr8TsaXguvspKnAAV2nQ=
+github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240228123452-e43abb11f4a5/go.mod h1:b87zqQerXQiLND+Ma6sRteu/wX0Uk6DAkKtSFJegF4c=
 github.com/StackVista/netlink v0.0.0-20231207101142-91d41874606b h1:9UZEx5+IBk26JfiMnUrNwE7J5bcC5zYtWwI4O8Q540I=
 github.com/StackVista/netlink v0.0.0-20231207101142-91d41874606b/go.mod h1:twkDnbuQxJYemMlGd4JFIcuhgX83tXhKS2B/PRMpOho=
 github.com/StackVista/sketches-go v1.2.0-pre h1:04QAbYurRVq5LY6VK0KbFPUi4YhJcpEi5AansGdLdMw=

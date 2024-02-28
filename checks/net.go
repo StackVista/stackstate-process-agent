@@ -220,7 +220,7 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 			}
 		} else {
 			for _, conn := range cs.Conns {
-				if _, ok := c.initialConnections[getConnectionKey(conn)]; (!ok) && conn.Initial_seq == 0 && conn.Initial_ack_seq == 0 && conn.Direction != network.NONE {
+				if _, ok := c.initialConnections[getConnectionKey(conn)]; (!ok) && conn.InitialTCPSeq.Seq == 0 && conn.InitialTCPSeq.Ack_seq == 0 && conn.Direction != network.NONE {
 					log.Debugf("Got new connection without initial handshake: %v", conn)
 				}
 				c.initialConnections[getConnectionKey(conn)] = nil
@@ -505,8 +505,8 @@ func (c *ConnectionsCheck) formatConnections(
 			ApplicationProtocol: appProto,
 			Metrics:             metrics,
 			HttpObservations:    observations,
-			InitialSeq:          conn.Initial_seq,
-			InitialAckSeq:       conn.Initial_ack_seq,
+			InitialSeq:          conn.InitialTCPSeq.Seq,
+			InitialAckSeq:       conn.InitialTCPSeq.Ack_seq,
 		})
 
 		connectionMetricCorrelated += connectionMetricsCount

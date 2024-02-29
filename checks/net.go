@@ -49,7 +49,10 @@ type ConnectionsCheck struct {
 	localTracer    *tracer.Tracer
 	localTracerErr error
 
-	podsCache *pods.CachedPods
+	// Set to keep track of which connections we observed initially. This is used for debugging purposes, because
+	// for new connections we expect full observability
+	initialConnections map[connKey]interface{}
+	podsCache          *pods.CachedPods
 
 	prevCheckTime time.Time
 
@@ -86,6 +89,11 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	log.Debugf("Got traced connections: %d", len(conns.Conns))
+	for _, c := range conns.Conns {
+		log.Debugf("\t%v", c)
 	}
 
 	var aggregatedInterval time.Duration
@@ -168,9 +176,26 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 		}
 	}
 
+	initialSeqMissingCountOut := 0
+	initialSeqMissingCountIn := 0
+	initialSeqMissingCountNone := 0
 	log.Infof("collected %d connections and %d http client observations and %d http server trace observations in %s", len(formattedConnections), clientObservations, serverObservations, time.Since(start))
 	for _, conn := range formattedConnections {
+		if conn.InitialSeq == 0 && conn.InitialAckSeq == 0 {
+			if conn.Direction == model.ConnectionDirection_outgoing {
+				initialSeqMissingCountOut = initialSeqMissingCountOut + 1
+			} else if conn.Direction == model.ConnectionDirection_incoming {
+				initialSeqMissingCountIn = initialSeqMissingCountIn + 1
+			} else {
+				initialSeqMissingCountNone = initialSeqMissingCountNone + 1
+			}
+		}
+
 		log.Debugf("%v", conn)
+	}
+
+	if initialSeqMissingCountNone != 0 || initialSeqMissingCountIn != 0 || initialSeqMissingCountOut != 0 {
+		log.Infof("for %d outgoing, %d incoming and %d undirected connections the initial handshake was not observed", initialSeqMissingCountOut, initialSeqMissingCountIn, initialSeqMissingCountNone)
 	}
 
 	log.Infof("collected %d pods for connections", len(connsPods.pods))
@@ -187,6 +212,20 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 			return nil, fmt.Errorf("using local network tracer, but no tracer was initialized")
 		}
 		cs, err := c.localTracer.GetActiveConnections("process-agent")
+
+		if len(c.initialConnections) == 0 {
+			c.initialConnections = map[connKey]interface{}{}
+			for _, conn := range cs.Conns {
+				c.initialConnections[getConnectionKey(conn)] = nil
+			}
+		} else {
+			for _, conn := range cs.Conns {
+				if _, ok := c.initialConnections[getConnectionKey(conn)]; (!ok) && conn.InitialTCPSeq.Seq == 0 && conn.InitialTCPSeq.Ack_seq == 0 && conn.Direction != network.NONE {
+					log.Debugf("Got new connection without initial handshake: %v", conn)
+				}
+				c.initialConnections[getConnectionKey(conn)] = nil
+			}
+		}
 		return cs, err
 	}
 
@@ -321,6 +360,11 @@ func (c *ConnectionsCheck) formatConnections(
 	var httpObservationNoProcess, httpObservationShortLived, httpObservationCorrelated float64 = 0, 0, 0
 
 	for _, conn := range conns {
+		// Not interested in UDP connections
+		if conn.Type == network.UDP {
+			continue
+		}
+
 		var connectionMetricsCount, httpObservationsCount float64 = 0, 0
 		metrics := make([]*model.ConnectionMetric, 0)
 		observations := make([]*model.HTTPTraceObservation, 0)
@@ -371,16 +415,20 @@ func (c *ConnectionsCheck) formatConnections(
 			},
 		})
 
+		var pid = int32(conn.Pid)
+		var pidCreateTime int64
 		// Check to see if this is a process that we observed and that it's not short-lived / blacklisted in the Process check
 		process, ok := processes[conn.Pid]
 		if !ok {
 			connectionMetricNoProcess += connectionMetricsCount
 			httpObservationNoProcess += httpObservationsCount
 			connectionNoProcess++
+			pid = 0
+			pidCreateTime = 0
 			log.Debugf("Filter connection: %v is out because process %d (in net namespace %d) is not observed (gone or just started)", conn, conn.Pid, conn.NetNS)
-			continue
+		} else {
+			pidCreateTime = process.CreateTime
 		}
-		pidCreateTime := process.CreateTime
 
 		// Filtering for short-lived relations.
 		relationID := CreateNetworkRelationIdentifier(cfg, conn)
@@ -404,11 +452,9 @@ func (c *ConnectionsCheck) formatConnections(
 			log.Debugf("Filter relation: %s (%v) based on it's short-lived nature; ",
 				relationID, conn, cfg.ShortLivedNetworkRelationQualifierSecs,
 			)
-			continue
-		}
 
-		if conn.Direction != network.OUTGOING && conn.Direction != network.INCOMING {
-			log.Warnf("unexpected connection direction %s for %v", conn.Direction.String(), conn)
+			pid = 0
+			pidCreateTime = 0
 		}
 
 		// Get adresses
@@ -436,13 +482,17 @@ func (c *ConnectionsCheck) formatConnections(
 			Port: int32(conn.DPort),
 		}
 
-		filteredObservations := make([]*model.HTTPTraceObservation, 0)
-		if !isHeaderProxyContainer(process) {
-			filteredObservations = observations
+		if pid == 0 {
+			// Clear metrics when having a filtered pid
+			metrics = make([]*model.ConnectionMetric, 0)
+			observations = make([]*model.HTTPTraceObservation, 0)
+		} else if !isHeaderProxyContainer(process) {
+			// Clear observations for the proxy container
+			observations = make([]*model.HTTPTraceObservation, 0)
 		}
 
 		cxs = append(cxs, &model.Connection{
-			Pid:                 int32(conn.Pid),
+			Pid:                 pid,
 			PidCreateTime:       pidCreateTime,
 			Family:              formatFamily(conn.Family),
 			Type:                formatType(conn.Type),
@@ -454,7 +504,9 @@ func (c *ConnectionsCheck) formatConnections(
 			NetNs:               conn.NetNS,
 			ApplicationProtocol: appProto,
 			Metrics:             metrics,
-			HttpObservations:    filteredObservations,
+			HttpObservations:    observations,
+			InitialSeq:          conn.InitialTCPSeq.Seq,
+			InitialAckSeq:       conn.InitialTCPSeq.Ack_seq,
 		})
 
 		connectionMetricCorrelated += connectionMetricsCount

@@ -26,7 +26,9 @@ task :build do
   else
     bin = "process-agent"
   end
-  sh "./prebuild-datadog-agent.sh -i"
+  if ENV["STS_DEV_CONTAINER"] != "true"
+    sh "./prebuild-datadog-agent.sh -i"
+  end
   go_build("github.com/StackVista/stackstate-process-agent/cmd/agent", {
     :cmd => "go build -o #{bin}",
     :race => ENV['GO_RACE'] == 'true',
@@ -66,7 +68,9 @@ end
 
 desc "Test Datadog Process agent"
 task :test do
-  sh "./prebuild-datadog-agent.sh -i"
+  if ENV["STS_DEV_CONTAINER"] != "true"
+    sh "./prebuild-datadog-agent.sh -i"
+  end
   go_test("$(go list ./...)", {
    :bpf => true,
    :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],
@@ -80,7 +84,9 @@ task :cmdtest do
 end
 
 task :vet do
-  sh "./prebuild-datadog-agent.sh -i"
+  if ENV["STS_DEV_CONTAINER"] != "true"
+    sh "./prebuild-datadog-agent.sh -i"
+  end
   go_vet("$(go list ./...)", {
     :bpf => true,
     :embed_path => ENV['STACKSTATE_EMBEDDED_PATH'],

@@ -129,3 +129,5 @@ ENV HOST_SYS /host/sys
 ENV HOST_ETC /host/etc
 ENV DD_SYSTEM_PROBE_BPF_DIR /workspaces/agent/src/github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/ebpf/bytecode/build/
 ENV STS_TEST_RUN true
+ENV BPF_DEBUG true
+ENV STS_DEV_CONTAINER true

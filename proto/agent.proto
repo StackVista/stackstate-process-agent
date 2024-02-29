@@ -413,6 +413,8 @@ message Connection {
 	Addr natraddr = 56; // Translated remote address
 	repeated HTTPTraceObservation httpObservations = 57;
 	uint32 netNs = 58; // local
+	uint32 initialSeq = 59;
+	uint32 initialAckSeq = 60;
 }
 
 message Addr {

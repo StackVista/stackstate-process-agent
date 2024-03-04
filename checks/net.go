@@ -387,7 +387,7 @@ func (c *ConnectionsCheck) formatConnections(
 			delete(uncorrelatedObservations, co)
 			delete(uncorrelatedConnectionMetrics, co)
 			if len(observations) > 0 {
-				log.Debugf("Correlated connection observations: %v:%d<-%v:%d @ %d (%v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(observations), conn)
+				log.Debugf("Correlated connection observations: %v:%d<-%v:%d @ %d (%v, %v) -- %v", util.FromLowHigh(co.DstIPLow, co.DstIPHigh), co.DstPort, util.FromLowHigh(co.SrcIPLow, co.SrcIPHigh), co.SrcPort, co.NetNs, len(metrics), len(observations), conn)
 			}
 		}
 
@@ -486,7 +486,7 @@ func (c *ConnectionsCheck) formatConnections(
 			// Clear metrics when having a filtered pid
 			metrics = make([]*model.ConnectionMetric, 0)
 			observations = make([]*model.HTTPTraceObservation, 0)
-		} else if !isHeaderProxyContainer(process) {
+		} else if isHeaderProxyContainer(process) {
 			// Clear observations for the proxy container
 			observations = make([]*model.HTTPTraceObservation, 0)
 		}

@@ -407,6 +407,13 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		}
 	}
 
+	if proxyURL := os.Getenv("STS_PROXY_HTTPS"); proxyURL != "" {
+		c.HTTPSProxy, err = url.Parse(proxyURL)
+		if err != nil {
+			log.Errorf("error parsing STS_PROXY_HTTPS, not using a proxy: %s", err)
+		}
+	}
+
 	if proxyURL := os.Getenv("HTTP_PROXY"); proxyURL != "" {
 		c.HTTPProxy, err = url.Parse(proxyURL)
 		if err != nil {
@@ -418,6 +425,13 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.HTTPProxy, err = url.Parse(proxyURL)
 		if err != nil {
 			log.Errorf("error parsing STS_HTTP_PROXY, not using a proxy: %s", err)
+		}
+	}
+
+	if proxyURL := os.Getenv("STS_PROXY_HTTP"); proxyURL != "" {
+		c.HTTPProxy, err = url.Parse(proxyURL)
+		if err != nil {
+			log.Errorf("error parsing STS_PROXY_HTTP, not using a proxy: %s", err)
 		}
 	}
 

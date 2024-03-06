@@ -7,6 +7,7 @@ import (
 	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	log "github.com/cihub/seelog"
+	"k8s.io/utils/strings/slices"
 )
 
 // TracerConfig creates a config for the network tracer
@@ -52,18 +53,18 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		ProtocolClassificationEnabled: cfg.NetworkTracer.EnableProtocolInspection,
 
-		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection,
-		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection,
+		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "http"),
+		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "http2"),
 
-		EnableKafkaMonitoring: false,
+		EnableKafkaMonitoring: false && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "kafka"),
 
-		EnableMongoMonitoring: cfg.NetworkTracer.EnableProtocolInspection,
+		EnableMongoMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "mongo"),
 		MaxMongoStatsBuffered: 100000,
 
-		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection,
+		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "amqp"),
 		MaxAMQPStatsBuffered: 100000,
 
-		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection,
+		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "tls"),
 		EnableIstioMonitoring:     false,
 		EnableGoTLSSupport:        false,
 		EnableJavaTLSSupport:      false,

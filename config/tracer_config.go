@@ -53,18 +53,18 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		ProtocolClassificationEnabled: cfg.NetworkTracer.EnableProtocolInspection,
 
-		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection && slices.Contains(cfg.NetworkTracer.DisabledProtocols, "http"),
-		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && slices.Contains(cfg.NetworkTracer.DisabledProtocols, "http2"),
+		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "http"),
+		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "http2"),
 
-		EnableKafkaMonitoring: false && slices.Contains(cfg.NetworkTracer.DisabledProtocols, "kafka"),
+		EnableKafkaMonitoring: false && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "kafka"),
 
-		EnableMongoMonitoring: cfg.NetworkTracer.EnableProtocolInspection && slices.Contains(cfg.NetworkTracer.DisabledProtocols, "mongo"),
+		EnableMongoMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "mongo"),
 		MaxMongoStatsBuffered: 100000,
 
-		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection && slices.Contains(cfg.NetworkTracer.DisabledProtocols, "amqp"),
+		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "amqp"),
 		MaxAMQPStatsBuffered: 100000,
 
-		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection && slices.Contains(cfg.NetworkTracer.DisabledProtocols, "tls"),
+		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "tls"),
 		EnableIstioMonitoring:     false,
 		EnableGoTLSSupport:        false,
 		EnableJavaTLSSupport:      false,

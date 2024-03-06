@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
-	"github.com/DataDog/datadog-agent/pkg/util/filesystem"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/DataDog/datadog-agent/pkg/util/filesystem"
 
 	log "github.com/cihub/seelog"
 	"gopkg.in/yaml.v2"
@@ -139,9 +140,11 @@ type YamlAgentConfig struct {
 		// ProbeDebugLog logging when loading probe
 		ProbeDebugLog string `yaml:"probe_debug_log_enabled"`
 		// ProbeLogBufferSizeBytes increase the probe log buffer for debugging purposes
-		ProbeLogBufferSizeBytes     int `yaml:"probe_log_buffer_size_bytes"`
-		MaxHTTPStatsBuffered        int `yaml:"http_stats_buffer_size"`
-		MaxHTTPObservationsBuffered int `yaml:"http_observations_buffer_size"`
+		ProbeLogBufferSizeBytes int `yaml:"probe_log_buffer_size_bytes"`
+		// Protocol probes to be disabled, mostly for debugging.
+		DisabledProtocols           []string `yaml:"disabled_protocols"`
+		MaxHTTPStatsBuffered        int      `yaml:"http_stats_buffer_size"`
+		MaxHTTPObservationsBuffered int      `yaml:"http_observations_buffer_size"`
 		HTTPMetrics                 struct {
 			// Specifies which algorithm to use to collapse measurements: collapsing_lowest_dense, collapsing_highest_dense, unbounded
 			SketchType string `yaml:"sketch_type"`
@@ -432,6 +435,9 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	}
 	if networkConf.Network.EBPFArtifactDir != "" {
 		agentConf.NetworkTracer.EbpfArtifactDir = networkConf.Network.EBPFArtifactDir
+	}
+	if networkConf.Network.DisabledProtocols != nil {
+		agentConf.NetworkTracer.DisabledProtocols = networkConf.Network.DisabledProtocols
 	}
 	return agentConf, nil
 }

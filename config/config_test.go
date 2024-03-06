@@ -11,6 +11,7 @@ import (
 	"github.com/DataDog/gopsutil/process"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
+	"k8s.io/utils/strings/slices"
 )
 
 func TestBlacklist(t *testing.T) {
@@ -581,6 +582,22 @@ network_tracer_config:
 	assert.Equal(false, agentConfig.NetworkTracer.EnableProtocolInspection)
 }
 
+func TestStackStateNetworkConfigProtocolsDisabled(t *testing.T) {
+	assert := assert.New(t)
+	var ddy YamlAgentConfig
+	err := yaml.Unmarshal(
+		[]byte(`
+network_tracer_config:
+  disabled_protocols: ['amqp']
+`), &ddy)
+	assert.NoError(err)
+
+	agentConfig, err := NewAgentConfig(&ddy)
+	assert.NoError(err)
+
+	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, "amqp"))
+}
+
 func TestStackStateHttpTracingDisabled(t *testing.T) {
 	assert := assert.New(t)
 	var ddy YamlAgentConfig
@@ -672,6 +689,7 @@ func TestEnvOverrides(t *testing.T) {
 	os.Setenv("STS_HTTP_TRACING_ENABLED", "true")
 	os.Setenv("STS_HTTP_STATS_BUFFER_SIZE", "150000")
 	os.Setenv("STS_HTTP_OBSERVATIONS_BUFFER_SIZE", "160000")
+	os.Setenv("STS_DISABLED_PROTOCOLS", "AMQP,hTTp")
 
 	agentConfig, _ := NewAgentConfig(nil)
 
@@ -683,6 +701,8 @@ func TestEnvOverrides(t *testing.T) {
 	assert.Equal(true, agentConfig.NetworkTracer.EnableHTTPTracing)
 	assert.Equal(150000, agentConfig.NetworkTracer.MaxHTTPStatsBuffered)
 	assert.Equal(160000, agentConfig.NetworkTracer.MaxHTTPObservationsBuffered)
+	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, "amqp"))
+	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, "http"))
 }
 
 func TestEnvSiteConfig(t *testing.T) {

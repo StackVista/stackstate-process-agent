@@ -49,6 +49,8 @@ type NetworkTracerConfig struct {
 	MaxHTTPStatsBuffered int
 	// Max number of http observations buffered
 	MaxHTTPObservationsBuffered int
+	// Protocols to disable, mostly for debugging
+	DisabledProtocols []string
 }
 
 // APIEndpoint is a single endpoint where process data will be submitted.
@@ -232,6 +234,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 			ProbeLogBufferSizeBytes:     16000000,
 			MaxHTTPStatsBuffered:        100000,
 			MaxHTTPObservationsBuffered: 100000,
+			DisabledProtocols:           []string{},
 		},
 
 		// Check config
@@ -516,6 +519,14 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if maxObs, err := strconv.Atoi(os.Getenv("STS_HTTP_OBSERVATIONS_BUFFER_SIZE")); err == nil && maxObs != 0 {
 		c.NetworkTracer.MaxHTTPObservationsBuffered = maxObs
+	}
+
+	if v := os.Getenv("STS_DISABLED_PROTOCOLS"); v != "" {
+		protocols := strings.Split(v, ",")
+		for i, proto := range protocols {
+			protocols[i] = strings.ToLower(proto)
+		}
+		c.NetworkTracer.DisabledProtocols = protocols
 	}
 
 	var patterns []string

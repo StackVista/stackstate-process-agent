@@ -896,16 +896,23 @@ func aggregateAMQPStats(amqpStats map[amqp.Key]*amqp.RequestStat) map[connKey][]
 			"queue":    amqpKey.QueueName,
 		}
 
-		result[connKey] = append(result[connKey],
-			makeConnectionMetricWithNumber(
-				amqpMessagesDeliveredDelta, tags,
-				float64(stat.MessagesDelivered),
-			),
-			makeConnectionMetricWithNumber(
-				amqpMessagesPublishedDelta, tags,
-				float64(stat.MessagesPublished),
-			),
-		)
+		if stat.MessagesDelivered != 0 {
+			result[connKey] = append(result[connKey],
+				makeConnectionMetricWithNumber(
+					amqpMessagesDeliveredDelta, tags,
+					float64(stat.MessagesDelivered),
+				),
+			)
+		}
+
+		if stat.MessagesPublished != 0 {
+			result[connKey] = append(result[connKey],
+				makeConnectionMetricWithNumber(
+					amqpMessagesPublishedDelta, tags,
+					float64(stat.MessagesPublished),
+				),
+			)
+		}
 	}
 
 	return result

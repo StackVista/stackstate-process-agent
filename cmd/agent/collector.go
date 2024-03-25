@@ -391,7 +391,7 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 	defer cancel()
 	req.WithContext(ctx)
 
-	log.Infof("Sent payload, size: %d bytes.", len(body))
+	log.Debugf("Sent payload, size: %d bytes.", len(body))
 	resp, err := l.client.GetClient().Do(req)
 	if err != nil {
 		if isHTTPTimeout(err) {

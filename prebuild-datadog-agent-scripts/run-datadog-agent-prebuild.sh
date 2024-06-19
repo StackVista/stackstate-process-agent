@@ -4,15 +4,22 @@
 
 set -ex
 
-if ! type "rsync" > /dev/null; then
-  apt install rsync -y --no-install-recommends
-fi
-
 # This command assumes the datadog agent to be mounted at /source-datadog-agent. To avoid outputting to that directory,
 # we make a clone before running any commands
-mkdir -p $WORKDIR
-rsync -au "$SOURCEDIR"/. $WORKDIR
-chown -R root:root $WORKDIR
+if [ -L "$WORKDIR" ] && [ -d "$WORKDIR" ]
+then
+  echo "$WORKDIR is a symlink to a directory. It is your responsibility to ensure that the directory has the up-to-date code."
+else
+
+  if ! type "rsync" > /dev/null; then
+    apt install rsync -y --no-install-recommends
+  fi
+
+  mkdir -p $WORKDIR
+  rsync -au "$SOURCEDIR"/. $WORKDIR
+  chown -R root:root $WORKDIR
+fi
+
 cd $WORKDIR
 
 # Adding a faux tag to make the build pass on the rpo with no tags

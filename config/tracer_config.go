@@ -82,7 +82,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		EnableConntrack:                 true,
 		EnableEbpfConntracker:           true,
-		AllowNetlinkConntrackerFallback: true,
+		AllowNetlinkConntrackerFallback: false,
 		ConntrackMaxStateSize:           131072,
 		ConntrackRateLimit:              500,
 		ConntrackRateLimitInterval:      3 * time.Second,

@@ -75,7 +75,10 @@ func NewCollector(cfg *config.AgentConfig,
 	enabledChecks := make([]checks.Check, 0)
 	for _, c := range checks.All {
 		if cfg.CheckIsEnabled(c.Name()) {
-			c.Init(cfg, sysInfo)
+			err = c.Init(cfg, sysInfo)
+			if err != nil {
+				return Collector{}, fmt.Errorf("failed to intialize check %s: %w", c.Name(), err)
+			}
 			enabledChecks = append(enabledChecks, c)
 		}
 	}

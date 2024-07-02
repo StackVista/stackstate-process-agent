@@ -88,7 +88,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		ConntrackRateLimitInterval:      3 * time.Second,
 		EnableConntrackAllNamespaces:    true,
 		IgnoreConntrackInitFailure:      false,
-		ConntrackInitTimeout:            60 * time.Second,
+		ConntrackInitTimeout:            10 * time.Second,
 
 		EnableGatewayLookup: true,
 

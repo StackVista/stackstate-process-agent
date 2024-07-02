@@ -252,7 +252,10 @@ func debugCheckResults(cfg *config.AgentConfig, check string) error {
 	names := make([]string, 0, len(checks.All))
 	for _, ch := range checks.All {
 		if ch.Name() == check {
-			ch.Init(cfg, sysInfo)
+			err = ch.Init(cfg, sysInfo)
+			if err != nil {
+				return fmt.Errorf("error initializing check %s: %w", ch.Name(), err)
+			}
 			return printResults(cfg, ch)
 		}
 		names = append(names, ch.Name())

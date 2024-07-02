@@ -13,7 +13,7 @@ import (
 // processed in another way (e.g. printed for debugging).
 // Before checks are used you must called Init.
 type Check interface {
-	Init(cfg *config.AgentConfig, info *model.SystemInfo)
+	Init(cfg *config.AgentConfig, info *model.SystemInfo) error
 	Name() string
 	Endpoint() string
 	Run(cfg *config.AgentConfig, features features.Features, groupID int32, currentTime time.Time) (*CheckResult, error)

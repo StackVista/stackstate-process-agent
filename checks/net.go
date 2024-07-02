@@ -76,8 +76,7 @@ func (c *ConnectionsCheck) Endpoint() string { return "/api/v1/connections" }
 func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, groupID int32, currentTime time.Time) (*CheckResult, error) {
 	// If local tracer failed to initialize, so we shouldn't be doing any checks
 	if c.useLocalTracer && c.localTracer == nil {
-		log.Errorf("failed to create network tracer. Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting")
-		return nil, c.localTracerErr
+		return nil, fmt.Errorf("cannot run connections check when tracer is not initialized. Set STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting")
 	}
 
 	start := time.Now()

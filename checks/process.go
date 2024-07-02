@@ -47,9 +47,10 @@ type ProcessCheck struct {
 }
 
 // Init initializes the singleton ProcessCheck.
-func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) {
+func (p *ProcessCheck) Init(cfg *config.AgentConfig, info *model.SystemInfo) error {
 	p.sysInfo = info
 	p.cache = cache.New(cfg.ProcessCacheDurationMin, cfg.ProcessCacheDurationMin)
+	return nil
 }
 
 // Name returns the name of the ProcessCheck.

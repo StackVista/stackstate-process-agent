@@ -80,9 +80,11 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		HTTPNotificationThreshold: 512,
 		HTTPMaxRequestFragment:    160,
 
-		EnableConntrack:                 true,
-		EnableEbpfConntracker:           true,
-		AllowNetlinkConntrackerFallback: false,
+		EnableConntrack:       true,
+		EnableEbpfConntracker: true,
+		// This needs to be enabled because the ebpf conntrack connection tracer does not work if the nf_conntrack kernel
+		// module is not loaded. This happens in cilium CNI networking for example.
+		AllowNetlinkConntrackerFallback: true,
 		ConntrackMaxStateSize:           131072,
 		ConntrackRateLimit:              500,
 		ConntrackRateLimitInterval:      3 * time.Second,

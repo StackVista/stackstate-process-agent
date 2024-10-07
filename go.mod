@@ -500,4 +500,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
 
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20240823070002-ac7009c5a2c9
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20241007142636-4f9181b0e074

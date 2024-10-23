@@ -201,16 +201,8 @@ func (l *Collector) run(exit chan bool) {
 				if l.cfg.ReportCheckHealthState || l.features.FeatureEnabled(features.HealthStates) {
 					healthStream, healthData := l.makeHealth(result)
 
-					components, relations := l.integrationTopology(result.check)
-					for _, component := range components {
-						l.batcher.SubmitComponent(checkID, transactionID, agentTopologyInstance, component)
-					}
-					for _, relation := range relations {
-						l.batcher.SubmitRelation(checkID, transactionID, agentTopologyInstance, relation)
-					}
-
 					repeatInterval := int(l.cfg.CheckInterval(result.check.Name()).Seconds())
-					l.batcher.SubmitHealthStartSnapshot(checkID, transactionID, healthStream, repeatInterval, repeatInterval*2)
+					l.batcher.SubmitHealthStartSnapshot(checkID, transactionID, healthStream, repeatInterval, repeatInterval*4)
 					l.batcher.SubmitHealthCheckData(checkID, transactionID, healthStream, healthData)
 					l.batcher.SubmitHealthStopSnapshot(checkID, transactionID, healthStream)
 				}

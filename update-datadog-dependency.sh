@@ -25,7 +25,7 @@ USAGE
 }
 
 ACTION=""
-
+BRANCH="stackstate-7.49.1"
 while [ $# -gt 0 ]; do
   case $1 in
     -l|--local)
@@ -36,7 +36,7 @@ while [ $# -gt 0 ]; do
     ;;
     -b|--branch)
       shift
-      BRANCH="${1:-stackstate-7.49.1}"
+      BRANCH="${1}"
       echo "Using branch ${BRANCH}"
       go mod edit -replace "github.com/DataDog/datadog-agent=github.com/StackVista/datadog-agent-upstream-for-process-agent@${BRANCH}"
       go mod tidy

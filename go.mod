@@ -26,7 +26,6 @@ replace (
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 	github.com/iovisor/gobpf => github.com/StackVista/gobpf v0.1.2
 	github.com/spf13/viper => github.com/DataDog/viper v1.7.1
-	golang.org/x/net => golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
 )
 
 require (
@@ -77,7 +76,6 @@ require (
 	github.com/containerd/continuity v0.4.2-0.20230616210509-1e0d26eb2381 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/ttrpc v1.2.2 // indirect
-	github.com/containerd/typeurl v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v25.0.6+incompatible // indirect
@@ -505,4 +503,5 @@ require (
 )
 
 replace github.com/moby/buildkit v0.11.0 => github.com/moby/buildkit v0.12.5
+
 replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20241122130834-660a9f0569ac

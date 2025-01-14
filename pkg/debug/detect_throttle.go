@@ -69,16 +69,16 @@ func getCgroupPath() (string, error) {
 	return "", fmt.Errorf("no valid cgroup path found")
 }
 
-type ThrottleState struct {
-	nr_periods   uint64
-	nr_throttled uint64
+type throttleState struct {
+	nrPeriods   uint64
+	nrThrottled uint64
 }
 
-func newThrottleState() *ThrottleState {
-	return &ThrottleState{}
+func newThrottleState() *throttleState {
+	return &throttleState{}
 }
 
-func (t *ThrottleState) readThrottledRatio() (float64, error) {
+func (t *throttleState) readThrottledRatio() (float64, error) {
 	cgroupPath, err := getCgroupPath()
 	if err != nil {
 		return 0, err
@@ -94,7 +94,7 @@ func (t *ThrottleState) readThrottledRatio() (float64, error) {
 		return 0, err
 	}
 
-	var nr_periods, nr_throttled uint64 = 0, 0
+	var nrPeriods, nrThrottled uint64 = 0, 0
 
 	// parse the cpu.stat
 	lines := strings.Split(string(data), "\n")
@@ -105,29 +105,29 @@ func (t *ThrottleState) readThrottledRatio() (float64, error) {
 		fields := strings.Split(line, " ")
 		if len(fields) >= 2 {
 			if fields[0] == "nr_periods" {
-				nr_periods, err = strconv.ParseUint(strings.TrimSpace(fields[1]), 10, 64)
-			} else if fields[0] == "nr_throttled" {
-				nr_throttled, err = strconv.ParseUint(strings.TrimSpace(fields[1]), 10, 64)
+				nrPeriods, err = strconv.ParseUint(strings.TrimSpace(fields[1]), 10, 64)
+			} else if fields[0] == "nrThrottled" {
+				nrThrottled, err = strconv.ParseUint(strings.TrimSpace(fields[1]), 10, 64)
 			}
 		}
 	}
 
 	// No value found yet
-	if t.nr_periods == 0 {
-		t.nr_periods = nr_periods
-		t.nr_throttled = nr_throttled
+	if t.nrPeriods == 0 {
+		t.nrPeriods = nrPeriods
+		t.nrThrottled = nrThrottled
 		return 0, nil
 	}
 
-	delta_periods := nr_periods - t.nr_periods
-	delta_throttled := nr_throttled - t.nr_throttled
+	deltaPeriods := nrPeriods - t.nrPeriods
+	deltaThrottled := nrThrottled - t.nrThrottled
 
-	if delta_periods == 0 {
+	if deltaPeriods == 0 {
 		return 0, nil
 	}
 
-	t.nr_periods = nr_periods
-	t.nr_throttled = nr_throttled
+	t.nrPeriods = nrPeriods
+	t.nrThrottled = nrThrottled
 
-	return float64(delta_throttled) / float64(delta_periods), nil
+	return float64(deltaThrottled) / float64(deltaPeriods), nil
 }

@@ -23,7 +23,7 @@ func DetectThrottle(initialDelay, interval time.Duration) func() {
 		for {
 			select {
 			case <-time.NewTicker(interval).C:
-				r, err := state.readThrottledRatio()
+				ratio, err := state.readThrottledRatio()
 				if err != nil {
 					log.Warnf("Error reading throttle information form cgroup. Exiting throttle watcher: %v", err)
 				}

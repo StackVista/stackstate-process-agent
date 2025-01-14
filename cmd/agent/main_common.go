@@ -9,6 +9,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/tagger/local"
 	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
+	"github.com/StackVista/stackstate-process-agent/pkg/debug"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionforwarder"
@@ -188,6 +189,10 @@ func runAgent(exit chan bool) {
 	go func() {
 		http.ListenAndServe("localhost:6062", nil)
 	}()
+
+	// Run throttle detector
+	closeThrottle := debug.DetectThrottle(60*time.Second, 30*time.Second)
+	defer closeThrottle()
 
 	// Run metrics server
 	go func() {

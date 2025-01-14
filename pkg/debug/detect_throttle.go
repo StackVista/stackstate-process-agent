@@ -27,7 +27,7 @@ func DetectThrottle(initialDelay, interval time.Duration) func() {
 				if err != nil {
 					log.Warnf("Error reading throttle information form cgroup. Exiting throttle watcher: %v", err)
 				}
-				if r > 0.7 {
+				if ratio > 0.7 {
 					log.Warn("Detected throttling (more than 70% of periods were throttled). Please increase cpu limits.")
 				}
 			case <-doneChannel:

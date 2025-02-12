@@ -1,10 +1,5 @@
 # StackState Process Agent
 
-[![CircleCI](https://circleci.com/gh/StackVista/stackstate-process-agent.svg?style=svg)](https://circleci.com/gh/StackVista/stackstate-process-agent)
-
-## Installation
-
-See the [Live Processes docs](https://docs.datadoghq.com/graphing/infrastructure/process/#installation) for installation instructions.
 
 ## Development or running from source
 
@@ -70,11 +65,13 @@ After pushing a change to `datadog-agent-upstream-for-process-agent` be sure to 
 
 ### Test cycle for the datadog dependency
 
+Part of the tests for this repo run manually, because they are very heavy/relient on setup (not super CI-friendly). Here it is described how to run those.
+
 Use `./update-datadog-dependency.sh -l <path>` to work against a local checkout of `datadog-agent-upstream-for-process-agent`
 Run `./prebuild-datadog-agent.sh -s` to get into the build shell.
 
-Rerun `/scripts/rune-datadog-agent-test.sh rerun` to keep running the tests after a change was made
-Rerun `/scripts/rune-datadog-agent-prebuild.sh rerun` to keep building the output artifacts after a change was made
+Rerun `/prebuild-datadog-agent-scripts/rune-datadog-agent-test.sh rerun` to keep running the tests after a change was made
+Rerun `/prebuild-datadog-agent-scripts/rune-datadog-agent-prebuild.sh rerun` to keep building the output artifacts after a change was made
 
 ## Development or Running with Vagrant
 
@@ -92,12 +89,4 @@ You can up the memory and pre-install some processes at boot of the Vagrant vm w
 ```
 $ MEM="2048" PROCESSES="java mysql postgresql tomcat" vagrant up process-agent-test
 ```
-
-## Testing
-
-Instructions related to manual testing can be found in [Testing.md](Testing.md)
-
-## Contributing
-
-In order for your contributions you will be required to sign a CLA. When a PR is opened a bot will prompt you to sign the CLA. Once signed you will be set for all contributions going forward.
 

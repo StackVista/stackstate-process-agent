@@ -52,7 +52,7 @@ rake protobuf
 
 ## Working with the datadog dependency
 
-The `prebuild-datadog-agent'sh` script is in charge of prebuilding artifacts for the main build. See --help there.
+The `prebuild-datadog-agent.sh` script is in charge of prebuilding artifacts for the main build. See --help there.
 
 ### Working against a local copy
 
@@ -70,8 +70,8 @@ Part of the tests for this repo run manually, because they are very heavy/relien
 Use `./update-datadog-dependency.sh -l <path>` to work against a local checkout of `datadog-agent-upstream-for-process-agent`
 Run `./prebuild-datadog-agent.sh -s` to get into the build shell.
 
-Rerun `/prebuild-datadog-agent-scripts/rune-datadog-agent-test.sh rerun` to keep running the tests after a change was made
-Rerun `/prebuild-datadog-agent-scripts/rune-datadog-agent-prebuild.sh rerun` to keep building the output artifacts after a change was made
+Rerun `/prebuild-datadog-agent-scripts/run-datadog-agent-test.sh rerun` to keep running the tests after a change was made
+Rerun `/prebuild-datadog-agent-scripts/run-datadog-agent-prebuild.sh rerun` to keep building the output artifacts after a change was made
 
 ## Development or Running with Vagrant
 

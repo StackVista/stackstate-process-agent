@@ -8,8 +8,7 @@
 set -e
 
 DIR="${BASH_SOURCE%/*}"
-if [ ! -d "$DIR" ]; then DIR="$PWD"; fi
-if [ "$DIR" = "." ]; then DIR="$PWD"; fi
+if [ ! -d "$DIR" ] || [ "$DIR" = "." ]; then DIR="$PWD"; fi
 
 printUsage() {
   cat << USAGE
@@ -84,7 +83,7 @@ while [ $# -gt 0 ]; do
 done
 
 # First make sure all dependencies are downloaded
-echo "Downloading go files"
+echo "Downloading go files.\n"
 go mod download
 
 ALL_ARTIFACTS_DIR="$DIR/prebuild_artifacts"
@@ -96,10 +95,12 @@ if [ "$(go list -f '{{ .Replace }}' -m github.com/DataDog/datadog-agent)" = "<ni
     REPO_PATH="https://github.com/DataDog/datadog-agent"
     SOURCE_DIR="$ALL_ARTIFACTS_DIR/checkout/$DEPENDENCY_VERSION"
 else
+  # If the module has a replace directive in go.mod, this command will return the replaced path.
+  # If there is no replace directive, it will return <nil>.
   GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Replace.Dir }}' -m github.com/DataDog/datadog-agent)
 
   if [ -d "$GO_MOD_DEPENDENCY_DIR/.git" ]; then
-    echo "Running the data prebuild for a local dependency $DEPENDENCY_VERSION. Be aware that generate will not automatically pickup changes. Be sure to run -clean whenever the generated code would change."
+    echo "Running the data prebuild for local repo '$GO_MOD_DEPENDENCY_DIR'.\nBe aware that generate will not automatically pickup changes. Be sure to run '--clean' whenever the generated code would change.\n"
     # The dependency is a local git repo. No need to pull or pick a version
     DEPENDENCY_VERSION="local"
     SOURCE_DIR=$GO_MOD_DEPENDENCY_DIR
@@ -172,7 +173,7 @@ runPrebuildInDocker() {
 if [ "$ACTION" = "generate" ]; then
   echo "Generating code"
   if [ -d "$DEPENDENCY_ARTIFACTS_DIR/gofiles" ]; then
-    echo "Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
+    echo "Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping.\nTo regenerate first run with --clean"
     exit 0
   fi
 

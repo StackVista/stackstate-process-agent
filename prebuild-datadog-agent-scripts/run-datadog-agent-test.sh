@@ -56,7 +56,9 @@ invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --cp
 invoke test --build-include=linux_bpf,test --targets=./pkg/network/protocols/http/.,./pkg/network/protocols/mongo/.,./pkg/network/usm/.,./pkg/network/. --skip-linters
 # These tests need to run without concurrency
 invoke test --build-include=linux_bpf,test --targets=./pkg/process/monitor/. --cpus=1 --skip-linters
+
 # Only openssl was proven to work, still need to prove gnutls
+# Use `export STS_TEST_RUN=true` before running this manually
 invoke test --build-include=linux_bpf,test --targets=./pkg/network/tracer/. --skip-linters  --test-run-name="^TestHTTPSObservationViaLibraryIntegration$"
 
 invoke test --build-include=linux_bpf,test --cpus=1 --targets=./pkg/network/tracer/. --skip-linters --test-run-name="^TracerSuite/prebuilt/TestTCPInitialSeq"

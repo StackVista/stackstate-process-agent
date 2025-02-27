@@ -115,7 +115,7 @@ else
 fi
 
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/artifacts/$DEPENDENCY_VERSION"
-DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:c3847b73
+DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:0d87e00f
 
 checkoutSource() {
   if [ ! -d "$SOURCE_DIR" ]; then
@@ -165,6 +165,7 @@ runPrebuildInDocker() {
     --privileged \
     --pid host \
     --cap-add all \
+     --rm -i -t \
     "$@"
   set +x
 }

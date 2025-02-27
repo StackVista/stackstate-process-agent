@@ -5,7 +5,11 @@ go 1.22
 // From datadog-agent-upstream-for-process-agent, replaces done in that go mod file need to be done here too
 replace github.com/pahanini/go-grpc-bidirectional-streaming-example v0.0.0-20211027164128-cc6111af44be => github.com/DataDog/go-grpc-bidirectional-streaming-example v0.0.0-20221024060302-b9cf785c02fe
 
-replace github.com/spdx/tools-golang => github.com/spdx/tools-golang v0.3.0
+// No more needed
+// replace github.com/spdx/tools-golang => github.com/spdx/tools-golang v0.3.0
+
+// Add this from Datadog
+replace github.com/aquasecurity/trivy => github.com/DataDog/trivy v0.0.0-20241223234648-d2ac813bf11b
 
 replace github.com/vishvananda/netlink => github.com/StackVista/netlink v0.0.0-20231207101142-91d41874606b
 

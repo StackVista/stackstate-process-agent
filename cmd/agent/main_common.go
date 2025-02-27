@@ -6,8 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/DataDog/datadog-agent/pkg/tagger/local"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
+	// "github.com/DataDog/datadog-agent/pkg/tagger/local"
+	// "github.com/DataDog/datadog-agent/pkg/workloadmeta"
 	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/pkg/debug"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
@@ -24,7 +24,7 @@ import (
 	log "github.com/cihub/seelog"
 
 	"github.com/DataDog/datadog-agent/pkg/process/util"
-	"github.com/DataDog/datadog-agent/pkg/tagger"
+	// "github.com/DataDog/datadog-agent/pkg/tagger"
 	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
 )
@@ -123,15 +123,15 @@ func runAgent(exit chan bool) {
 	config.ConfigureHostname(cfg)
 
 	// Setting up the tagger (must be done after config is setup)
-	store := workloadmeta.CreateGlobalStore(workloadmeta.NodeAgentCatalog)
-	store.Start(context.TODO())
+	// store := workloadmeta.CreateGlobalStore(workloadmeta.NodeAgentCatalog)
+	// store.Start(context.TODO())
 
-	tagger.SetDefaultTagger(local.NewTagger(store))
-	err = tagger.Init(context.TODO())
-	if err != nil {
-		log.Errorf("failed to start the tagger: %s", err)
-	}
-	defer tagger.Stop() //nolint:errcheck
+	// tagger.SetDefaultTagger(local.NewTagger(store))
+	// err = tagger.Init(context.TODO())
+	// if err != nil {
+	// 	log.Errorf("failed to start the tagger: %s", err)
+	// }
+	// defer tagger.Stop() //nolint:errcheck
 
 	client := httpclient.NewStackStateClient(makeClientHost(cfg))
 	manager := transactionmanager.NewTransactionManager(

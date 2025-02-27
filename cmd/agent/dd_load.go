@@ -4,6 +4,6 @@ package main
 // items through init() functions, whichweneed to make sureare loaded aswell.
 
 import (
-	// register all workloadmeta collectors. In the datadog agent this i loaded through loader.go
-	_ "github.com/DataDog/datadog-agent/pkg/workloadmeta/collectors"
+// register all workloadmeta collectors. In the datadog agent this i loaded through loader.go
+// _ "github.com/DataDog/datadog-agent/pkg/workloadmeta/collectors"
 )

@@ -6,7 +6,7 @@ package config
  */
 import (
 	"fmt"
-	ddconfig "github.com/DataDog/datadog-agent/pkg/config"
+	// ddconfig "github.com/DataDog/datadog-agent/pkg/config"
 	"os"
 	"strconv"
 )
@@ -23,11 +23,11 @@ func SetupDDAgentConfig(cfg *AgentConfig) error {
 	os.Setenv("DD_KUBELET_TLS_VERIFY", strconv.FormatBool(!cfg.SkipKubeletTLSVerify))
 
 	// load the configuration, this basically initializes everything with defaults
-	if _, err := ddconfig.Load(); err != nil {
-		return fmt.Errorf("unable to load Datadog config file: %s", err)
-	}
+	// if _, err := ddconfig.Load(); err != nil {
+	// 	return fmt.Errorf("unable to load Datadog config file: %s", err)
+	// }
 
-	ddconfig.DetectFeatures()
+	// ddconfig.DetectFeatures()
 
 	return nil
 }

@@ -95,15 +95,17 @@ func TestNetworkConnectionBatching(t *testing.T) {
 
 func makeProcessConnection(pid uint32, local, remote string, localPort, remotePort uint16) network.ConnectionStats {
 	return network.ConnectionStats{
-		Pid:       pid,
-		Type:      network.TCP,
-		Family:    network.AFINET,
-		Direction: network.OUTGOING,
-		Source:    util.AddressFromString(local),
-		SPort:     localPort,
-		Dest:      util.AddressFromString(remote),
-		DPort:     remotePort,
-		NetNS:     1,
+		ConnectionTuple: network.ConnectionTuple{
+			Pid:       pid,
+			Type:      network.TCP,
+			Family:    network.AFINET,
+			Direction: network.OUTGOING,
+			Source:    util.AddressFromString(local),
+			SPort:     localPort,
+			Dest:      util.AddressFromString(remote),
+			DPort:     remotePort,
+			NetNS:     1,
+		},
 	}
 }
 
@@ -629,7 +631,9 @@ func TestHTTPAggregation_SingleReq(t *testing.T) {
 
 	conn1Key := getConnectionKeyForHTTPStats(conn1req1)
 
-	var stats = http.NewRequestStats(true)
+	// https://github.com/DataDog/datadog-agent/pull/29848
+	// according to the PR we now always aggregate the metrics
+	var stats = http.NewRequestStats()
 	stats.AddRequest(200, msToNs(100.0), 0, nil)
 	stats.AddRequest(400, msToNs(2.0), 0, nil)
 	stats.AddRequest(400, msToNs(4.0), 0, nil)
@@ -696,10 +700,10 @@ func TestHTTPAggregation_MultipleReq(t *testing.T) {
 	assert.Equal(t, conn2Key, getConnectionKeyForHTTPStats(conn2req5))
 	assert.NotEqual(t, conn1Key, conn2Key)
 
-	conn1req2Stats := http.NewRequestStats(true)
-	conn1req3Stats := http.NewRequestStats(true)
-	conn1req1Stats := http.NewRequestStats(true)
-	conn2req4Stats := http.NewRequestStats(true)
+	conn1req2Stats := http.NewRequestStats()
+	conn1req3Stats := http.NewRequestStats()
+	conn1req1Stats := http.NewRequestStats()
+	conn2req4Stats := http.NewRequestStats()
 
 	conn1req2Stats.AddRequest(300, msToNs(90000), 0, nil)
 	conn1req2Stats.AddRequest(500, msToNs(60000), 0, nil)
@@ -942,7 +946,7 @@ func TestHTTPAggregation_SingleReq_NoPath(t *testing.T) {
 
 	conn1Key := getConnectionKeyForHTTPStats(conn1req1)
 
-	conn1req1Stats := http.NewRequestStats(true)
+	conn1req1Stats := http.NewRequestStats()
 	conn1req1Stats.AddRequest(200, msToNs(100), 0, nil)
 	conn1req1Stats.AddRequest(400, msToNs(2), 0, nil)
 	conn1req1Stats.AddRequest(400, msToNs(4), 0, nil)

@@ -43,8 +43,6 @@ type NetworkTracerConfig struct {
 	EnableHTTPTracing bool
 	// ProbeDebugLog logging when loading probe
 	ProbeDebugLog bool
-	// ProbeLogBufferSizeBytes increase the probe log buffer for debugging purposes
-	ProbeLogBufferSizeBytes int
 	// Max number of http stats buffered
 	MaxHTTPStatsBuffered int
 	// Max number of http observations buffered
@@ -151,6 +149,9 @@ type AgentConfig struct {
 	// Break down HTTP stats by path
 	// Careful: The path label can have a very high cardinality
 	HTTPStatsPerPath bool
+
+	// True when the agent is runned locally, for debugging purposes
+	LocalRun bool
 }
 
 // CheckIsEnabled returns a bool indicating if the given check name is enabled.
@@ -231,7 +232,6 @@ func NewDefaultAgentConfig() *AgentConfig {
 			EbpfArtifactDir:             "/opt/stackstate-agent/ebpf",
 			EnableHTTPTracing:           false,
 			ProbeDebugLog:               false,
-			ProbeLogBufferSizeBytes:     16000000,
 			MaxHTTPStatsBuffered:        100000,
 			MaxHTTPObservationsBuffered: 100000,
 			DisabledProtocols:           []string{},
@@ -265,6 +265,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 
 		// Break down HTTP stats by path
 		HTTPStatsPerPath: false,
+		LocalRun:         false,
 	}
 
 	// Set default values for proc/sys paths if unset.
@@ -521,10 +522,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if ok, err := isAffirmative(os.Getenv("STS_PROBE_DEBUG_LOG_ENABLED")); err == nil {
 		c.NetworkTracer.ProbeDebugLog = ok
-	}
-
-	if logBufferSizeBytes, err := strconv.Atoi(os.Getenv("STS_PROBE_LOG_BUFFER_SIZE_BYTES")); err == nil && logBufferSizeBytes != 0 {
-		c.NetworkTracer.ProbeLogBufferSizeBytes = logBufferSizeBytes
 	}
 
 	if maxStats, err := strconv.Atoi(os.Getenv("STS_HTTP_STATS_BUFFER_SIZE")); err == nil && maxStats != 0 {

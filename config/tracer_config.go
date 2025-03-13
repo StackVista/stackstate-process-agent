@@ -25,7 +25,6 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		CollectTCPv4Conns: true,
 		TCPConnTimeout:    2 * time.Minute,
-		TCPClosedTimeout:  1 * time.Second,
 
 		CollectUDPv4Conns: false,
 		UDPConnTimeout:    defaultUDPTimeoutSeconds * time.Second,
@@ -67,11 +66,9 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "tls"),
 		EnableIstioMonitoring:     false,
 		EnableGoTLSSupport:        false,
-		EnableJavaTLSSupport:      false,
 
 		EnableHTTPTracing:           cfg.NetworkTracer.EnableHTTPTracing,
 		ProbeDebugLog:               cfg.NetworkTracer.ProbeDebugLog,
-		ProbeLogBufferSizeBytes:     cfg.NetworkTracer.ProbeLogBufferSizeBytes,
 		MaxHTTPStatsBuffered:        cfg.NetworkTracer.MaxHTTPStatsBuffered,        // 100000,
 		MaxHTTPObservationsBuffered: cfg.NetworkTracer.MaxHTTPObservationsBuffered, // 100000 is the default from datadog
 
@@ -82,15 +79,16 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		EnableConntrack:       true,
 		EnableEbpfConntracker: true,
-		// This needs to be enabled because the ebpf conntrack connection tracer does not work if the nf_conntrack kernel
-		// module is not loaded. This happens in cilium CNI networking for example.
-		AllowNetlinkConntrackerFallback: true,
-		ConntrackMaxStateSize:           131072,
-		ConntrackRateLimit:              500,
-		ConntrackRateLimitInterval:      3 * time.Second,
-		EnableConntrackAllNamespaces:    true,
-		IgnoreConntrackInitFailure:      false,
-		ConntrackInitTimeout:            120 * time.Second,
+
+		// At the moment we disable it by default, this is a new feature from the 7.62.2 sync.
+		// Let's see if we need it in the future.
+		EnableCiliumLBConntracker:    false,
+		ConntrackMaxStateSize:        131072,
+		ConntrackRateLimit:           500,
+		ConntrackRateLimitInterval:   3 * time.Second,
+		EnableConntrackAllNamespaces: true,
+		IgnoreConntrackInitFailure:   false,
+		ConntrackInitTimeout:         120 * time.Second,
 
 		EnableGatewayLookup: true,
 
@@ -99,6 +97,8 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		RecordedQueryTypes: []string{},
 
 		EnableRootNetNs: true,
+
+		HTTP2DynamicTableMapCleanerInterval: 300 * time.Second,
 
 		HTTPMapCleanerInterval: 300 * time.Second,
 		HTTPIdleConnectionTTL:  30 * time.Second,
@@ -145,24 +145,27 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 	return ebpf.Config{
 		BPFDebug:                 false,
 		BPFDir:                   cfg.NetworkTracer.EbpfArtifactDir,
-		JavaDir:                  "", // Dummy value, we do not support java TLS right now (does it work on k8s?)
 		ExcludedBPFLinuxVersions: []string{},
 		EnableTracepoints:        false,
 		ProcRoot:                 kernel.ProcFSRoot(),
 
-		EnableCORE: false,
-		BTFPath:    "", // No btf support for now
-
+		EnableCORE:                   false,
 		EnableRuntimeCompiler:        false,
-		RuntimeCompilerOutputDir:     "/opt/stackstate-agent/runtime-compiler-output",
-		EnableKernelHeaderDownload:   false,
-		KernelHeadersDirs:            []string{"/opt/stackstate-agent/kernel-headers"},
-		KernelHeadersDownloadDir:     "/tmp",
-		AptConfigDir:                 "/etc/apt",
-		YumReposDir:                  "/etc/yum.repos.d",
-		ZypperReposDir:               "/etc/zypp/repos.d",
-		AllowPrecompiledFallback:     false,
 		AllowRuntimeCompiledFallback: false,
+
+		// Should be irrilevant for us since we disable CORE and runtime compiler.
+		// Put it to `true` just to highlight that we want to fallback to the prebuilt mode.
+		AllowPrebuiltFallback: true,
+
+		BTFPath: "", // No btf support for now
+
+		RuntimeCompilerOutputDir:   "/opt/stackstate-agent/runtime-compiler-output",
+		EnableKernelHeaderDownload: false,
+		KernelHeadersDirs:          []string{"/opt/stackstate-agent/kernel-headers"},
+		KernelHeadersDownloadDir:   "/tmp",
+		AptConfigDir:               "/etc/apt",
+		YumReposDir:                "/etc/yum.repos.d",
+		ZypperReposDir:             "/etc/zypp/repos.d",
 
 		AttachKprobesWithKprobeEventsABI: false,
 	}

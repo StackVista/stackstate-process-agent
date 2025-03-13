@@ -58,9 +58,9 @@ RUN  adduser --system --no-create-home --disabled-password --ingroup root stacks
 
 
 # Copy eBPF probes
-COPY ebpf-object-files /opt/stackstate-agent/ebpf
-ENV STS_SYSTEM_PROBE_BPF_DIR /opt/stackstate-agent/ebpf
-ENV DD_SYSTEM_PROBE_BPF_DIR /opt/stackstate-agent/ebpf
+COPY ebpf-object-files/x86_64 /opt/stackstate-agent/ebpf
+ENV STS_SYSTEM_PROBE_BPF_DIR=/opt/stackstate-agent/ebpf
+ENV DD_SYSTEM_PROBE_BPF_DIR=/opt/stackstate-agent/ebpf
 
 #   - copy default config files
 COPY DockerFiles/agent/stackstate*.yaml /etc/stackstate-agent/

@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 # Okay, here it goes: The process agent depends on the datadog agent, which:
 # - for some modules (EBPF) uses go:generate which needs to be run to even build the dependency.
@@ -8,8 +8,7 @@
 set -e
 
 DIR="${BASH_SOURCE%/*}"
-if [ ! -d "$DIR" ]; then DIR="$PWD"; fi
-if [ "$DIR" = "." ]; then DIR="$PWD"; fi
+if [ ! -d "$DIR" ] || [ "$DIR" = "." ]; then DIR="$PWD"; fi
 
 printUsage() {
   cat << USAGE
@@ -63,10 +62,6 @@ while [ $# -gt 0 ]; do
       ACTION="shell"
       shift
     ;;
-    -t|--test)
-      ACTION="test"
-      shift
-    ;;
     -c|--clean)
       ACTION="clean"
       shift
@@ -84,7 +79,7 @@ while [ $# -gt 0 ]; do
 done
 
 # First make sure all dependencies are downloaded
-echo "Downloading go files"
+echo "Downloading go files.\n"
 go mod download
 
 ALL_ARTIFACTS_DIR="$DIR/prebuild_artifacts"
@@ -99,7 +94,7 @@ else
   GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Replace.Dir }}' -m github.com/DataDog/datadog-agent)
 
   if [ -d "$GO_MOD_DEPENDENCY_DIR/.git" ]; then
-    echo "Running the data prebuild for a local dependency $DEPENDENCY_VERSION. Be aware that generate will not automatically pickup changes. Be sure to run -clean whenever the generated code would change."
+    echo "Running the data prebuild for local repo '$GO_MOD_DEPENDENCY_DIR'.\nBe aware that generate will not automatically pickup changes. Be sure to run '--clean' whenever the generated code would change.\n"
     # The dependency is a local git repo. No need to pull or pick a version
     DEPENDENCY_VERSION="local"
     SOURCE_DIR=$GO_MOD_DEPENDENCY_DIR
@@ -114,8 +109,9 @@ else
   fi
 fi
 
+# obtain the docker image from datadog repo
+source $GO_MOD_DEPENDENCY_DIR/sts_tests/docker_image.sh
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/artifacts/$DEPENDENCY_VERSION"
-DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:c3847b73
 
 checkoutSource() {
   if [ ! -d "$SOURCE_DIR" ]; then
@@ -165,6 +161,7 @@ runPrebuildInDocker() {
     --privileged \
     --pid host \
     --cap-add all \
+     --rm -i -t \
     "$@"
   set +x
 }
@@ -247,9 +244,6 @@ elif [ "$ACTION" = "clean" ]; then
   if [ -d "$DIR/ebpf-object-files-root/" ]; then
     sudo rm -rf ebpf-object-files-root
   fi
-elif [ "$ACTION" = "test" ]; then
-  echo "Running tests"
-  runPrebuildInDocker "$DOCKER_IMAGE" /scripts/run-datadog-agent-test.sh
 elif [ "$ACTION" = "shell" ]; then
   echo "Launching generate shell"
   echo "From the shell it is possible to run the scripts in the /scripts directory to regenerate artifacts or run tests."

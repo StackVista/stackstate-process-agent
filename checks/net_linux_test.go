@@ -2,6 +2,7 @@ package checks
 
 import (
 	"errors"
+	telemetryComponent "github.com/DataDog/datadog-agent/comp/core/telemetry"
 	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
 	tracer "github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/stretchr/testify/assert"
@@ -16,13 +17,13 @@ func TestConnectionsCheck_retryTracerInit(t *testing.T) {
 
 	for _, tc := range []struct {
 		name               string
-		mockMakeTracerFunc func(config *tracerConfig.Config) (*tracer.Tracer, error)
+		mockMakeTracerFunc func(config *tracerConfig.Config, t telemetryComponent.Component) (*tracer.Tracer, error)
 		expectedTracer     *tracer.Tracer
 		expectedError      string
 	}{
 		{
 			name: "Returns the tracer when the make tracer function returns one",
-			mockMakeTracerFunc: func(config *tracerConfig.Config) (*tracer.Tracer, error) {
+			mockMakeTracerFunc: func(config *tracerConfig.Config, t telemetryComponent.Component) (*tracer.Tracer, error) {
 				return &tracer.Tracer{}, nil
 			},
 			expectedTracer: &tracer.Tracer{},
@@ -30,7 +31,7 @@ func TestConnectionsCheck_retryTracerInit(t *testing.T) {
 		},
 		{
 			name: "Returns the tracer when the amount of retries are below the configured amount. ie retrying makes it work.",
-			mockMakeTracerFunc: func(config *tracerConfig.Config) (*tracer.Tracer, error) {
+			mockMakeTracerFunc: func(config *tracerConfig.Config, t telemetryComponent.Component) (*tracer.Tracer, error) {
 				if testRetry < retryAmount-1 {
 					testRetry = testRetry + 1
 					return nil, errors.New("failed to create tracer")
@@ -42,7 +43,7 @@ func TestConnectionsCheck_retryTracerInit(t *testing.T) {
 		},
 		{
 			name: "Returns an error when max retries are reached.",
-			mockMakeTracerFunc: func(config *tracerConfig.Config) (*tracer.Tracer, error) {
+			mockMakeTracerFunc: func(config *tracerConfig.Config, t telemetryComponent.Component) (*tracer.Tracer, error) {
 				if testRetry <= retryAmount-1 {
 					testRetry = testRetry + 1
 					return nil, errors.New("failed to create tracer")
@@ -54,7 +55,7 @@ func TestConnectionsCheck_retryTracerInit(t *testing.T) {
 		},
 		{
 			name: "Return an error when the make tracer function returns an error",
-			mockMakeTracerFunc: func(config *tracerConfig.Config) (*tracer.Tracer, error) {
+			mockMakeTracerFunc: func(config *tracerConfig.Config, t telemetryComponent.Component) (*tracer.Tracer, error) {
 				return nil, errors.New("failed to create tracer")
 			},
 			expectedError: "failed to create tracer",

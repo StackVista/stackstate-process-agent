@@ -16,7 +16,7 @@ variables:
   QUAY_REGISTRY: quay.io
   DOCKER_REGISTRY: docker.io
   VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:4f42c88f
+  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:5ac33c09
   GOPATH: "$CI_PROJECT_DIR/.go"
 
 .go_process_agent_cache:
@@ -68,7 +68,7 @@ prebuild_agent:
         - prebuild_artifacts/artifacts/*
   stage: prebuild
   needs: [ dependencies ]
-  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:c3847b73
+  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:0d87e00f
   tags:
     - sts-k8s-xl-runner
   script:

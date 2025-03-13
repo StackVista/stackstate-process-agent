@@ -114,7 +114,11 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 	var lastRates map[string]*containers.ContainerRateMetrics
 	var cntError error
 	var pidToCid map[int]string
-	ctrList, lastRates, pidToCid, cntError = containers.GetSharedContainerProvider().GetContainers(2*time.Second, p.lastCtrRates)
+	sharedContainerProvider, err := containers.GetSharedContainerProvider()
+	if err != nil {
+		return nil, err
+	}
+	ctrList, lastRates, pidToCid, cntError = sharedContainerProvider.GetContainers(2*time.Second, p.lastCtrRates)
 	if cntError == nil {
 		p.lastCtrRates = lastRates
 	} else {

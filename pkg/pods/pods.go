@@ -7,6 +7,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"strings"
 	"time"
 )
 
@@ -45,6 +46,11 @@ func MakeCachedPods(expirationTime time.Duration) *CachedPods {
 	}
 }
 
+func trimRuntimeFromCID(cid string) string {
+	parts := strings.SplitN(cid, "://", 2)
+	return parts[len(parts)-1]
+}
+
 // GetContainerToPodMap returns a map from containerID to its pod
 func (p *CachedPods) GetContainerToPodMap(ctx context.Context) map[string]*kubelet.Pod {
 	result := make(map[string]*kubelet.Pod)
@@ -67,7 +73,7 @@ func (p *CachedPods) GetContainerToPodMap(ctx context.Context) map[string]*kubel
 	// add new pods to the state
 	for _, pod := range pods {
 		for _, container := range pod.Status.Containers {
-			trimmedID := kubelet.TrimRuntimeFromCID(container.ID)
+			trimmedID := trimRuntimeFromCID(container.ID)
 			if trimmedID != "" {
 				p.containerIDToPod[trimmedID] = &podEntry{
 					pod:      pod,

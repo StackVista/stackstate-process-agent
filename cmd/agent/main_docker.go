@@ -29,7 +29,7 @@ func handleSignals(exit chan bool) {
 			continue
 		default:
 			if _, exists := thrownSignalWarnings.LoadOrStore(sig, true); !exists {
-				_ = log.Warnf("Caught signal %s; continuing/ignoring.", sig)
+				log.Infof("Caught signal %s; continuing/ignoring.", sig)
 			}
 		}
 	}

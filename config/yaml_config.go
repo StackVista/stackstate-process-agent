@@ -16,10 +16,12 @@ import (
 // available in Agent versions >= 6
 type YamlAgentConfig struct {
 	APIKey               string `yaml:"api_key"`
-	Site                 string `yaml:"site"`
+	Site                 string `yaml:"site"` // todo!: this is not used (?)
 	StsURL               string `yaml:"sts_url"`
 	SkipKubeletTLSVerify bool   `yaml:"skip_kubelet_tls_verify"`
 	SkipSSLValidation    bool   `yaml:"skip_ssl_validation"`
+	// Used for local debugging (default: false)
+	LocalRun bool `yaml:"local_run"`
 	// Whether the process-agent should output logs to console
 	LogToConsole bool   `yaml:"log_to_console"`
 	LogLevel     string `yaml:"log_level"`
@@ -139,8 +141,6 @@ type YamlAgentConfig struct {
 		HTTPTracingEnabled string `yaml:"http_tracing_enabled"`
 		// ProbeDebugLog logging when loading probe
 		ProbeDebugLog string `yaml:"probe_debug_log_enabled"`
-		// ProbeLogBufferSizeBytes increase the probe log buffer for debugging purposes
-		ProbeLogBufferSizeBytes int `yaml:"probe_log_buffer_size_bytes"`
 		// Protocol probes to be disabled, mostly for debugging.
 		DisabledProtocols           []string `yaml:"disabled_protocols"`
 		MaxHTTPStatsBuffered        int      `yaml:"http_stats_buffer_size"`
@@ -208,6 +208,9 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	var err error
 
 	agentConf.APIEndpoints[0].APIKey = yc.APIKey
+
+	// Debug purpose only
+	agentConf.LocalRun = yc.LocalRun
 
 	if enabled, err := isAffirmative(yc.Process.Enabled); enabled {
 		agentConf.Enabled = true

@@ -115,7 +115,7 @@ else
 fi
 
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/artifacts/$DEPENDENCY_VERSION"
-DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:c3847b73
+DOCKER_IMAGE=quay.io/stackstate/datadog_build_system-probe_x64:0d87e00f
 
 checkoutSource() {
   if [ ! -d "$SOURCE_DIR" ]; then
@@ -165,6 +165,7 @@ runPrebuildInDocker() {
     --privileged \
     --pid host \
     --cap-add all \
+     --rm -i -t \
     "$@"
   set +x
 }
@@ -195,7 +196,7 @@ elif [ "$ACTION" = "install-go" ]; then
   fi
 
   set -x
-  chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR"
+  # chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR"
   if [ "$(cp -v -a -u "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR")" != "" ]; then
     echo "Nuking GOCACHE after changing go files, because we messed with the 'mod' directory (which gets cached)"
     rm -rf "$(go env GOCACHE)"

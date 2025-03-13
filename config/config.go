@@ -151,6 +151,9 @@ type AgentConfig struct {
 	// Break down HTTP stats by path
 	// Careful: The path label can have a very high cardinality
 	HTTPStatsPerPath bool
+
+	// True when the agent is runned locally, for debugging purposes
+	LocalRun bool
 }
 
 // CheckIsEnabled returns a bool indicating if the given check name is enabled.
@@ -265,6 +268,7 @@ func NewDefaultAgentConfig() *AgentConfig {
 
 		// Break down HTTP stats by path
 		HTTPStatsPerPath: false,
+		LocalRun:         false,
 	}
 
 	// Set default values for proc/sys paths if unset.

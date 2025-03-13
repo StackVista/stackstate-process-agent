@@ -151,7 +151,11 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	}
 	log.Debugf("%v", dnsMap)
 
-	containerToPod := c.podsCache.GetContainerToPodMap(context.TODO())
+	containerToPod := make(map[string]*kubelet.Pod)
+	// Only for debugging purpose
+	if !cfg.LocalRun {
+		containerToPod = c.podsCache.GetContainerToPodMap(context.TODO())
+	}
 
 	log.Debugf("Protocol map: %v", protocolMap)
 	log.Debugf("collected %d connection data", len(connectionStats))
@@ -210,6 +214,7 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 		if c.localTracer == nil {
 			return nil, fmt.Errorf("using local network tracer, but no tracer was initialized")
 		}
+		// we always use the same client-ID to get connections from the tracer
 		cs, err := c.localTracer.GetActiveConnections("process-agent")
 
 		if len(c.initialConnections) == 0 {
@@ -458,13 +463,16 @@ func (c *ConnectionsCheck) formatConnections(
 
 		// Get adresses
 		var natladdr, natraddr *model.Addr
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsZero() {
+		// todo!: IsZero() is removed here https://github.com/DataDog/datadog-agent/commit/f627a34c87c60b6a606edb8e90c7c7500e00302d
+		// now they use isValid() that seems to be the same.
+		// BTW in the original code we use `conn.IPTranslation.ReplDstIP.IsZero()` instead of `!conn.IPTranslation.ReplDstIP.IsZero()` why?
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
 			natraddr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplSrcIP.String(),
 				Port: int32(conn.IPTranslation.ReplSrcPort),
 			}
 		}
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP.IsZero() {
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP.IsValid() {
 			natladdr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplDstIP.String(),
 				Port: int32(conn.IPTranslation.ReplDstPort),

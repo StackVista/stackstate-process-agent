@@ -6,27 +6,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/DataDog/datadog-agent/pkg/tagger/local"
-	"github.com/DataDog/datadog-agent/pkg/workloadmeta"
-	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
-	"github.com/StackVista/stackstate-process-agent/pkg/debug"
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionforwarder"
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"time"
 
+	localtagger "github.com/DataDog/datadog-agent/comp/core/tagger/impl"
+	taggerTelemetry "github.com/DataDog/datadog-agent/comp/core/tagger/telemetry"
+	"github.com/DataDog/datadog-agent/comp/core/telemetry/telemetryimpl"
+	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/impl"
 	"github.com/DataDog/datadog-agent/pkg/pidfile"
-	log "github.com/cihub/seelog"
-
 	"github.com/DataDog/datadog-agent/pkg/process/util"
-	"github.com/DataDog/datadog-agent/pkg/tagger"
+	containers "github.com/DataDog/datadog-agent/pkg/process/util/containers"
 	"github.com/StackVista/stackstate-process-agent/checks"
+	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/config"
+	"github.com/StackVista/stackstate-process-agent/pkg/debug"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionforwarder"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
+	log "github.com/cihub/seelog"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var opts struct {
@@ -117,21 +118,21 @@ func runAgent(exit chan bool) {
 	}
 
 	// Setup config for the datadog agent
-	config.SetupDDAgentConfig(cfg)
+	ddConfig, err := config.SetupDDAgentConfig(cfg)
+	if err != nil {
+		log.Criticalf("Error setting up datadog agent config: %s", err)
+		os.Exit(1)
+	}
 
 	// Configuring hostname after datadog is configured, because it uses datadog logic
 	config.ConfigureHostname(cfg)
 
-	// Setting up the tagger (must be done after config is setup)
-	store := workloadmeta.CreateGlobalStore(workloadmeta.NodeAgentCatalog)
-	store.Start(context.TODO())
-
-	tagger.SetDefaultTagger(local.NewTagger(store))
-	err = tagger.Init(context.TODO())
-	if err != nil {
-		log.Errorf("failed to start the tagger: %s", err)
-	}
+	// Setting up the workload meta and tagger for the sharedContainerProvider
+	wm := workloadmeta.StartWorkloadMetaNoFx(context.TODO(), log.Current)
+	tagger, _ := localtagger.NewLocalTagger(ddConfig, wm, taggerTelemetry.NewStore(telemetryimpl.GetCompatComponent()))
+	tagger.Start(context.TODO())
 	defer tagger.Stop() //nolint:errcheck
+	_ = containers.InitSharedContainerProvider(wm, tagger)
 
 	client := httpclient.NewStackStateClient(makeClientHost(cfg))
 	manager := transactionmanager.NewTransactionManager(
@@ -161,7 +162,7 @@ func runAgent(exit chan bool) {
 	if err != nil {
 		log.Debugf("Docker is not available on this host")
 	}
-	// we shouldn't quit because docker is not required. If no docker docket is available,
+	// we shouldn't quit because docker is not required. If no docker socket is available,
 	// we just pass down empty string
 	updateDockerSocket(dockerSock)
 
@@ -243,7 +244,7 @@ func makeClientHost(cfg *config.AgentConfig) *httpclient.ClientHost {
 }
 
 func debugCheckResults(cfg *config.AgentConfig, check string) error {
-	sysInfo, err := checks.CollectSystemInfo(cfg)
+	sysInfo, err := checks.CollectSystemInfo()
 	if err != nil {
 		return err
 	}

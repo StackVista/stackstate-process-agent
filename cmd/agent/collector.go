@@ -67,7 +67,7 @@ func NewCollector(cfg *config.AgentConfig,
 	client *httpclient.StackStateClient,
 	batcher transactionbatcher.TransactionalBatcher,
 	manager transactionmanager.TransactionManager) (Collector, error) {
-	sysInfo, err := checks.CollectSystemInfo(cfg)
+	sysInfo, err := checks.CollectSystemInfo()
 	if err != nil {
 		return Collector{}, err
 	}
@@ -113,34 +113,36 @@ func (l *Collector) runCheck(c checks.Check, features features.Features) {
 	result, err := c.Run(l.cfg, features, atomic.AddInt32(&l.groupID, 1), currentTime)
 	checkRunDuration.WithLabelValues(c.Name()).Observe(time.Since(currentTime).Seconds())
 
-	if err != nil && result == nil {
+	switch {
+	case err != nil && result == nil:
+		// if we don't have a result, we can't send anything to the backend
 		l.send <- checkResult{check: c, err: err}
 		log.Criticalf("Unable to run check '%s': %s", c.Name(), err)
-	} else {
+		return
+	case err == nil && result == nil:
+		log.Infof("Ignoring empty result of '%s' check", c.Name())
+	case err != nil && result != nil, err == nil && result != nil:
+		// If we have an error we print a warning and send the result anyway
 		if err != nil {
 			log.Warnf("Check '%s' partially failed: %v", c.Name(), err)
 		}
-		if result != nil {
-			l.send <- checkResult{
-				check:   c,
-				payload: &checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), currentTime},
-				err:     err,
-			}
-			// update proc and container count for info
-			updateProcContainerCount(result.CollectorMessages)
-		} else {
-			log.Infof("Ignoring empty result of '%s' check", c.Name())
+		l.send <- checkResult{
+			check:   c,
+			payload: &checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), currentTime},
+			err:     err,
 		}
+		// update proc and container count for info
+		updateProcContainerCount(result.CollectorMessages)
+	}
 
-		d := time.Since(currentTime)
-		switch {
-		case runCounter < 5:
-			log.Infof("Finished check #%d in %s", runCounter, d)
-		case runCounter == 5:
-			log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
-		case runCounter%20 == 0:
-			log.Infof("Finish check #%d in %s", runCounter, d)
-		}
+	d := time.Since(currentTime)
+	switch {
+	case runCounter < 5:
+		log.Infof("Finished check #%d in %s", runCounter, d)
+	case runCounter == 5:
+		log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
+	case runCounter%20 == 0:
+		log.Infof("Finish check #%d in %s", runCounter, d)
 	}
 }
 
@@ -158,6 +160,8 @@ func (l *Collector) run(exit chan bool) {
 	// Channel to announce new features detected
 	featuresCh := make(chan features.Features, 1)
 
+	// We poll the features a first time. We will try several times until we receive a response.
+	// So these features cannot change over time, Why don't we provide them into the helm chat instead of using this polling?
 	l.getFeatures(l.cfg.APIEndpoints[0], "/features", featuresCh)
 
 	go func() {

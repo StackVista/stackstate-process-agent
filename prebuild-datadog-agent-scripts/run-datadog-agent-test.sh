@@ -31,8 +31,8 @@ invoke install-tools
 
 invoke system-probe.build
 
-llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm-debug.o > $OUTPUTDIR/usm_debug.txt
-llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm.o > $OUTPUTDIR/usm.txt
+# llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm-debug.o > $OUTPUTDIR/usm_debug.txt
+# llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm.o > $OUTPUTDIR/usm.txt
 
 export DD_SYSTEM_PROBE_BPF_DIR=$WORKDIR/pkg/ebpf/bytecode/build/
 

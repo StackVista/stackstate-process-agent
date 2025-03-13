@@ -25,7 +25,6 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		CollectTCPv4Conns: true,
 		TCPConnTimeout:    2 * time.Minute,
-		TCPClosedTimeout:  1 * time.Second,
 
 		CollectUDPv4Conns: false,
 		UDPConnTimeout:    defaultUDPTimeoutSeconds * time.Second,
@@ -67,11 +66,9 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "tls"),
 		EnableIstioMonitoring:     false,
 		EnableGoTLSSupport:        false,
-		EnableJavaTLSSupport:      false,
 
 		EnableHTTPTracing:           cfg.NetworkTracer.EnableHTTPTracing,
 		ProbeDebugLog:               cfg.NetworkTracer.ProbeDebugLog,
-		ProbeLogBufferSizeBytes:     cfg.NetworkTracer.ProbeLogBufferSizeBytes,
 		MaxHTTPStatsBuffered:        cfg.NetworkTracer.MaxHTTPStatsBuffered,        // 100000,
 		MaxHTTPObservationsBuffered: cfg.NetworkTracer.MaxHTTPObservationsBuffered, // 100000 is the default from datadog
 
@@ -84,13 +81,14 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		EnableEbpfConntracker: true,
 		// This needs to be enabled because the ebpf conntrack connection tracer does not work if the nf_conntrack kernel
 		// module is not loaded. This happens in cilium CNI networking for example.
-		AllowNetlinkConntrackerFallback: true,
-		ConntrackMaxStateSize:           131072,
-		ConntrackRateLimit:              500,
-		ConntrackRateLimitInterval:      3 * time.Second,
-		EnableConntrackAllNamespaces:    true,
-		IgnoreConntrackInitFailure:      false,
-		ConntrackInitTimeout:            120 * time.Second,
+		// todo!: Maybe we need it (?)
+		//EnableCiliumLBConntracker:    true,
+		ConntrackMaxStateSize:        131072,
+		ConntrackRateLimit:           500,
+		ConntrackRateLimitInterval:   3 * time.Second,
+		EnableConntrackAllNamespaces: true,
+		IgnoreConntrackInitFailure:   false,
+		ConntrackInitTimeout:         120 * time.Second,
 
 		EnableGatewayLookup: true,
 
@@ -99,6 +97,8 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		RecordedQueryTypes: []string{},
 
 		EnableRootNetNs: true,
+
+		HTTP2DynamicTableMapCleanerInterval: 300 * time.Second,
 
 		HTTPMapCleanerInterval: 300 * time.Second,
 		HTTPIdleConnectionTTL:  30 * time.Second,
@@ -145,7 +145,6 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 	return ebpf.Config{
 		BPFDebug:                 false,
 		BPFDir:                   cfg.NetworkTracer.EbpfArtifactDir,
-		JavaDir:                  "", // Dummy value, we do not support java TLS right now (does it work on k8s?)
 		ExcludedBPFLinuxVersions: []string{},
 		EnableTracepoints:        false,
 		ProcRoot:                 kernel.ProcFSRoot(),
@@ -161,7 +160,6 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 		AptConfigDir:                 "/etc/apt",
 		YumReposDir:                  "/etc/yum.repos.d",
 		ZypperReposDir:               "/etc/zypp/repos.d",
-		AllowPrecompiledFallback:     false,
 		AllowRuntimeCompiledFallback: false,
 
 		AttachKprobesWithKprobeEventsABI: false,

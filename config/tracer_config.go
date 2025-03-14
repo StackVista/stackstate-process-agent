@@ -82,7 +82,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		// This needs to be enabled because the ebpf conntrack connection tracer does not work if the nf_conntrack kernel
 		// module is not loaded. This happens in cilium CNI networking for example.
 		// todo!: Maybe we need it (?)
-		//EnableCiliumLBConntracker:    true,
+		EnableCiliumLBConntracker:    true,
 		ConntrackMaxStateSize:        131072,
 		ConntrackRateLimit:           500,
 		ConntrackRateLimitInterval:   3 * time.Second,

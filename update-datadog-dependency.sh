@@ -7,10 +7,6 @@
 
 set -e
 
-DIR="${BASH_SOURCE%/*}"
-if [ ! -d "$DIR" ]; then DIR="$PWD"; fi
-if [ "$DIR" = "." ]; then DIR="$PWD"; fi
-
 printUsage() {
   cat << USAGE
 

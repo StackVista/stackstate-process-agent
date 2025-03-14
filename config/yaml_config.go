@@ -424,9 +424,6 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	if probeLogEnabled, err := isAffirmative(networkConf.Network.ProbeDebugLog); err == nil {
 		agentConf.NetworkTracer.ProbeDebugLog = probeLogEnabled
 	}
-	if networkConf.Network.ProbeLogBufferSizeBytes != 0 {
-		agentConf.NetworkTracer.ProbeLogBufferSizeBytes = networkConf.Network.ProbeLogBufferSizeBytes
-	}
 	if networkConf.Network.MaxHTTPStatsBuffered != 0 {
 		agentConf.NetworkTracer.MaxHTTPStatsBuffered = networkConf.Network.MaxHTTPStatsBuffered
 	}

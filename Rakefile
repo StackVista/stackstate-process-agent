@@ -131,7 +131,7 @@ desc "Process Agent CI script (fmt, vet, etc)"
 task :ci => [:deps, :fmt, :vet, :test, :lint, :build]
 
 desc "Process Agent local build"
-task :local_build => [:deps, :prebuild, :build]
+task :local_build => [:prebuild, :build]
 
 task :err do
   system("go install github.com/kisielk/errcheck")

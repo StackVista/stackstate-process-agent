@@ -172,9 +172,9 @@ require (
 
 require (
 	github.com/DataDog/datadog-agent/comp/core/telemetry v0.62.2
+	github.com/DataDog/datadog-agent/pkg/config/model v0.62.2
 	github.com/DataDog/datadog-agent/pkg/config/setup v0.62.2
 	github.com/DataDog/datadog-agent/pkg/util/filesystem v0.62.2
-	go.uber.org/fx v1.23.0
 	k8s.io/kubelet v0.31.2
 )
 
@@ -209,7 +209,6 @@ require (
 	github.com/DataDog/datadog-agent/pkg/collector/check/defaults v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/config/env v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/config/mock v0.62.2 // indirect
-	github.com/DataDog/datadog-agent/pkg/config/model v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/config/nodetreemodel v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/config/structure v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/config/teeconfig v0.62.2 // indirect
@@ -500,6 +499,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/dig v1.18.0 // indirect
+	go.uber.org/fx v1.23.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	go4.org/intern v0.0.0-20230525184215-6c62f75575cb // indirect

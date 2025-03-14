@@ -30,16 +30,17 @@ git tag -a 7.0.0 -m 7.0.0 || true
 # This command will create system-probe. Running the go:generate as well as invoking the precompilation of the ebpf files
 invoke system-probe.build
 
-# todo!: update these paths
-# llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm-debug.o > $OUTPUTDIR/usm_debug.txt
-# llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/usm.o > $OUTPUTDIR/usm.txt
+llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/x86_64/usm-debug.o > $OUTPUTDIR/usm_debug.txt
+llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/x86_64/usm.o > $OUTPUTDIR/usm.txt
 
 # Output the generated gofiles (including relative paths) to the output directory
+# These go files contain the path to the ebpf source code that will be compiled at runtime. We don't use the runtime mode, so at a certain point we could avoid to build it.
 mkdir -p "$OUTPUTDIR/gofiles"
-git ls-files --others --ignored --exclude-from=.gitignore | grep "\.go$" | xargs -I{} cp --parents {} "$OUTPUTDIR/gofiles"
+git ls-files --others --ignored --exclude-from=pkg/ebpf/bytecode/runtime/.gitignore | grep "\.go$" | xargs -I{} cp --parents {} "$OUTPUTDIR/gofiles"
 chown -R "$OUTPUT_USER_ID:$OUTPUT_GROUP_ID" "$OUTPUTDIR/gofiles"
 
 # Output the ebpf files to the output directory
+# We need the `.o` files that the process-agent will use at runtime. We only run in prebuilt mode so the .o files are enough
 mkdir -p "$OUTPUTDIR/ebpf/"
 cp -r ./pkg/ebpf/bytecode/build/* "$OUTPUTDIR/ebpf/"
 chown -R "$OUTPUT_USER_ID:$OUTPUT_GROUP_ID" "$OUTPUTDIR/ebpf"

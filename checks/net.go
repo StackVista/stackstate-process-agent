@@ -463,9 +463,6 @@ func (c *ConnectionsCheck) formatConnections(
 
 		// Get adresses
 		var natladdr, natraddr *model.Addr
-		// todo!: IsZero() is removed here https://github.com/DataDog/datadog-agent/commit/f627a34c87c60b6a606edb8e90c7c7500e00302d
-		// now they use isValid() that seems to be the same.
-		// BTW in the original code we use `conn.IPTranslation.ReplDstIP.IsZero()` instead of `!conn.IPTranslation.ReplDstIP.IsZero()` why?
 		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
 			natraddr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplSrcIP.String(),

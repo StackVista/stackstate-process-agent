@@ -79,10 +79,10 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		EnableConntrack:       true,
 		EnableEbpfConntracker: true,
-		// This needs to be enabled because the ebpf conntrack connection tracer does not work if the nf_conntrack kernel
-		// module is not loaded. This happens in cilium CNI networking for example.
-		// todo!: Maybe we need it (?)
-		EnableCiliumLBConntracker:    true,
+
+		// At the moment we disable it by default, this is a new feature from the 7.62.2 sync.
+		// Let's see if we need it in the future.
+		EnableCiliumLBConntracker:    false,
 		ConntrackMaxStateSize:        131072,
 		ConntrackRateLimit:           500,
 		ConntrackRateLimitInterval:   3 * time.Second,
@@ -149,18 +149,23 @@ func EBPFConfig(cfg *AgentConfig) ebpf.Config {
 		EnableTracepoints:        false,
 		ProcRoot:                 kernel.ProcFSRoot(),
 
-		EnableCORE: false,
-		BTFPath:    "", // No btf support for now
-
+		EnableCORE:                   false,
 		EnableRuntimeCompiler:        false,
-		RuntimeCompilerOutputDir:     "/opt/stackstate-agent/runtime-compiler-output",
-		EnableKernelHeaderDownload:   false,
-		KernelHeadersDirs:            []string{"/opt/stackstate-agent/kernel-headers"},
-		KernelHeadersDownloadDir:     "/tmp",
-		AptConfigDir:                 "/etc/apt",
-		YumReposDir:                  "/etc/yum.repos.d",
-		ZypperReposDir:               "/etc/zypp/repos.d",
 		AllowRuntimeCompiledFallback: false,
+
+		// Should be irrilevant for us since we disable CORE and runtime compiler.
+		// Put it to `true` just to highlight that we want to fallback to the prebuilt mode.
+		AllowPrebuiltFallback: true,
+
+		BTFPath: "", // No btf support for now
+
+		RuntimeCompilerOutputDir:   "/opt/stackstate-agent/runtime-compiler-output",
+		EnableKernelHeaderDownload: false,
+		KernelHeadersDirs:          []string{"/opt/stackstate-agent/kernel-headers"},
+		KernelHeadersDownloadDir:   "/tmp",
+		AptConfigDir:               "/etc/apt",
+		YumReposDir:                "/etc/yum.repos.d",
+		ZypperReposDir:             "/etc/zypp/repos.d",
 
 		AttachKprobesWithKprobeEventsABI: false,
 	}

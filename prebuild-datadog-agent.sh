@@ -110,7 +110,7 @@ else
 fi
 
 # obtain the docker image from datadog repo
-source $SOURCE_DIR/sts_tests/docker_image.sh
+source $GO_MOD_DEPENDENCY_DIR/sts_tests/docker_image.sh
 DEPENDENCY_ARTIFACTS_DIR="$ALL_ARTIFACTS_DIR/artifacts/$DEPENDENCY_VERSION"
 
 checkoutSource() {

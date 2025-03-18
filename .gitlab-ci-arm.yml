@@ -49,7 +49,7 @@ dependencies:
   stage: prebuild
   needs: []
   tags:
-    - sts-k8s-xl-runner
+    - sts-k8s-xl-arm64-runner
   script:
     - mkdir -p .go
     - go mod download
@@ -70,7 +70,7 @@ prebuild_agent:
   needs: [ dependencies ]
   image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_arm64:5ac33c09
   tags:
-    - sts-k8s-xl-runner
+    - sts-k8s-xl-arm64-runner
   script:
     - ./prebuild-datadog-agent.sh --generate-no-docker
   artifacts:
@@ -101,7 +101,7 @@ build_linux:
       - $CI_PROJECT_DIR/ebpf-object-files
     expire_in: 2 week
   tags:
-    - sts-k8s-xl-runner
+    - sts-k8s-xl-arm64-runner
   retry:
     max: 2
     when:
@@ -115,7 +115,7 @@ test:
     - printenv
     - rake ci
   tags:
-    - sts-k8s-xl-runner
+    - sts-k8s-xl-arm64-runner
   retry:
     max: 2
     when:

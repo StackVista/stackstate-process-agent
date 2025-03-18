@@ -25,7 +25,7 @@ variables:
       files:
         - go.mod
         - go.sum
-      prefix: process_agent
+      prefix: process_agent_arm64
     paths:
       - .go/
 

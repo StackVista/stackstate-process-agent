@@ -38,13 +38,11 @@ variables:
 .linux_builder:
   image: ${LINUX_BUILDER}
   before_script:
-    - set -x
     - eval "$(gimme)"
     - source /root/.bashrc
     - source /etc/profile
     - conda activate ddpy3
     - export PATH="${GOPATH}/bin:${PATH}"
-    - set +x
 
 dependencies:
   extends: [ .linux_builder, .go_process_agent_cache ]
@@ -74,6 +72,8 @@ prebuild_agent:
   tags:
     - sts-k8s-xl-arm64-runner
   script:
+    - mkdir -p .go
+    - go mod download
     - ./prebuild-datadog-agent.sh --generate-no-docker
   artifacts:
     paths:
@@ -86,11 +86,11 @@ test_protobuf_updated:
   tags:
     - sts-k8s-xl-arm64-runner
   script:
-    - set -x
+    - mkdir -p .go
+    - go mod download
     - (cd $(go list -f '{{ .Dir }}' -m github.com/gogo/protobuf); make install)
     - rake protobuf
     - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
-    - set +x
 
 build_linux:
   extends: [ .linux_builder, .go_process_pull_agent_cache ]

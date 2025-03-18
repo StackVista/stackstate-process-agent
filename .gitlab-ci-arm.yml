@@ -81,6 +81,8 @@ test_protobuf_updated:
   extends: [ .linux_builder, .go_process_pull_agent_cache ]
   stage: test
   needs: [ dependencies ]
+  tags:
+    - sts-k8s-xl-arm64-runner
   script:
     - (cd $(go list -f '{{ .Dir }}' -m github.com/gogo/protobuf); make install)
     - rake protobuf

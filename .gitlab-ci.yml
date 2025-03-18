@@ -4,7 +4,7 @@ stages:
 agent_x86_64:
   stage: triggers
   variables:
-    ARCH: x86_64
+    ARCH: x64
     DD_ARCH: x64
   trigger:
     include: .gitlab-ci-x64.yml
@@ -16,7 +16,7 @@ agent_x86_64:
 agent_arm64:
   stage: triggers
   variables:
-    ARCH: aarch64
+    ARCH: arm64
     DD_ARCH: arm64
   trigger:
     include: .gitlab-ci-arm.yml

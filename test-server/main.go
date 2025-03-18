@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-// Empty feature set
+// FeaturesResponse Empty feature set to send
 type FeaturesResponse struct {
 }
 

@@ -707,7 +707,8 @@ func statusCodeClassToString(class uint16) string {
 	case 500:
 		return "5xx"
 	default:
-		return ""
+		// We group by family before reaching this point, so this should never happen
+		panic(fmt.Sprintf("unexpected status code class: %d", class))
 	}
 }
 

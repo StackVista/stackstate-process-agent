@@ -37,7 +37,8 @@ while [ $# -gt 0 ]; do
 
       # Branch names that contains a slash are not valid in go.mod, so we need to use the commit hash
       # See: https://github.com/golang/go/issues/32955
-      COMMIT=$(git ls-remote https://github.com/StackVista/datadog-agent-upstream-for-process-agent.git "${BRANCH}" | awk '{print $1}')
+      # We need the `tail -n 1` because in case of merge commits we could have 2 commit hashes in the output, just take the last one.
+      COMMIT=$(git ls-remote https://github.com/StackVista/datadog-agent-upstream-for-process-agent.git "${BRANCH}" | tail -n 1 | awk '{print $1}')
       if [ -z "${COMMIT}" ]; then
         echo "Error: commit not found for ${BRANCH}"
         exit 1

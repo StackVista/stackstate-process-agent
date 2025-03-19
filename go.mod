@@ -7,9 +7,6 @@ toolchain go1.23.5
 // From datadog-agent-upstream-for-process-agent, replaces done in that go mod file need to be done here too
 replace github.com/pahanini/go-grpc-bidirectional-streaming-example v0.0.0-20211027164128-cc6111af44be => github.com/DataDog/go-grpc-bidirectional-streaming-example v0.0.0-20221024060302-b9cf785c02fe
 
-// todo!: it seems Datadog agent removed this replace
-// replace github.com/spdx/tools-golang => github.com/spdx/tools-golang v0.3.0
-
 replace github.com/aquasecurity/trivy => github.com/DataDog/trivy v0.0.0-20241223234648-d2ac813bf11b
 
 replace github.com/vishvananda/netlink => github.com/StackVista/netlink v0.0.0-20231207101142-91d41874606b
@@ -542,4 +539,4 @@ require (
 
 replace github.com/moby/buildkit v0.11.0 => github.com/moby/buildkit v0.12.5
 
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250317151602-5a991685baa7
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250320133125-5b2b83ced2c0

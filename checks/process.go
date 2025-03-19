@@ -5,7 +5,6 @@ package checks
 import (
 	ddmodel "github.com/DataDog/agent-payload/v5/process"
 	"github.com/DataDog/datadog-agent/pkg/process/util/containers"
-	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -94,7 +93,7 @@ var reportedContainerCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
 // Processes are split up into a chunks of at most 100 processes per message to
 // limit the message size on intake.
 // See agent.proto for the schema of the message and models used.
-func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Features, groupID int32, currentTime time.Time) (*CheckResult, error) {
+func (p *ProcessCheck) Run(cfg *config.AgentConfig, groupID int32, currentTime time.Time) (*CheckResult, error) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -157,13 +156,13 @@ func (p *ProcessCheck) Run(cfg *config.AgentConfig, featureFlags features.Featur
 	replicateKubernetesLabelsToProcesses(processes, containers)
 
 	// Always send increment (to allow for low-latency deletes)
-	if cfg.EnableIncrementalPublishing && featureFlags.FeatureEnabled(features.IncrementalTopology) {
+	if cfg.EnableIncrementalPublishing {
 		log.Debug("Sending process status increment")
 		messages = p.fmtIncrement(cfg, groupID, buildIncrement(processes, containers, p.lastProcState, p.lastCtrState))
 	}
 
 	// Sometimes also add the full snapshot, in case some of the data was lost
-	if (!cfg.EnableIncrementalPublishing) || (!featureFlags.FeatureEnabled(features.IncrementalTopology)) || time.Now().After(p.lastRefresh.Add(cfg.IncrementalPublishingRefreshInterval)) {
+	if (!cfg.EnableIncrementalPublishing) || time.Now().After(p.lastRefresh.Add(cfg.IncrementalPublishingRefreshInterval)) {
 		log.Debug("Sending process status snapshot")
 		messages = append(messages, p.fmtSnapshot(cfg, groupID, processes, containers)...)
 		p.lastRefresh = time.Now()

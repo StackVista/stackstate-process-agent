@@ -19,7 +19,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	containers "github.com/DataDog/datadog-agent/pkg/process/util/containers"
 	"github.com/StackVista/stackstate-process-agent/checks"
-	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/pkg/debug"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
@@ -252,7 +251,7 @@ func debugCheckResults(cfg *config.AgentConfig, check string) error {
 	if check == checks.Connections.Name() {
 		// Connections check requires process-check to have occurred first (for process creation ts)
 		checks.Process.Init(cfg, sysInfo)
-		checks.Process.Run(cfg, features.All(), 0, time.Now())
+		checks.Process.Run(cfg, 0, time.Now())
 	}
 
 	names := make([]string, 0, len(checks.All))
@@ -271,7 +270,7 @@ func debugCheckResults(cfg *config.AgentConfig, check string) error {
 
 func printResults(cfg *config.AgentConfig, ch checks.Check) error {
 	// Run the check once to prime the cache.
-	if _, err := ch.Run(cfg, features.All(), 0, time.Now()); err != nil {
+	if _, err := ch.Run(cfg, 0, time.Now()); err != nil {
 		return fmt.Errorf("collection error: %s", err)
 	}
 
@@ -284,7 +283,7 @@ func printResults(cfg *config.AgentConfig, ch checks.Check) error {
 	fmt.Printf("\nResults for check %v\n", ch)
 	fmt.Printf("-----------------------------\n\n")
 
-	result, err := ch.Run(cfg, features.All(), 1, time.Now())
+	result, err := ch.Run(cfg, 1, time.Now())
 	if err != nil {
 		return fmt.Errorf("collection error: %s", err)
 	}

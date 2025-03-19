@@ -462,13 +462,13 @@ func (c *ConnectionsCheck) formatConnections(
 
 		// Get adresses
 		var natladdr, natraddr *model.Addr
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
+		if conn.IPTranslation != nil && !conn.IPTranslation.ReplSrcIP.IsValid() {
 			natraddr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplSrcIP.String(),
 				Port: int32(conn.IPTranslation.ReplSrcPort),
 			}
 		}
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP.IsValid() {
+		if conn.IPTranslation != nil && !conn.IPTranslation.ReplDstIP.IsValid() {
 			natladdr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplDstIP.String(),
 				Port: int32(conn.IPTranslation.ReplDstPort),

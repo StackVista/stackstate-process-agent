@@ -28,7 +28,6 @@ import (
 
 	"github.com/DataDog/sketches-go/ddsketch"
 
-	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	log "github.com/cihub/seelog"
@@ -73,7 +72,7 @@ func (c *ConnectionsCheck) Endpoint() string { return "/api/v1/connections" }
 // this information. For each connection we'll return a `model.Connection`
 // that will be bundled up into a `CollectorConnections`.
 // See agent.proto for the schema of the message and models.
-func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, groupID int32, currentTime time.Time) (*CheckResult, error) {
+func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTime time.Time) (*CheckResult, error) {
 	// If local tracer failed to initialize, so we shouldn't be doing any checks
 	if c.useLocalTracer && c.localTracer == nil {
 		return nil, fmt.Errorf("cannot run connections check when tracer is not initialized. Set STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting")
@@ -151,7 +150,11 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, _ features.Features, gro
 	}
 	log.Debugf("%v", dnsMap)
 
-	containerToPod := c.podsCache.GetContainerToPodMap(context.TODO())
+	containerToPod := make(map[string]*kubelet.Pod)
+	// Only for debugging purpose
+	if !cfg.LocalRun {
+		containerToPod = c.podsCache.GetContainerToPodMap(context.TODO())
+	}
 
 	log.Debugf("Protocol map: %v", protocolMap)
 	log.Debugf("collected %d connection data", len(connectionStats))
@@ -210,6 +213,7 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 		if c.localTracer == nil {
 			return nil, fmt.Errorf("using local network tracer, but no tracer was initialized")
 		}
+		// we always use the same client-ID to get connections from the tracer
 		cs, err := c.localTracer.GetActiveConnections("process-agent")
 
 		if len(c.initialConnections) == 0 {
@@ -458,13 +462,13 @@ func (c *ConnectionsCheck) formatConnections(
 
 		// Get adresses
 		var natladdr, natraddr *model.Addr
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsZero() {
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
 			natraddr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplSrcIP.String(),
 				Port: int32(conn.IPTranslation.ReplSrcPort),
 			}
 		}
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP.IsZero() {
+		if conn.IPTranslation != nil && conn.IPTranslation.ReplDstIP.IsValid() {
 			natladdr = &model.Addr{
 				Ip:   conn.IPTranslation.ReplDstIP.String(),
 				Port: int32(conn.IPTranslation.ReplDstPort),
@@ -703,7 +707,8 @@ func statusCodeClassToString(class uint16) string {
 	case 500:
 		return "5xx"
 	default:
-		return ""
+		// We group by family before reaching this point, so this should never happen
+		panic(fmt.Sprintf("unexpected status code class: %d", class))
 	}
 }
 

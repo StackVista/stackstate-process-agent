@@ -16,9 +16,10 @@ import (
 )
 
 // Init initializes a ConnectionsCheck instance.
-func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, sysInfo *model.SystemInfo) error {
+func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, _ *model.SystemInfo) error {
 
 	log.Info("starting network tracer locally")
+	// todo!: remove this is not needed. We always have a local tracer and we put this variable always to `true`!
 	c.useLocalTracer = true
 
 	// Checking whether the current kernel version is supported by the tracer

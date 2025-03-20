@@ -3,9 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/StackVista/stackstate-process-agent/cmd/agent/features"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/check"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
@@ -19,7 +17,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"reflect"
 	"sync/atomic"
 	"time"
 
@@ -55,7 +52,6 @@ type Collector struct {
 	groupID       int32
 	runCounter    int32
 	enabledChecks []checks.Check
-	features      features.Features
 
 	batcher transactionbatcher.TransactionalBatcher
 	manager transactionmanager.TransactionManager
@@ -67,7 +63,7 @@ func NewCollector(cfg *config.AgentConfig,
 	client *httpclient.StackStateClient,
 	batcher transactionbatcher.TransactionalBatcher,
 	manager transactionmanager.TransactionManager) (Collector, error) {
-	sysInfo, err := checks.CollectSystemInfo(cfg)
+	sysInfo, err := checks.CollectSystemInfo()
 	if err != nil {
 		return Collector{}, err
 	}
@@ -88,7 +84,6 @@ func NewCollector(cfg *config.AgentConfig,
 		cfg:           cfg,
 		groupID:       rand.Int31(),
 		enabledChecks: enabledChecks,
-		features:      features.Empty(),
 
 		batcher: batcher,
 		manager: manager,
@@ -105,42 +100,44 @@ var (
 	}, []string{"check"})
 )
 
-func (l *Collector) runCheck(c checks.Check, features features.Features) {
+func (l *Collector) runCheck(c checks.Check) {
 	runCounter := atomic.AddInt32(&l.runCounter, 1)
 	currentTime := time.Now()
 	// update the last collected timestamp for info
 	updateLastCollectTime(currentTime)
-	result, err := c.Run(l.cfg, features, atomic.AddInt32(&l.groupID, 1), currentTime)
+	result, err := c.Run(l.cfg, atomic.AddInt32(&l.groupID, 1), currentTime)
 	checkRunDuration.WithLabelValues(c.Name()).Observe(time.Since(currentTime).Seconds())
 
-	if err != nil && result == nil {
+	switch {
+	case err != nil && result == nil:
+		// if we don't have a result, we can't send anything to the backend
 		l.send <- checkResult{check: c, err: err}
 		log.Criticalf("Unable to run check '%s': %s", c.Name(), err)
-	} else {
+		return
+	case err == nil && result == nil:
+		log.Infof("Ignoring empty result of '%s' check", c.Name())
+	case err != nil && result != nil, err == nil && result != nil:
+		// If we have an error we print a warning and send the result anyway
 		if err != nil {
 			log.Warnf("Check '%s' partially failed: %v", c.Name(), err)
 		}
-		if result != nil {
-			l.send <- checkResult{
-				check:   c,
-				payload: &checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), currentTime},
-				err:     err,
-			}
-			// update proc and container count for info
-			updateProcContainerCount(result.CollectorMessages)
-		} else {
-			log.Infof("Ignoring empty result of '%s' check", c.Name())
+		l.send <- checkResult{
+			check:   c,
+			payload: &checkPayload{result.CollectorMessages, result.Metrics, c.Endpoint(), currentTime},
+			err:     err,
 		}
+		// update proc and container count for info
+		updateProcContainerCount(result.CollectorMessages)
+	}
 
-		d := time.Since(currentTime)
-		switch {
-		case runCounter < 5:
-			log.Infof("Finished check #%d in %s", runCounter, d)
-		case runCounter == 5:
-			log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
-		case runCounter%20 == 0:
-			log.Infof("Finish check #%d in %s", runCounter, d)
-		}
+	d := time.Since(currentTime)
+	switch {
+	case runCounter < 5:
+		log.Infof("Finished check #%d in %s", runCounter, d)
+	case runCounter == 5:
+		log.Infof("Finished check #%d in %s. First 5 check runs finished, next runs will be logged every 20 runs.", runCounter, d)
+	case runCounter%20 == 0:
+		log.Infof("Finish check #%d in %s", runCounter, d)
 	}
 }
 
@@ -153,12 +150,6 @@ func (l *Collector) run(exit chan bool) {
 
 	go handleSignals(exit)
 	queueSizeTicker := time.NewTicker(10 * time.Second)
-	featuresTicker := time.NewTicker(5 * time.Second)
-
-	// Channel to announce new features detected
-	featuresCh := make(chan features.Features, 1)
-
-	l.getFeatures(l.cfg.APIEndpoints[0], "/features", featuresCh)
 
 	go func() {
 		for {
@@ -198,7 +189,7 @@ func (l *Collector) run(exit chan bool) {
 					}
 				}
 
-				if l.cfg.ReportCheckHealthState || l.features.FeatureEnabled(features.HealthStates) {
+				if l.cfg.ReportCheckHealthState {
 					healthStream, healthData := l.makeHealth(result)
 
 					repeatInterval := int(l.cfg.CheckInterval(result.check.Name()).Seconds())
@@ -214,12 +205,6 @@ func (l *Collector) run(exit chan bool) {
 				close(txOut)
 			case <-queueSizeTicker.C:
 				updateQueueSize(l.send)
-			case <-featuresTicker.C:
-				l.getFeatures(l.cfg.APIEndpoints[0], "/features", featuresCh)
-			case featuresValue := <-featuresCh:
-				l.features = featuresValue
-				// Stop polling
-				featuresTicker.Stop()
 			case <-exit:
 				return
 			}
@@ -230,13 +215,13 @@ func (l *Collector) run(exit chan bool) {
 		// Assignment here, because iterator value gets altered
 		go func(c checks.Check) {
 			// Run the check the first time to prime the caches.
-			l.runCheck(c, l.features)
+			l.runCheck(c)
 
 			ticker := time.NewTicker(l.cfg.CheckInterval(c.Name()))
 			for {
 				select {
 				case <-ticker.C:
-					l.runCheck(c, l.features)
+					l.runCheck(c)
 				case _, ok := <-exit:
 					if !ok {
 						return
@@ -316,58 +301,6 @@ func (l *Collector) postToAPIwithEncoding(endpoint config.APIEndpoint, checkPath
 	}
 	defer resp.Body.Close()
 	responses <- errorResponse{nil}
-}
-
-func (l *Collector) getFeatures(endpoint config.APIEndpoint, checkPath string, report chan features.Features) {
-	resp, accessErr := l.accessAPIwithEncoding(endpoint, "GET", checkPath, make([]byte, 0), "identity")
-
-	// Handle error response
-	if accessErr != nil {
-		// Soo we got a 404, meaning we were able to contact stackstate, but it had no features path. We can publish a result
-		if resp != nil {
-			log.Info("Found StackState version which does not support feature detection yet")
-			report <- features.Empty()
-			return
-		}
-		// Log
-		_ = log.Error(accessErr)
-		return
-	}
-
-	defer resp.Body.Close()
-
-	// Get byte array
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		_ = log.Errorf("could not decode response body from features: %s", err)
-		return
-	}
-	var data interface{}
-	// Parse json
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		_ = log.Errorf("error unmarshalling features json: %s of body %s", err, body)
-		return
-	}
-
-	// Validate structure
-	featureMap, ok := data.(map[string]interface{})
-	if !ok {
-		_ = log.Errorf("Json was wrongly formatted, expected map type, got: %s", reflect.TypeOf(data))
-	}
-
-	featuresParsed := make(map[features.FeatureID]bool)
-
-	for k, v := range featureMap {
-		featureValue, okV := v.(bool)
-		if !okV {
-			_ = log.Warnf("Json was wrongly formatted, expected boolean type, got: %s, skipping feature %s", reflect.TypeOf(v), k)
-		}
-		featuresParsed[features.FeatureID(k)] = featureValue
-	}
-
-	log.Infof("Server supports features: %s", featuresParsed)
-	report <- features.Make(featuresParsed)
 }
 
 func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method string, checkPath string, body []byte, contentEncoding string) (*http.Response, error) {

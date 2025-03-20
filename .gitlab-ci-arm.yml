@@ -68,12 +68,11 @@ prebuild_agent:
         - prebuild_artifacts/artifacts/*
   stage: prebuild
   needs: [ dependencies ]
-  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_arm64:d15269d5
+  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_arm64:15ead906
   tags:
     - sts-k8s-xl-arm64-runner
   script:
-    - mkdir -p .go
-    - go mod download
+    - if [ ! -d ".go" ]; then mkdir -p .go ; go mod download ; fi
     - ./prebuild-datadog-agent.sh --generate-no-docker
   artifacts:
     paths:

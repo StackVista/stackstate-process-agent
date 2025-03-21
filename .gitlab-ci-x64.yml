@@ -16,7 +16,7 @@ variables:
   QUAY_REGISTRY: quay.io
   DOCKER_REGISTRY: docker.io
   VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:5ac33c09
+  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:61b4ad67
   GOPATH: "$CI_PROJECT_DIR/.go"
 
 .go_process_agent_cache:
@@ -68,7 +68,7 @@ prebuild_agent:
         - prebuild_artifacts/artifacts/*
   stage: prebuild
   needs: [ dependencies ]
-  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:5ac33c09
+  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:61b4ad67
   tags:
     - sts-k8s-xl-runner
   script:
@@ -81,6 +81,8 @@ test_protobuf_updated:
   extends: [ .linux_builder, .go_process_pull_agent_cache ]
   stage: test
   needs: [ dependencies ]
+  tags:
+    - sts-k8s-m-runner
   script:
     - (cd $(go list -f '{{ .Dir }}' -m github.com/gogo/protobuf); make install)
     - rake protobuf
@@ -123,6 +125,8 @@ test:
 
 publish_binaries:
   stage: publish
+  tags:
+    - sts-k8s-m-runner
   extends: [ .linux_builder, .go_process_pull_agent_cache ]
   needs:
     - build_linux
@@ -158,6 +162,8 @@ publish_binaries:
 
 publish_linux_docker:
   extends: [ .publish_linux_docker ]
+  tags:
+    - sts-k8s-m-runner
   variables:
     REPO: $STS_DOCKER_TEST_REPO
     TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA-$DD_ARCH"
@@ -165,6 +171,8 @@ publish_linux_docker:
 
 publish_k8s_docker:
   extends: [ .publish_linux_docker ]
+  tags:
+    - sts-k8s-m-runner
   variables:
     REPO: $STS_DOCKER_K8S_REPO
     TAG: "$CI_COMMIT_REF_NAME-$DD_ARCH"
@@ -172,6 +180,8 @@ publish_k8s_docker:
 
 publish_linux_docker_release:
   extends: [ .publish_linux_docker ]
+  tags:
+    - sts-k8s-m-runner
   variables:
     REPO: $STS_DOCKER_RELEASE_REPO
     TAG: $CI_COMMIT_REF_NAME-$DD_ARCH
@@ -180,4 +190,3 @@ publish_linux_docker_release:
   only:
     - tags
     - trigger
-

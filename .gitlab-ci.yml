@@ -6,7 +6,7 @@ agent_x86_64:
   stage: triggers
   variables:
     ARCH: x86_64
-    DD_ARCH: x64
+    DD_ARCH: amd64
     DOCKER_ARCH: amd64
   trigger:
     include: .gitlab-ci-x64.yml

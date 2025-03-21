@@ -128,6 +128,8 @@ test:
 
 publish_binaries:
   stage: publish
+  tags:
+    - sts-k8s-m-arm64-runner
   extends: [ .linux_builder, .go_process_pull_agent_cache ]
   needs:
     - build_linux
@@ -163,6 +165,8 @@ publish_binaries:
 
 publish_linux_docker:
   extends: [ .publish_linux_docker ]
+  tags:
+    - sts-k8s-m-arm64-runner
   variables:
     REPO: $STS_DOCKER_TEST_REPO
     TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA-$DD_ARCH"
@@ -170,6 +174,8 @@ publish_linux_docker:
 
 publish_k8s_docker:
   extends: [ .publish_linux_docker ]
+  tags:
+    - sts-k8s-m-arm64-runner
   variables:
     REPO: $STS_DOCKER_K8S_REPO
     TAG: "$CI_COMMIT_REF_NAME-$DD_ARCH"
@@ -177,6 +183,8 @@ publish_k8s_docker:
 
 publish_linux_docker_release:
   extends: [ .publish_linux_docker ]
+  tags:
+    - sts-k8s-m-arm64-runner
   variables:
     REPO: $STS_DOCKER_RELEASE_REPO
     TAG: $CI_COMMIT_REF_NAME-$DD_ARCH

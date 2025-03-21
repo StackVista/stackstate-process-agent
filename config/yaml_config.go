@@ -16,7 +16,6 @@ import (
 // available in Agent versions >= 6
 type YamlAgentConfig struct {
 	APIKey               string `yaml:"api_key"`
-	Site                 string `yaml:"site"` // todo!: this is not used (?)
 	StsURL               string `yaml:"sts_url"`
 	SkipKubeletTLSVerify bool   `yaml:"skip_kubelet_tls_verify"`
 	SkipSSLValidation    bool   `yaml:"skip_ssl_validation"`

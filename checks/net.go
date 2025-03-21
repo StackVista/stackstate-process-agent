@@ -43,8 +43,6 @@ var (
 
 // ConnectionsCheck collects statistics about live TCP and UDP connections.
 type ConnectionsCheck struct {
-	// Local network tracer
-	useLocalTracer bool
 	localTracer    *tracer.Tracer
 	localTracerErr error
 
@@ -74,7 +72,7 @@ func (c *ConnectionsCheck) Endpoint() string { return "/api/v1/connections" }
 // See agent.proto for the schema of the message and models.
 func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTime time.Time) (*CheckResult, error) {
 	// If local tracer failed to initialize, so we shouldn't be doing any checks
-	if c.useLocalTracer && c.localTracer == nil {
+	if c.localTracer == nil {
 		return nil, fmt.Errorf("cannot run connections check when tracer is not initialized. Set STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting")
 	}
 
@@ -209,30 +207,26 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 }
 
 func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
-	if c.useLocalTracer { // If local tracer is set up, use that
-		if c.localTracer == nil {
-			return nil, fmt.Errorf("using local network tracer, but no tracer was initialized")
-		}
-		// we always use the same client-ID to get connections from the tracer
-		cs, err := c.localTracer.GetActiveConnections("process-agent")
-
-		if len(c.initialConnections) == 0 {
-			c.initialConnections = map[connKey]interface{}{}
-			for _, conn := range cs.Conns {
-				c.initialConnections[getConnectionKey(conn)] = nil
-			}
-		} else {
-			for _, conn := range cs.Conns {
-				if _, ok := c.initialConnections[getConnectionKey(conn)]; (!ok) && conn.InitialTCPSeq.Seq == 0 && conn.InitialTCPSeq.Ack_seq == 0 && conn.Direction != network.NONE {
-					log.Debugf("Got new connection without initial handshake: %v", conn)
-				}
-				c.initialConnections[getConnectionKey(conn)] = nil
-			}
-		}
-		return cs, err
+	if c.localTracer == nil {
+		return nil, fmt.Errorf("the tracer was not initialized")
 	}
+	// we always use the same client-ID to get connections from the tracer
+	cs, err := c.localTracer.GetActiveConnections("process-agent")
 
-	return nil, fmt.Errorf("remote ConnectionTracker is not supported")
+	if len(c.initialConnections) == 0 {
+		c.initialConnections = map[connKey]interface{}{}
+		for _, conn := range cs.Conns {
+			c.initialConnections[getConnectionKey(conn)] = nil
+		}
+	} else {
+		for _, conn := range cs.Conns {
+			if _, ok := c.initialConnections[getConnectionKey(conn)]; (!ok) && conn.InitialTCPSeq.Seq == 0 && conn.InitialTCPSeq.Ack_seq == 0 && conn.Direction != network.NONE {
+				log.Debugf("Got new connection without initial handshake: %v", conn)
+			}
+			c.initialConnections[getConnectionKey(conn)] = nil
+		}
+	}
+	return cs, err
 }
 
 var logShortLivingNoticeOnce = &sync.Once{}

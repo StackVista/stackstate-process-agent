@@ -10,8 +10,8 @@ if [ -z ${PROCESS_AGENT_VERSION+x} ]; then
 	exit 1
 fi
 echo $PROCESS_AGENT_VERSION
-FILENAME="process-agent-amd64-$PROCESS_AGENT_VERSION"
-EBPF_FILENAME="process-agent-amd64-$PROCESS_AGENT_VERSION-ebpf.tar.gz"
+FILENAME="process-agent-$DOCKER_ARCH-$PROCESS_AGENT_VERSION"
+EBPF_FILENAME="process-agent-$DOCKER_ARCH-$PROCESS_AGENT_VERSION-ebpf.tar.gz"
 WORKSPACE=${WORKSPACE:-$PWD/..}
 agent_path="$WORKSPACE"
 

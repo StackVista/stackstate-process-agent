@@ -1,5 +1,6 @@
 stages:
   - triggers
+  - postbuild
 
 agent_x86_64:
   stage: triggers
@@ -22,6 +23,15 @@ agent_arm64:
     DOCKER_ARCH: arm64
   trigger:
     include: .gitlab-ci-arm.yml
+    strategy: depend
+  rules:
+    - when: always
+
+merge_docker_manifest:
+  stage: postbuild
+  needs: [ agent_x86_64, agent_arm64 ]
+  trigger:
+    include: .gitlab-ci-docker.yml
     strategy: depend
   rules:
     - when: always

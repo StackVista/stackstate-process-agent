@@ -16,7 +16,7 @@ variables:
   QUAY_REGISTRY: quay.io
   DOCKER_REGISTRY: docker.io
   VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_arm64:d15269d5
+  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_arm64:61b4ad67
   GOPATH: "$CI_PROJECT_DIR/.go"
 
 .go_process_agent_cache:
@@ -68,11 +68,10 @@ prebuild_agent:
         - prebuild_artifacts/artifacts/*
   stage: prebuild
   needs: [ dependencies ]
-  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_arm64:15ead906
+  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_arm64:61b4ad67
   tags:
     - sts-k8s-xl-arm64-runner
   script:
-    - if [ ! -d ".go" ]; then mkdir -p .go ; go mod download ; fi
     - ./prebuild-datadog-agent.sh --generate-no-docker
   artifacts:
     paths:
@@ -83,10 +82,8 @@ test_protobuf_updated:
   stage: test
   needs: [ dependencies ]
   tags:
-    - sts-k8s-xl-arm64-runner
+    - sts-k8s-m-arm64-runner
   script:
-    - mkdir -p .go
-    - go mod download
     - (cd $(go list -f '{{ .Dir }}' -m github.com/gogo/protobuf); make install)
     - rake protobuf
     - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
@@ -193,4 +190,3 @@ publish_linux_docker_release:
   only:
     - tags
     - trigger
-

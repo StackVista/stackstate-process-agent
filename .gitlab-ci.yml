@@ -4,8 +4,9 @@ stages:
 agent_x86_64:
   stage: triggers
   variables:
-    ARCH: x64
+    ARCH: x86_64
     DD_ARCH: x64
+    DOCKER_ARCH: amd64
   trigger:
     include: .gitlab-ci-x64.yml
     strategy: depend
@@ -16,8 +17,9 @@ agent_x86_64:
 agent_arm64:
   stage: triggers
   variables:
-    ARCH: arm64
+    ARCH: aarch64
     DD_ARCH: arm64
+    DOCKER_ARCH: arm64
   trigger:
     include: .gitlab-ci-arm.yml
     strategy: depend

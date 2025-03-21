@@ -1,4 +1,4 @@
-
+ARG ARCH=amd64
 ####################################
 # Actual docker image construction #
 ####################################
@@ -12,7 +12,7 @@ ENV DOCKER_STS_AGENT=true \
 
 # make sure we have recent dependencies
 RUN apt-get update && apt-get upgrade -y \
-  && apt-get install -y util-linux ncurses-bin ncurses-base libncursesw5:amd64 \
+  && apt-get install -y util-linux ncurses-bin ncurses-base libncursesw5:${ARCH} \
   # https://security-tracker.debian.org/tracker/CVE-2018-15686
   && apt-get install -y libudev1 libsystemd0 \
   && apt-get install -y ca-certificates \

@@ -2,9 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	// "github.com/StackVista/agent-transport-protocol/pkg/model"
-	// "github.com/StackVista/stackstate-process-agent/model"
-	// "io"
+	"github.com/StackVista/stackstate-process-agent/model"
+	"io"
 	"log"
 	"net/http"
 )
@@ -29,6 +28,41 @@ func genericHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func decodeMessage(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received request: %s %s", r.Method, r.URL.Path)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	m, err := model.DecodeMessage(body)
+	if err != nil {
+		http.Error(w, "Error deconding message body", http.StatusBadRequest)
+		return
+	}
+
+	switch m.Body.(type) {
+	case *model.CollectorConnections:
+		collectorConn := m.Body.(*model.CollectorConnections)
+		for _, c := range collectorConn.Connections {
+			if c.ApplicationProtocol == "postgres" {
+				log.Printf("[%s]Pid: %d, Netns: %d, laddr %s, lport %d, raddr %s, rport %d", c.ApplicationProtocol, c.Pid, c.NetNs, c.GetLaddr().GetIp(), c.GetLaddr().GetPort(), c.GetRaddr().GetIp(), c.GetRaddr().GetPort())
+				for _, m := range c.GetMetrics() {
+					log.Printf("- Metric: name %s, value %s, tag %s", m.GetName(), m.GetValue().String(), m.GetTags())
+				}
+			}
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func printHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received request: %s %s", r.Method, r.URL.Path)
 	if r.Method != http.MethodPost {
@@ -36,26 +70,13 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// body, err := io.ReadAll(r.Body)
-	// if err != nil {
-	// 	http.Error(w, "Error reading request body", http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// m, err := model.DecodeMessage(body)
-	// if err != nil {
-	// 	http.Error(w, "Error deconding message body", http.StatusBadRequest)
-	// 	return
-	// }
-
-	// log.Printf("Body: %s", m.Body.String())
 	w.WriteHeader(http.StatusOK)
 }
 
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/stsAgent/features", featuresHandler)
-	mux.HandleFunc("/stsAgent/api/v1/connections", printHandler)
+	mux.HandleFunc("/stsAgent/api/v1/connections", decodeMessage)
 	mux.HandleFunc("/stsAgent/intake", printHandler)
 	mux.HandleFunc("/stsAgent/", genericHandler)
 

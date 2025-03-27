@@ -197,7 +197,6 @@ func EncodeMessage(m Message) ([]byte, error) {
 }
 
 // ReadHeader reads the header off raw message bytes.
-// todo!: this needs to be updated to handle v3 format
 func ReadHeader(data []byte) (MessageHeader, int, error) {
 	if len(data) <= 4 {
 		return MessageHeader{}, 0, fmt.Errorf("invalid message length: %d", len(data))
@@ -207,6 +206,8 @@ func ReadHeader(data []byte) (MessageHeader, int, error) {
 		return readHeaderV1(data)
 	case MessageV2:
 		return readHeaderV2(data)
+	case MessageV3:
+		return readHeaderV3(data)
 	default:
 		return MessageHeader{}, 0, fmt.Errorf("invalid message version: %d", uint8(data[0]))
 	}

@@ -172,7 +172,6 @@ require (
 	github.com/DataDog/datadog-agent/pkg/config/model v0.62.2
 	github.com/DataDog/datadog-agent/pkg/config/setup v0.62.2
 	github.com/DataDog/datadog-agent/pkg/util/filesystem v0.62.2
-	github.com/DataDog/datadog-agent/pkg/util/testutil v0.62.2
 	github.com/lib/pq v1.10.9
 	github.com/testcontainers/testcontainers-go v0.33.0
 	k8s.io/kubelet v0.31.2
@@ -246,6 +245,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/statstracker v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/system v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/system/socket v0.62.2 // indirect
+	github.com/DataDog/datadog-agent/pkg/util/testutil v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/util/winutil v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/version v0.62.2 // indirect
 	github.com/DataDog/datadog-go/v5 v5.6.0 // indirect
@@ -548,4 +548,4 @@ require (
 
 replace github.com/moby/buildkit v0.11.0 => github.com/moby/buildkit v0.12.5
 
-replace github.com/DataDog/datadog-agent => /home/andrea/personal/datadog-agent-upstream-for-process-agent
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250327184716-9f31b4117bd5

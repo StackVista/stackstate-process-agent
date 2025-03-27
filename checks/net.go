@@ -13,7 +13,9 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/amqp"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/mongo"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/postgres"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
+	"github.com/DataDog/datadog-agent/pkg/network/types"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
@@ -140,6 +142,15 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 		protocolMap[k] = "amqp"
 	}
 
+	// Add aggregated Postgres stats to the connection stats
+	for k, v := range aggregatePostgresStats(conns.Postgres) {
+		if _, exists := connectionStats[k]; exists {
+			log.Warnf("Found both Postgres and other stats for connection key %v", k)
+		}
+		connectionStats[k] = v
+		protocolMap[k] = "postgres"
+	}
+
 	httpObservations := aggregateHTTPTraceObservations(conns.HTTPObservations)
 
 	dnsMap := map[string][]dns.Hostname{}
@@ -165,6 +176,15 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 
 	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, connectionStats, httpObservations, containerToPod, protocolMap)
 	c.prevCheckTime = currentTime
+
+	// for _, c := range formattedConnections {
+	// 	if c.ApplicationProtocol == "postgres" {
+	// 		log.Infof("[%s]Pid: %d, Netns: %d, laddr %s, lport %d, raddr %s, rport %d", c.ApplicationProtocol, c.Pid, c.NetNs, c.Laddr.Ip, c.Laddr.Port, c.Raddr.Ip, c.Raddr.Port)
+	// 		for _, m := range c.Metrics {
+	// 			log.Infof("- Metric: name %s, value %s, tag %s", m.Name, m.Value.String(), m.Tags)
+	// 		}
+	// 	}
+	// }
 
 	metrics := c.reportMetrics(cfg.HostName, conns, formattedConnections /*, conns.HTTPTelemetry*/)
 	var clientObservations, serverObservations int
@@ -565,6 +585,7 @@ func (c *ConnectionsCheck) formatConnections(
 	return cxs, connPods
 }
 
+// todo!: What is the difference between this and the DataDog one `types.ConnectionKey`?
 type connKey struct {
 	SrcIPHigh uint64
 	SrcIPLow  uint64
@@ -573,6 +594,16 @@ type connKey struct {
 	DstIPLow  uint64
 	DstPort   uint16
 	NetNs     uint32
+}
+
+func (c connKey) compareWithDataDogDual(ddc *types.ConnectionKey) bool {
+	return c.SrcIPHigh == ddc.SrcIPHigh &&
+		c.SrcIPLow == ddc.SrcIPLow &&
+		c.SrcPort == ddc.SrcPort &&
+		c.DstIPHigh == ddc.DstIPHigh &&
+		c.DstIPLow == ddc.DstIPLow &&
+		c.DstPort == ddc.DstPort &&
+		c.NetNs == ddc.NetNs
 }
 
 func (c connKey) String() string {
@@ -676,6 +707,18 @@ func getConnectionKeyForMongoStats(key mongo.Key) connKey {
 	}
 }
 
+func getConnectionKeyForPostgresStats(key postgres.Key) connKey {
+	return connKey{
+		SrcIPHigh: key.SrcIPHigh,
+		SrcIPLow:  key.SrcIPLow,
+		SrcPort:   key.SrcPort,
+		DstIPHigh: key.DstIPHigh,
+		DstIPLow:  key.DstIPLow,
+		DstPort:   key.DstPort,
+		NetNs:     key.NetNs,
+	}
+}
+
 func getConnectionKeyForAMQPStats(key amqp.Key) connKey {
 	return connKey{
 		SrcIPHigh: key.SrcIPHigh,
@@ -729,6 +772,9 @@ const (
 
 	mongoResponseTime  metricName = "mongo_response_time_seconds"
 	mongoRequestsDelta metricName = "mongo_requests_delta"
+
+	postgresResponseTime  metricName = "postgres_response_time_seconds"
+	postgresRequestsDelta metricName = "postgres_requests_delta"
 
 	amqpMessagesDeliveredDelta metricName = "amqp_messages_delivered_delta"
 	amqpMessagesPublishedDelta metricName = "amqp_messages_published_delta"
@@ -876,6 +922,39 @@ func aggregateMongoStats(mongoStats map[mongo.Key]*mongo.RequestStat) map[connKe
 			),
 			makeConnectionMetricWithHistogram(
 				mongoResponseTime, tags,
+				scaled,
+			),
+		)
+	}
+
+	return result
+}
+
+func aggregatePostgresStats(postgresStats map[postgres.Key]*postgres.RequestStat) map[connKey][]*model.ConnectionMetric {
+	result := map[connKey][]*model.ConnectionMetric{}
+
+	// todo!: support SQL command and database name.
+	tags := map[string]string{}
+
+	for key, stat := range postgresStats {
+		connKey := getConnectionKeyForPostgresStats(key)
+		scaled := emptySketch()
+		if scaled == nil {
+			log.Warn("cannot create the sketch for connection: %v", key)
+			continue
+		}
+
+		scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), 1)
+		// todo!: we can also use the count we have in the stats
+		requestCount := scaled.GetCount()
+
+		result[connKey] = append(result[connKey],
+			makeConnectionMetricWithNumber(
+				postgresRequestsDelta, tags,
+				float64(requestCount),
+			),
+			makeConnectionMetricWithHistogram(
+				postgresResponseTime, tags,
 				scaled,
 			),
 		)

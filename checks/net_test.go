@@ -11,6 +11,8 @@ import (
 
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols/postgres"
+	"github.com/DataDog/datadog-agent/pkg/network/types"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/DataDog/sketches-go/ddsketch"
@@ -404,6 +406,9 @@ const (
 	PID1CONN1RECV2DELTA = float64(PID1CONN1RECV2 - PID1CONN1RECV1)
 	PID1CONN2RECV2DELTA = float64(PID1CONN2RECV2 - PID1CONN2RECV1)
 	PID2CONN1RECV2DELTA = float64(PID2CONN1RECV2 - PID2CONN1RECV1)
+
+	rootNS    = 0
+	notRootNS = 3
 )
 
 func TestRelationCacheOrdering(t *testing.T) {
@@ -621,6 +626,73 @@ func getConnectionMetricNumber(t *testing.T, metrics []*model.ConnectionMetric, 
 
 func msToNs(ms float64) float64 {
 	return ms * 1000000
+}
+
+// Move this to Datadog Postgres
+func createPostgresKeyFromConn(c *types.ConnectionKey, operation postgres.Operation, parameters string) postgres.Key {
+	return postgres.Key{
+		ConnectionKey: *c,
+		Operation:     operation,
+		Parameters:    parameters,
+	}
+}
+
+func TestPostgresAggregation(t *testing.T) {
+	// Simple connection no root namespace
+	conn := types.NewConnectionKey(util.AddressFromString("127.0.0.1"), util.AddressFromString("127.0.0.2"), 121, 80, rootNS)
+	// Same but seen from not root namespace
+	connSeenFromNs := types.NewConnectionKey(util.AddressFromString("127.0.0.1"), util.AddressFromString("127.0.0.2"), 121, 80, notRootNS)
+	// Different tuple in the root namespace
+	anotherConn := types.NewConnectionKey(util.AddressFromString("10.0.0.1"), util.AddressFromString("10.0.0.3"), 34, 96, rootNS)
+
+	// todo!: rework this when we will support the metrics tags
+	stat := map[postgres.Key]*postgres.RequestStat{
+		///////////////////
+		createPostgresKeyFromConn(&conn, postgres.SelectOP, "dummy_table"): {},
+		// Different operation
+		createPostgresKeyFromConn(&conn, postgres.InsertOP, "dummy_table"): {},
+		// Different table
+		createPostgresKeyFromConn(&conn, postgres.SelectOP, "dummy_table_2"): {},
+		///////////////////
+		createPostgresKeyFromConn(&connSeenFromNs, postgres.SelectOP, "dummy_table"): {},
+		///////////////////
+		createPostgresKeyFromConn(&anotherConn, postgres.SelectOP, "dummy_table"): {},
+	}
+
+	// we initialize the stats for each key
+	for k, v := range stat {
+		v.StaticTags = 0
+		if k.Operation == postgres.SelectOP {
+			v.Count = 3
+			v.FirstLatencySample = 20
+			v.Latencies = emptySketch()
+			v.Latencies.Add(v.FirstLatencySample * nsToS)
+			v.Latencies.Add(v.FirstLatencySample * nsToS)
+			v.Latencies.Add(v.FirstLatencySample * nsToS)
+		} else if k.Operation == postgres.InsertOP {
+			v.Count = 2
+			v.FirstLatencySample = 10
+			v.Latencies = emptySketch()
+			v.Latencies.Add(v.FirstLatencySample * nsToS)
+			v.Latencies.Add(v.FirstLatencySample * nsToS)
+		}
+	}
+
+	metrics := aggregatePostgresStats(stat)
+	assert.Len(t, metrics, 3)
+
+	for k, ms := range metrics {
+		if k.compareWithDataDogDual(&conn) {
+			// we expect 6 metrics
+			assert.Len(t, ms, 6)
+		} else if k.compareWithDataDogDual(&connSeenFromNs) {
+			// we expect 2 metric
+			assert.Len(t, ms, 2)
+		} else if k.compareWithDataDogDual(&anotherConn) {
+			// we expect 2 metric
+			assert.Len(t, ms, 2)
+		}
+	}
 }
 
 func TestHTTPAggregation_SingleReq(t *testing.T) {

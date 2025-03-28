@@ -25,7 +25,7 @@ variables:
       files:
         - go.mod
         - go.sum
-      prefix: process_agent_arm64
+      prefix: process_agent_${DD_ARCH}
     paths:
       - .go/
 
@@ -63,7 +63,7 @@ prebuild_agent:
         files:
           - go.mod
           - go.sum
-        prefix: prebuild_datadog_agent
+        prefix: prebuild_datadog_agent_${DD_ARCH}
       paths:
         - prebuild_artifacts/artifacts/*
   stage: prebuild

@@ -29,9 +29,13 @@ git tag -a 7.0.0 -m 7.0.0 || true
 
 # This command will create system-probe. Running the go:generate as well as invoking the precompilation of the ebpf files
 invoke system-probe.build
-
-llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/x86_64/usm-debug.o > $OUTPUTDIR/usm_debug.txt
-llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/x86_64/usm.o > $OUTPUTDIR/usm.txt
+if [ "${DD_ARCH}" = "arm64" ]; then
+  llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/${DD_ARCH}/usm-debug.o > $OUTPUTDIR/usm_debug.txt
+  llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/${DD_ARCH}/usm.o > $OUTPUTDIR/usm.txt
+else
+  llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/${ARCH}/usm-debug.o > $OUTPUTDIR/usm_debug.txt
+  llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/${ARCH}/usm.o > $OUTPUTDIR/usm.txt
+fi
 
 # Output the generated gofiles (including relative paths) to the output directory
 # These go files contain the path to the ebpf source code that will be compiled at runtime. We don't use the runtime mode, so at a certain point we could avoid to build it.

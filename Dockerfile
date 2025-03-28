@@ -1,11 +1,11 @@
-ARG ARCH="x86_64"
-ARG DOCKER_ARCH="amd64"
 ####################################
 # Actual docker image construction #
 ####################################
 
 FROM ubuntu:jammy-20230308
 LABEL maintainer="StackState <info@stackstate.com>"
+ARG ARCH="x86_64"
+ARG DOCKER_ARCH="amd64"
 ENV DOCKER_STS_AGENT=true \
 	DOCKER_DD_AGENT=true \
     PATH=/opt/stackstate-agent/bin/agent/:/opt/stackstate-agent/embedded/bin/:$PATH \

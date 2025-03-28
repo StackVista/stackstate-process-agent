@@ -6,12 +6,14 @@ FROM ubuntu:jammy-20230308
 LABEL maintainer="StackState <info@stackstate.com>"
 ARG ARCH="x86_64"
 ARG DOCKER_ARCH="amd64"
+ARG EBPF_SUBFOLDER="x86_64"
 ENV DOCKER_STS_AGENT=true \
 	DOCKER_DD_AGENT=true \
     PATH=/opt/stackstate-agent/bin/agent/:/opt/stackstate-agent/embedded/bin/:$PATH \
     CURL_CA_BUNDLE=/opt/stackstate-agent/embedded/ssl/certs/cacert.pem \
     ARCH=$ARCH \
-    DOCKER_ARCH=$DOCKER_ARCH
+    DOCKER_ARCH=$DOCKER_ARCH \
+    EBPF_SUBFOLDER=$EBPF_SUBFOLDER
 
 # make sure we have recent dependencies
 RUN apt-get update && apt-get upgrade -y \
@@ -61,7 +63,7 @@ RUN  adduser --system --no-create-home --disabled-password --ingroup root stacks
 
 
 # Copy eBPF probes
-COPY ebpf-object-files/${DOCKER_ARCH} /opt/stackstate-agent/ebpf
+COPY ebpf-object-files/${EBPF_SUBFOLDER} /opt/stackstate-agent/ebpf
 ENV STS_SYSTEM_PROBE_BPF_DIR=/opt/stackstate-agent/ebpf
 ENV DD_SYSTEM_PROBE_BPF_DIR=/opt/stackstate-agent/ebpf
 

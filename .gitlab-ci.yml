@@ -27,11 +27,35 @@ agent_arm64:
   rules:
     - when: always
 
-merge_docker_manifest:
+.merge_docker_manifest: &merge_docker_manifest
   stage: postbuild
   needs: [ agent_x86_64, agent_arm64 ]
   trigger:
     include: .gitlab-ci-docker.yml
     strategy: depend
   rules:
-    - when: always
+    - when: on_success
+
+merge_linux_docker_manifest:
+  <<: *merge_docker_manifest
+  variables:
+    DST_REPOSITORY: quay.io/stackstate/stackstate-process-agent-test
+    DST_TAG: "$CI_COMMIT_REF_NAME"
+
+merge_extra_linux_docker_manifest:
+  <<: *merge_docker_manifest
+  variables:
+    DST_REPOSITORY: quay.io/stackstate/stackstate-process-agent-test
+    DST_TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
+
+merge_k8s_docker_manifest:
+  <<: *merge_docker_manifest
+  variables:
+    DST_REPOSITORY: quay.io/stackstate/stackstate-k8s-process-agent
+    DST_TAG: "$CI_COMMIT_REF_NAME"
+
+merge_extra_k8s_docker_manifest:
+  <<: *merge_docker_manifest
+  variables:
+    DST_REPOSITORY: quay.io/stackstate/stackstate-k8s-process-agent
+    DST_TAG: "$CI_COMMIT_SHORT_SHA"

@@ -29,7 +29,7 @@ RUN apt-get update && apt-get upgrade -y \
   # https://security-tracker.debian.org/tracker/CVE-2016-2779
   && rm -f /usr/sbin/runuser \
   # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-6954
-  && rm -f /usr/lib/${DOCKER_ARCH}-linux-gnu/libdb-5.3.so
+  && rm -f /usr/lib/${ARCH}-linux-gnu/libdb-5.3.so
 
 # install clang from the website since the package manager can change at any time
 # Disabled for now because we do not do runtime compilation, but we might reenable this in the future (for debugging purpose)

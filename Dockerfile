@@ -33,7 +33,7 @@ RUN apt-get update && apt-get upgrade -y \
 
 # install clang from the website since the package manager can change at any time
 # Disabled for now because we do not do runtime compilation, but we might reenable this in the future (for debugging purpose)
-#RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-${SHORT_ARCH}-linux-gnu-ubuntu-16.04.tar.xz" -O /tmp/clang.tar.xz  -o /dev/null
+#RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-${LONG_ARCH}-linux-gnu-ubuntu-16.04.tar.xz" -O /tmp/clang.tar.xz  -o /dev/null
 #RUN echo "6b3cc55d3ef413be79785c4dc02828ab3bd6b887872b143e3091692fc6acefe7  /tmp/clang.tar.xz" | sha256sum --check
 #RUN mkdir -p /opt/clang
 #RUN tar xf /tmp/clang.tar.xz --no-same-owner -C /opt/clang --strip-components=1

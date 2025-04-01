@@ -1,0 +1,626 @@
+{
+    "messages": [
+        {
+            "key": "cluster/andrea-local-setup:10.42.0.18",
+            "partition": 0,
+            "offset": 10677,
+            "message": {
+                "Connections": {
+                    "collectionInfo": {
+                        "timeReceived": 1743497657071,
+                        "timestamp": 1743497656652,
+                        "hostName": "andrea-terzolo-andrea-local-setup",
+                        "apiKey": "2f34998d-973b-4998-9f0b-08f52c1ebb75",
+                        "clusterName": "andrea-local-setup",
+                        "collectionInterval": 30000
+                    },
+                    "connections": [
+                        {
+                            "localProcessId": {
+                                "pid": 36398,
+                                "pidCreateTime": 1743497555000
+                            },
+                            "localEndpoint": {
+                                "scope": "cluster/andrea-local-setup",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.42.0.18"
+                                    },
+                                    "port": 35866
+                                }
+                            },
+                            "direction": "OUTGOING",
+                            "remoteEndpoint": {
+                                "scope": "cluster/andrea-local-setup",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.43.74.76"
+                                    },
+                                    "port": 5432
+                                }
+                            },
+                            "connectionType": "TCP",
+                            "applicationProtocol": "postgres",
+                            "metrics": [
+                                {
+                                    "tags": {},
+                                    "name": "postgres_requests_delta",
+                                    "value": 30.0
+                                },
+                                {
+                                    "tags": {},
+                                    "name": "postgres_response_time_seconds",
+                                    "value": {
+                                        "mapping": {
+                                            "gamma": 1.02020202020202,
+                                            "indexOffset": 0.0,
+                                            "interpolation": "NONE"
+                                        },
+                                        "positiveValues": {
+                                            "binCounts": [
+                                                {
+                                                    "key": 666,
+                                                    "value": 3.0
+                                                },
+                                                {
+                                                    "key": 677,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 670,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 651,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 634,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 661,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 665,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 642,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 649,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 656,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 667,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 664,
+                                                    "value": 3.0
+                                                },
+                                                {
+                                                    "key": 659,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 647,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 654,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 633,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 657,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 674,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 653,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 658,
+                                                    "value": 1.0
+                                                }
+                                            ],
+                                            "contiguousBinCounts": [],
+                                            "contiguousBinIndexOffset": 0
+                                        },
+                                        "negativeValues": {
+                                            "binCounts": [],
+                                            "contiguousBinCounts": [],
+                                            "contiguousBinIndexOffset": 0
+                                        },
+                                        "zeroCount": 0.0
+                                    }
+                                },
+                                {
+                                    "tags": {},
+                                    "name": "bytes_sent_delta",
+                                    "value": 750.0
+                                },
+                                {
+                                    "tags": {},
+                                    "name": "bytes_received_delta",
+                                    "value": 3000.0
+                                }
+                            ],
+                            "remoteEndpointTranslated": {
+                                "ip": {
+                                    "address": "10.42.0.17"
+                                },
+                                "port": 5432
+                            },
+                            "initialSeq": {
+                                "seq": 422571444,
+                                "ack": 665284545
+                            }
+                        }
+                    ],
+                    "pods": [
+                        {
+                            "namespace": "default",
+                            "name": "postgres-client-66bfcb9c85-7nkfv",
+                            "uid": "cfeef4c9-02cb-4c79-85eb-fcb7447334a0",
+                            "labels": {
+                                "app": "postgres-client",
+                                "pod-template-hash": "66bfcb9c85"
+                            },
+                            "pids": [
+                                36398
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "key": "cluster/andrea-local-setup:10.42.0.18",
+            "partition": 0,
+            "offset": 10676,
+            "message": {
+                "Connections": {
+                    "collectionInfo": {
+                        "timeReceived": 1743497656976,
+                        "timestamp": 1743497656652,
+                        "hostName": "andrea-terzolo-andrea-local-setup",
+                        "apiKey": "2f34998d-973b-4998-9f0b-08f52c1ebb75",
+                        "clusterName": "andrea-local-setup",
+                        "collectionInterval": 30000
+                    },
+                    "connections": [
+                        {
+                            "localProcessId": {
+                                "pid": 33646,
+                                "pidCreateTime": 1743496832000
+                            },
+                            "localEndpoint": {
+                                "scope": "cluster/andrea-local-setup",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.42.0.17"
+                                    },
+                                    "port": 5432
+                                }
+                            },
+                            "direction": "INCOMING",
+                            "remoteEndpoint": {
+                                "scope": "cluster/andrea-local-setup",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.42.0.18"
+                                    },
+                                    "port": 35866
+                                }
+                            },
+                            "connectionType": "TCP",
+                            "applicationProtocol": "postgres",
+                            "metrics": [
+                                {
+                                    "tags": {},
+                                    "name": "postgres_requests_delta",
+                                    "value": 30.0
+                                },
+                                {
+                                    "tags": {},
+                                    "name": "postgres_response_time_seconds",
+                                    "value": {
+                                        "mapping": {
+                                            "gamma": 1.02020202020202,
+                                            "indexOffset": 0.0,
+                                            "interpolation": "NONE"
+                                        },
+                                        "positiveValues": {
+                                            "binCounts": [
+                                                {
+                                                    "key": 629,
+                                                    "value": 3.0
+                                                },
+                                                {
+                                                    "key": 651,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 638,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 661,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 650,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 647,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 633,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 618,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 649,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 648,
+                                                    "value": 4.0
+                                                },
+                                                {
+                                                    "key": 640,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 652,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 664,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 623,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 646,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 636,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 653,
+                                                    "value": 2.0
+                                                },
+                                                {
+                                                    "key": 624,
+                                                    "value": 1.0
+                                                },
+                                                {
+                                                    "key": 644,
+                                                    "value": 2.0
+                                                }
+                                            ],
+                                            "contiguousBinCounts": [],
+                                            "contiguousBinIndexOffset": 0
+                                        },
+                                        "negativeValues": {
+                                            "binCounts": [],
+                                            "contiguousBinCounts": [],
+                                            "contiguousBinIndexOffset": 0
+                                        },
+                                        "zeroCount": 0.0
+                                    }
+                                },
+                                {
+                                    "tags": {},
+                                    "name": "bytes_sent_delta",
+                                    "value": 3000.0
+                                },
+                                {
+                                    "tags": {},
+                                    "name": "bytes_received_delta",
+                                    "value": 750.0
+                                }
+                            ],
+                            "initialSeq": {
+                                "seq": 422571444,
+                                "ack": 665284545
+                            }
+                        }
+                    ],
+                    "pods": [
+                        {
+                            "namespace": "default",
+                            "name": "postgres-server-5bc9fb79b-g88w4",
+                            "uid": "a8c39fbd-0754-4b30-a6df-ecf307d6e106",
+                            "labels": {
+                                "app": "postgres-server",
+                                "pod-template-hash": "5bc9fb79b"
+                            },
+                            "pids": [
+                                33646
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "key": "cluster/gke-demo-dev.gcp.stackstate.io:10.1.1.223",
+            "partition": 0,
+            "offset": 10675,
+            "message": {
+                "Connections": {
+                    "collectionInfo": {
+                        "timeReceived": 1743497656560,
+                        "timestamp": 1743497655711,
+                        "hostName": "gke-gke-demo-dev-default-node-pool-3bf643a8-qj0p-gke-demo-dev.gcp.stackstate.io",
+                        "apiKey": "2f34998d-973b-4998-9f0b-08f52c1ebb75",
+                        "clusterName": "gke-demo-dev.gcp.stackstate.io",
+                        "collectionInterval": 29999
+                    },
+                    "connections": [
+                        {
+                            "localProcessId": {
+                                "pid": 85038,
+                                "pidCreateTime": 1743065807000
+                            },
+                            "localEndpoint": {
+                                "scope": "cluster/gke-demo-dev.gcp.stackstate.io",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.1.1.223"
+                                    },
+                                    "port": 58010
+                                }
+                            },
+                            "direction": "OUTGOING",
+                            "remoteEndpoint": {
+                                "scope": "cluster/gke-demo-dev.gcp.stackstate.io",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.2.0.1"
+                                    },
+                                    "port": 443
+                                }
+                            },
+                            "connectionType": "TCP",
+                            "metrics": [
+                                {
+                                    "tags": {},
+                                    "name": "bytes_sent_delta",
+                                    "value": 2687.0
+                                },
+                                {
+                                    "tags": {},
+                                    "name": "bytes_received_delta",
+                                    "value": 34845.0
+                                }
+                            ],
+                            "remoteEndpointTranslated": {
+                                "ip": {
+                                    "address": "10.0.0.2"
+                                },
+                                "port": 443
+                            },
+                            "initialSeq": {
+                                "seq": 269829204,
+                                "ack": -495449338
+                            }
+                        }
+                    ],
+                    "pods": [
+                        {
+                            "namespace": "ingress-nginx-internal",
+                            "name": "ingress-nginx-internal-controller-84c96fc79c-zf6ph",
+                            "uid": "7347a3e8-1417-4131-bbff-62c3676aa0bb",
+                            "labels": {
+                                "app.kubernetes.io/version": "1.12.1",
+                                "app.kubernetes.io/managed-by": "Helm",
+                                "pod-template-hash": "84c96fc79c",
+                                "app.kubernetes.io/name": "ingress-nginx",
+                                "app.kubernetes.io/component": "controller",
+                                "app.kubernetes.io/instance": "ingress-nginx-internal",
+                                "app.kubernetes.io/part-of": "ingress-nginx",
+                                "helm.sh/chart": "ingress-nginx-4.12.1"
+                            },
+                            "pids": [
+                                85038,
+                                85122
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "key": "cluster/gke-demo-dev.gcp.stackstate.io:10.0.0.63",
+            "partition": 0,
+            "offset": 10674,
+            "message": {
+                "Connections": {
+                    "collectionInfo": {
+                        "timeReceived": 1743497656560,
+                        "timestamp": 1743497655711,
+                        "hostName": "gke-gke-demo-dev-default-node-pool-3bf643a8-qj0p-gke-demo-dev.gcp.stackstate.io",
+                        "apiKey": "2f34998d-973b-4998-9f0b-08f52c1ebb75",
+                        "clusterName": "gke-demo-dev.gcp.stackstate.io",
+                        "collectionInterval": 29999
+                    },
+                    "connections": [
+                        {
+                            "localProcessId": {
+                                "pid": 85122,
+                                "pidCreateTime": 1743065810000
+                            },
+                            "localEndpoint": {
+                                "scope": "cluster/gke-demo-dev.gcp.stackstate.io",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.1.1.223"
+                                    },
+                                    "port": 443
+                                }
+                            },
+                            "direction": "INCOMING",
+                            "remoteEndpoint": {
+                                "scope": "cluster/gke-demo-dev.gcp.stackstate.io",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.0.0.63"
+                                    },
+                                    "port": 3489
+                                }
+                            },
+                            "connectionType": "TCP",
+                            "metrics": [
+                                {
+                                    "tags": {},
+                                    "name": "bytes_sent_delta",
+                                    "value": 0.0
+                                },
+                                {
+                                    "tags": {},
+                                    "name": "bytes_received_delta",
+                                    "value": 0.0
+                                }
+                            ],
+                            "initialSeq": {
+                                "seq": -1287343808,
+                                "ack": -1554608622
+                            }
+                        }
+                    ],
+                    "pods": [
+                        {
+                            "namespace": "ingress-nginx-internal",
+                            "name": "ingress-nginx-internal-controller-84c96fc79c-zf6ph",
+                            "uid": "7347a3e8-1417-4131-bbff-62c3676aa0bb",
+                            "labels": {
+                                "app.kubernetes.io/version": "1.12.1",
+                                "app.kubernetes.io/managed-by": "Helm",
+                                "pod-template-hash": "84c96fc79c",
+                                "app.kubernetes.io/name": "ingress-nginx",
+                                "app.kubernetes.io/component": "controller",
+                                "app.kubernetes.io/instance": "ingress-nginx-internal",
+                                "app.kubernetes.io/part-of": "ingress-nginx",
+                                "helm.sh/chart": "ingress-nginx-4.12.1"
+                            },
+                            "pids": [
+                                85038,
+                                85122
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "key": "cluster/gke-demo-dev.gcp.stackstate.io:10.0.0.61",
+            "partition": 0,
+            "offset": 10673,
+            "message": {
+                "Connections": {
+                    "collectionInfo": {
+                        "timeReceived": 1743497654031,
+                        "timestamp": 1743497652295,
+                        "hostName": "gke-gke-demo-dev-default-node-pool-3bf643a8-2yf1-gke-demo-dev.gcp.stackstate.io",
+                        "apiKey": "2f34998d-973b-4998-9f0b-08f52c1ebb75",
+                        "clusterName": "gke-demo-dev.gcp.stackstate.io",
+                        "collectionInterval": 30000
+                    },
+                    "connections": [
+                        {
+                            "localProcessId": {
+                                "pid": 0,
+                                "pidCreateTime": 0
+                            },
+                            "localEndpoint": {
+                                "scope": "cluster/gke-demo-dev.gcp.stackstate.io",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.1.6.72"
+                                    },
+                                    "port": 53
+                                }
+                            },
+                            "direction": "INCOMING",
+                            "remoteEndpoint": {
+                                "scope": "cluster/gke-demo-dev.gcp.stackstate.io",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.0.0.61"
+                                    },
+                                    "port": 12761
+                                }
+                            },
+                            "connectionType": "TCP",
+                            "metrics": [],
+                            "initialSeq": {
+                                "seq": 2070492069,
+                                "ack": 763214184
+                            }
+                        },
+                        {
+                            "localProcessId": {
+                                "pid": 0,
+                                "pidCreateTime": 0
+                            },
+                            "localEndpoint": {
+                                "scope": "cluster/gke-demo-dev.gcp.stackstate.io",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.1.6.72"
+                                    },
+                                    "port": 53
+                                }
+                            },
+                            "direction": "INCOMING",
+                            "remoteEndpoint": {
+                                "scope": "cluster/gke-demo-dev.gcp.stackstate.io",
+                                "endpoint": {
+                                    "ip": {
+                                        "address": "10.0.0.61"
+                                    },
+                                    "port": 55450
+                                }
+                            },
+                            "connectionType": "TCP",
+                            "metrics": [],
+                            "initialSeq": {
+                                "seq": -189191183,
+                                "ack": -16663961
+                            }
+                        }
+                    ],
+                    "pods": []
+                }
+            }
+        }
+    ]
+}

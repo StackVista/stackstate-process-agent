@@ -8,6 +8,7 @@ agent_x86_64:
     ARCH: x86_64
     DD_ARCH: amd64
     DOCKER_ARCH: amd64
+    LLVM_ARCH: x86_64
   trigger:
     include: .gitlab-ci-x64.yml
     strategy: depend
@@ -21,6 +22,7 @@ agent_arm64:
     ARCH: aarch64
     DD_ARCH: arm64
     DOCKER_ARCH: arm64
+    LLVM_ARCH: arm64
   trigger:
     include: .gitlab-ci-arm.yml
     strategy: depend

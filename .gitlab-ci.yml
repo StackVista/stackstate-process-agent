@@ -1,183 +1,37 @@
 stages:
-  - prebuild
-  - build
-  - test
-  - publish
+  - triggers
+  - postbuild
 
-variables:
-  SRC_PATH: /src/github.com/StackVista/stackstate-process-agent
-  STS_AWS_BUCKET: stackstate-process-agent-2-test
-  STS_REPO_BRANCH_NAME: $CI_COMMIT_REF_NAME
-  PACKAGING_BRANCH: $CI_COMMIT_REF_NAME
-  STS_DOCKER_RELEASE_REPO: stackstate-process-agent
-  STS_DOCKER_TEST_REPO: stackstate-process-agent-test
-  STS_DOCKER_K8S_REPO: stackstate-k8s-process-agent
-  GO111MODULE: "on"
-  QUAY_REGISTRY: quay.io
-  DOCKER_REGISTRY: docker.io
-  VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_x64:5ac33c09
-  GOPATH: "$CI_PROJECT_DIR/.go"
-
-.go_process_agent_cache:
-  cache: &go_cache
-    key:
-      files:
-        - go.mod
-        - go.sum
-      prefix: process_agent
-    paths:
-      - .go/
-
-.go_process_pull_agent_cache:
-  cache:
-    <<: *go_cache
-    # override the policy
-    policy: pull
-
-.linux_builder:
-  image: ${LINUX_BUILDER}
-  before_script:
-    - eval "$(gimme)"
-    - source /root/.bashrc
-    - source /etc/profile
-    - conda activate ddpy3
-    - export PATH="${GOPATH}/bin:${PATH}"
-
-dependencies:
-  extends: [ .linux_builder, .go_process_agent_cache ]
-  stage: prebuild
-  needs: []
-  tags:
-    - sts-k8s-xl-runner
-  script:
-    - mkdir -p .go
-    - go mod download
-
-prebuild_agent:
-  cache:
-    - <<: *go_cache
-      # override the policy
-      policy: pull
-    - key:
-        files:
-          - go.mod
-          - go.sum
-        prefix: prebuild_datadog_agent
-      paths:
-        - prebuild_artifacts/artifacts/*
-  stage: prebuild
-  needs: [ dependencies ]
-  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_x64:0d87e00f
-  tags:
-    - sts-k8s-xl-runner
-  script:
-    - ./prebuild-datadog-agent.sh --generate-no-docker
-  artifacts:
-    paths:
-      - prebuild_artifacts/artifacts/*
-
-test_protobuf_updated:
-  extends: [ .linux_builder, .go_process_pull_agent_cache ]
-  stage: test
-  needs: [ dependencies ]
-  script:
-    - (cd $(go list -f '{{ .Dir }}' -m github.com/gogo/protobuf); make install)
-    - rake protobuf
-    - '[[ ! `git status --porcelain` ]] || (echo "ERROR: protobuf should be regenerated and committed" && git diff && false)'
-
-build_linux:
-  extends: [ .linux_builder, .go_process_pull_agent_cache ]
-  stage: build
-  needs: [ dependencies, prebuild_agent ]
-  script:
-    - export PROCESS_AGENT_VERSION=$(eval $VERSION_LOGIC)
-    - printenv
-    - rake build
-    - ./prebuild-datadog-agent.sh --install-ebpf
-  artifacts:
-    paths:
-      - $CI_PROJECT_DIR/process-agent
-      - $CI_PROJECT_DIR/ebpf-object-files
-    expire_in: 2 week
-  tags:
-    - sts-k8s-xl-runner
-  retry:
-    max: 2
-    when:
-      - always
-
-test:
-  extends: [ .linux_builder, .go_process_pull_agent_cache ]
-  stage: test
-  needs: [ dependencies, prebuild_agent ]
-  script:
-    - printenv
-    - rake ci
-  tags:
-    - sts-k8s-xl-runner
-  retry:
-    max: 2
-    when:
-      - always
-
-publish_binaries:
-  stage: publish
-  extends: [ .linux_builder, .go_process_pull_agent_cache ]
-  needs:
-    - build_linux
-  script:
-    - export PROCESS_AGENT_VERSION=$(eval $VERSION_LOGIC)
-    - ls -la $CI_PROJECT_DIR
-    - ls -la $CI_PROJECT_DIR/packaging
-    - cd $CI_PROJECT_DIR/packaging && ./publish_staging_package.sh
-
-.docker_build:
-  image: ${DOCKER_PROXY_URL}/docker:20
-  services:
-    - name: ${DOCKER_PROXY_URL}/docker:20-dind
-      alias: docker
+agent_x86_64:
+  stage: triggers
   variables:
-    DOCKER_DRIVER: overlay
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  before_script:
-    - docker login -u "${docker_user}" -p "${docker_password}" "${DOCKER_REGISTRY}"
-    - docker login -u "${quay_user}" -p "${quay_password}" "${QUAY_REGISTRY}"
+    LONG_ARCH: x86_64
+    SHORT_ARCH: amd64
+    LLVM_ARCH: x86_64
+  trigger:
+    include: .gitlab-ci-x64.yml
+    strategy: depend
+  rules:
+    - when: always
 
-.publish_linux_docker:
-  extends: [ .docker_build ]
-  stage: publish
-  needs:
-    - build_linux
-    - prebuild_agent
-  script:
-    - export BUILD_TAG="${REPO}:${TAG}"
-    - docker build -t "${BUILD_TAG}" .
-    - ./packaging/publish_image.sh $BUILD_TAG $REPO $TAG $EXTRA_TAG
 
-publish_linux_docker:
-  extends: [ .publish_linux_docker ]
+agent_arm64:
+  stage: triggers
   variables:
-    REPO: $STS_DOCKER_TEST_REPO
-    TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA"
-    EXTRA_TAG: $CI_COMMIT_REF_NAME
+    LONG_ARCH: aarch64
+    SHORT_ARCH: arm64
+    LLVM_ARCH: arm64
+  trigger:
+    include: .gitlab-ci-arm.yml
+    strategy: depend
+  rules:
+    - when: always
 
-publish_k8s_docker:
-  extends: [ .publish_linux_docker ]
-  variables:
-    REPO: $STS_DOCKER_K8S_REPO
-    TAG: "$CI_COMMIT_REF_NAME"
-    EXTRA_TAG: $CI_COMMIT_SHORT_SHA
-
-publish_linux_docker_release:
-  extends: [ .publish_linux_docker ]
-  variables:
-    REPO: $STS_DOCKER_RELEASE_REPO
-    TAG: $CI_COMMIT_REF_NAME
-    EXTRA_TAG: latest
-  when: manual
-  only:
-    - tags
-    - trigger
-
+merge_docker_manifest:
+  stage: postbuild
+  needs: [ agent_x86_64, agent_arm64 ]
+  trigger:
+    include: .gitlab-ci-docker.yml
+    strategy: depend
+  rules:
+    - when: always

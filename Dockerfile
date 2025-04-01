@@ -1,18 +1,23 @@
-
 ####################################
 # Actual docker image construction #
 ####################################
 
 FROM ubuntu:jammy-20230308
 LABEL maintainer="StackState <info@stackstate.com>"
+ARG LONG_ARCH="x86_64"
+ARG SHORT_ARCH="amd64"
+ARG EBPF_SUBFOLDER="x86_64"
 ENV DOCKER_STS_AGENT=true \
 	DOCKER_DD_AGENT=true \
     PATH=/opt/stackstate-agent/bin/agent/:/opt/stackstate-agent/embedded/bin/:$PATH \
-    CURL_CA_BUNDLE=/opt/stackstate-agent/embedded/ssl/certs/cacert.pem
+    CURL_CA_BUNDLE=/opt/stackstate-agent/embedded/ssl/certs/cacert.pem \
+    LONG_ARCH=$LONG_ARCH \
+    SHORT_ARCH=$SHORT_ARCH \
+    EBPF_SUBFOLDER=$EBPF_SUBFOLDER
 
 # make sure we have recent dependencies
 RUN apt-get update && apt-get upgrade -y \
-  && apt-get install -y util-linux ncurses-bin ncurses-base libncursesw5:amd64 \
+  && apt-get install -y util-linux ncurses-bin ncurses-base libncursesw5:${SHORT_ARCH} \
   # https://security-tracker.debian.org/tracker/CVE-2018-15686
   && apt-get install -y libudev1 libsystemd0 \
   && apt-get install -y ca-certificates \
@@ -24,11 +29,11 @@ RUN apt-get update && apt-get upgrade -y \
   # https://security-tracker.debian.org/tracker/CVE-2016-2779
   && rm -f /usr/sbin/runuser \
   # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-6954
-  && rm -f /usr/lib/x86_64-linux-gnu/libdb-5.3.so
+  && rm -f /usr/lib/${LONG_ARCH}-linux-gnu/libdb-5.3.so
 
 # install clang from the website since the package manager can change at any time
 # Disabled for now because we do not do runtime compilation, but we might reenable this in the future (for debugging purpose)
-#RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz" -O /tmp/clang.tar.xz  -o /dev/null
+#RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-${LONG_ARCH}-linux-gnu-ubuntu-16.04.tar.xz" -O /tmp/clang.tar.xz  -o /dev/null
 #RUN echo "6b3cc55d3ef413be79785c4dc02828ab3bd6b887872b143e3091692fc6acefe7  /tmp/clang.tar.xz" | sha256sum --check
 #RUN mkdir -p /opt/clang
 #RUN tar xf /tmp/clang.tar.xz --no-same-owner -C /opt/clang --strip-components=1
@@ -58,7 +63,7 @@ RUN  adduser --system --no-create-home --disabled-password --ingroup root stacks
 
 
 # Copy eBPF probes
-COPY ebpf-object-files/x86_64 /opt/stackstate-agent/ebpf
+COPY ebpf-object-files/${EBPF_SUBFOLDER} /opt/stackstate-agent/ebpf
 ENV STS_SYSTEM_PROBE_BPF_DIR=/opt/stackstate-agent/ebpf
 ENV DD_SYSTEM_PROBE_BPF_DIR=/opt/stackstate-agent/ebpf
 

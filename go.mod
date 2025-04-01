@@ -539,4 +539,4 @@ require (
 
 replace github.com/moby/buildkit v0.11.0 => github.com/moby/buildkit v0.12.5
 
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250320133125-5b2b83ced2c0
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250401122545-f99de0c385c5

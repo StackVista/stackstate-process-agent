@@ -5,9 +5,8 @@ stages:
 agent_x86_64:
   stage: triggers
   variables:
-    ARCH: x86_64
-    DD_ARCH: amd64
-    DOCKER_ARCH: amd64
+    LONG_ARCH: x86_64
+    SHORT_ARCH: amd64
     LLVM_ARCH: x86_64
   trigger:
     include: .gitlab-ci-x64.yml
@@ -19,9 +18,8 @@ agent_x86_64:
 agent_arm64:
   stage: triggers
   variables:
-    ARCH: aarch64
-    DD_ARCH: arm64
-    DOCKER_ARCH: arm64
+    LONG_ARCH: aarch64
+    SHORT_ARCH: arm64
     LLVM_ARCH: arm64
   trigger:
     include: .gitlab-ci-arm.yml

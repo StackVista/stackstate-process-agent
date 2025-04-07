@@ -3,21 +3,21 @@
 package checks
 
 import (
-	ddmodel "github.com/DataDog/agent-payload/v5/process"
-	"github.com/DataDog/datadog-agent/pkg/process/util/containers"
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"strings"
 	"sync"
 	"time"
 
+	ddmodel "github.com/DataDog/agent-payload/v5/process"
+	"github.com/DataDog/datadog-agent/pkg/process/util/containers"
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	log "github.com/cihub/seelog"
 	cache "github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 // Process is a singleton ProcessCheck.

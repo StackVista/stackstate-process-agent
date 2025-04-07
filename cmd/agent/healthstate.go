@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/health"
 )
 

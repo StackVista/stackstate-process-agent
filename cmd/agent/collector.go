@@ -4,27 +4,25 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"math/rand"
+	"net/http"
+	"sync/atomic"
+	"time"
+
+	"github.com/StackVista/stackstate-process-agent/checks"
+	"github.com/StackVista/stackstate-process-agent/config"
+	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/check"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/topology"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionbatcher"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/transactional/transactionmanager"
+	log "github.com/cihub/seelog"
 	"github.com/gofrs/uuid"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"io"
-	"io/ioutil"
-	"math/rand"
-	"net/http"
-	"sync/atomic"
-	"time"
-
-	log "github.com/cihub/seelog"
-
-	"github.com/StackVista/stackstate-process-agent/checks"
-	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 )
 
 var agentTopologyInstance = topology.Instance{
@@ -330,7 +328,7 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 
 	if resp.StatusCode < 200 || resp.StatusCode > 300 {
 		defer resp.Body.Close()
-		io.Copy(ioutil.Discard, resp.Body)
+		io.Copy(io.Discard, resp.Body)
 		return resp, fmt.Errorf("unexpected response from %s. Status: %s, Body: %v", url, resp.Status, resp.Body)
 	}
 	log.Debugf("Response from %s is %d", url, resp.StatusCode)

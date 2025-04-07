@@ -4,9 +4,9 @@
 package checks
 
 import (
-	"github.com/StackVista/stackstate-process-agent/config"
 	"testing"
 
+	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/stretchr/testify/assert"
 )
 

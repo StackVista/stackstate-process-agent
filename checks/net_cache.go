@@ -1,8 +1,9 @@
 package checks
 
 import (
-	"github.com/patrickmn/go-cache"
 	"time"
+
+	"github.com/patrickmn/go-cache"
 )
 
 // NetworkRelationCache is used to track age of network relations and to keep metrics for connection for calculating rates

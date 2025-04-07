@@ -2,12 +2,12 @@ package pods
 
 import (
 	"context"
-	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
-	"github.com/DataDog/datadog-agent/pkg/util/retry"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
+	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
+	"github.com/DataDog/datadog-agent/pkg/util/retry"
+	"github.com/stretchr/testify/assert"
 	kubeletv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 

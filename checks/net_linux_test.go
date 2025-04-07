@@ -2,12 +2,13 @@ package checks
 
 import (
 	"errors"
+	"testing"
+	"time"
+
 	telemetryComponent "github.com/DataDog/datadog-agent/comp/core/telemetry"
 	tracerConfig "github.com/DataDog/datadog-agent/pkg/network/config"
 	tracer "github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestConnectionsCheck_retryTracerInit(t *testing.T) {

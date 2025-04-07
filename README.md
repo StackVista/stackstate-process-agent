@@ -16,11 +16,10 @@ If you want to use a custom version of `datadog-agent-upstream-for-process-agent
 
 ```bash
 rake local_build
-# The dockerfile and the config `conf-dev.yaml` expect the .o file under a specific folder. This command just moves these files.
+# The dockerfile and the config `conf-dev.yaml` expect the .o files under a specific folder. This command just moves these files.
 ./prebuild-datadog-agent.sh --install-ebpf
 # DataDog checks that ebpf .o files are owned by root,
 sudo chown root:root -R ./ebpf-object-files/x86_64
-
 ```
 
 ## Run the agent locally
@@ -32,6 +31,16 @@ sudo ./process-agent -config ./conf-dev.yaml
 ```
 
 To run without errors the process-agent needs the `test-server`. Start the `test-server` before the process-agent.
+
+## Run process-agent unit tests
+
+```bash
+rake test
+# or if you want to use the go command directly
+go test -tags 'docker kubelet kubeapiserver linux cri containerd linux_bpf' $(go list ./...)
+# To run a specific test in verbose mode
+go test -v -run TestPostgresAggregation -tags 'docker kubelet kubeapiserver linux cri containerd linux_bpf' $(go list ./...)
+```
 
 ## Build the docker image
 

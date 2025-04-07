@@ -18,7 +18,12 @@ incremental_publishing_enabled: true
 local_run: true
 process_config:
   enabled: 'true'
-
+  # Locally we don't want to filter anything
+  # filters:
+  #   short_lived_processes:
+  #     enabled: false
+  #   short_lived_network_relations:
+  #     enabled: false
   queue_size: 10
 #  intervals:
 #    container: 8

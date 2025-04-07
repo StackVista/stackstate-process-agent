@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-server
+  labels:
+    app: postgres-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-server
+  template:
+    metadata:
+      labels:
+        app: postgres-server
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:14-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_PASSWORD
+          value: "mysecretpassword"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  selector:
+    app: postgres-server
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-client
+  template:
+    metadata:
+      labels:
+        app: postgres-client
+    spec:
+      containers:
+      - name: client
+        image: postgres:14-alpine
+        env:
+        - name: PGPASSWORD
+          value: "mysecretpassword"
+        command: ["sh", "-c"]
+        args:
+          # Each time a new TCP connection.
+          # - |
+          #   echo "Waiting for PostgreSQL to be ready..."
+          #   until pg_isready -h postgres-service -U postgres; do
+          #     sleep 1;
+          #   done;
+          #   echo "PostgreSQL is ready."
+          #   echo "Creating table 'demo' if not exists..."
+          #   psql -h postgres-service -U postgres -c "CREATE TABLE IF NOT EXISTS demo (id SERIAL PRIMARY KEY, name VARCHAR(50));"
+          #   echo "Inserting initial entry into 'demo' table..."
+          #   psql -h postgres-service -U postgres -c "INSERT INTO demo (name) VALUES ('initial entry');"
+          #   echo "Starting periodic SELECT queries on 'demo' table..."
+          #   while true; do
+          #     psql -h postgres-service -U postgres -c "SELECT * FROM demo;";
+          #     sleep 1;
+          #   done;
+          #
+
+          # For 180 seconds we send a select query every second on the same TCP connection.
+          # This is used to avoid short-lived connections.
+          # Then we start again with a new TCP connection.
+          - |
+            echo "Waiting for PostgreSQL to be ready..."
+            until pg_isready -h postgres-service -U postgres; do
+              sleep 1;
+            done;
+            echo "PostgreSQL is ready."
+            echo "Creating table 'demo' if not exists..."
+            psql -h postgres-service -U postgres -c "CREATE TABLE IF NOT EXISTS demo (id SERIAL PRIMARY KEY, name VARCHAR(50));"
+            echo "Inserting initial entry into 'demo' table..."
+            psql -h postgres-service -U postgres -c "INSERT INTO demo (name) VALUES ('initial entry');"
+            echo "Starting periodic SELECT queries on 'demo' table..."
+            while true; do
+              pgbench -h postgres-service -U postgres -d postgres -c 1 -T 180 -n -f <(echo "SELECT * FROM demo; \sleep 1")
+            done;

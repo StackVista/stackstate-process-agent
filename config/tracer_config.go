@@ -63,6 +63,10 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "amqp"),
 		MaxAMQPStatsBuffered: 100000,
 
+		EnablePostgresMonitoring:   cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, PostgresProtocolName),
+		MaxPostgresStatsBuffered:   100000,
+		MaxPostgresTelemetryBuffer: 160, // Default value from DataDog
+
 		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "tls"),
 		EnableIstioMonitoring:     false,
 		EnableGoTLSSupport:        false,

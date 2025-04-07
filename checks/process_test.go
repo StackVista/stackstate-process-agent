@@ -2,18 +2,17 @@ package checks
 
 import (
 	"fmt"
-	"github.com/DataDog/gopsutil/cpu"
-	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
-	"github.com/patrickmn/go-cache"
 	"regexp"
 	"sort"
-
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
+	"github.com/StackVista/stackstate-process-agent/config"
+	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -4,10 +4,11 @@ package checks
 
 import (
 	"bytes"
-	model "github.com/StackVista/stackstate-process-agent/model"
 	"math"
 	"sort"
 	"strings"
+
+	model "github.com/StackVista/stackstate-process-agent/model"
 )
 
 // deriveUniqueProcesses returns a list containing only the unique items from the input list.

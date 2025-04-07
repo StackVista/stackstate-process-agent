@@ -1,10 +1,11 @@
 package checks
 
 import (
+	"time"
+
 	"github.com/DataDog/gopsutil/cpu"
 	"github.com/DataDog/gopsutil/process"
 	"github.com/patrickmn/go-cache"
-	"time"
 )
 
 // ProcessMetrics is used to keep state of the previous cpu time and io stat counters so that we can calculate usage rate

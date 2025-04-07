@@ -146,16 +146,6 @@ def go_pkg_deps(pkgs, root_path)
   return deps.sort.uniq
 end
 
-def go_fmt(path)
-  out = `go fmt #{path}`
-  errors = out.split("\n")
-  if errors.length > 0
-    errors.each do |error|
-      $stderr.puts error
-    end
-    fail
-  end
-end
 
 def get_go_module_path(path)
   `go list -f '{{ .Dir }}' -m #{path}`.strip

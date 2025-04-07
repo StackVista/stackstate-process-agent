@@ -2,11 +2,12 @@ package main
 
 import (
 	"errors"
+	"strings"
+	"testing"
+
 	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/stretchr/testify/assert"
-	"strings"
-	"testing"
 )
 
 func TestHealthStateMessageCut(t *testing.T) {

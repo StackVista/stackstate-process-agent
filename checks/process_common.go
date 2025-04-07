@@ -2,14 +2,15 @@ package checks
 
 import (
 	"fmt"
-	"github.com/DataDog/gopsutil/process"
-	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
-	log "github.com/cihub/seelog"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/DataDog/gopsutil/process"
+	"github.com/StackVista/stackstate-process-agent/config"
+	"github.com/StackVista/stackstate-process-agent/model"
+	log "github.com/cihub/seelog"
 )
 
 // ProcessCommon is the common process type used for sorting / process inclusions

@@ -2,13 +2,14 @@ package pods
 
 import (
 	"context"
+	"strings"
+	"time"
+
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/DataDog/datadog-agent/pkg/util/retry"
 	log "github.com/cihub/seelog"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"strings"
-	"time"
 )
 
 // CachedPods is a proxy to kubelet util that keeps a pod for some time (expirationTime) after it disappear from kubelet result

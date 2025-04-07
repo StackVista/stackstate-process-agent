@@ -1,0 +1,56 @@
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: test-server
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: test-server
+#   template:
+#     metadata:
+#       labels:
+#         app: test-server
+#     spec:
+#       containers:
+#       - name: test-server
+#         image: andreater/test-server:v1
+#         ports:
+#         - containerPort: 7077
+# ---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-server
+spec:
+  backoffLimit: 0  # No retry in case of errors
+  template:
+    metadata:
+      labels:
+        app: test-server
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: server
+        image: andreater/test-server:v4
+        ports:
+        - containerPort: 7077
+        volumeMounts:
+        - mountPath: /output
+          name: output-dir
+      volumes:
+        - name: output-dir
+          hostPath:
+            path: /tmp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-server-service
+spec:
+  selector:
+    app: test-server
+  ports:
+  - protocol: TCP
+    port: 7077
+    targetPort: 7077

@@ -29,6 +29,21 @@ git tag -a 7.0.0 -m 7.0.0 || true
 
 # This command will create system-probe. Running the go:generate as well as invoking the precompilation of the ebpf files
 invoke system-probe.build
+
+# If empty we try the fallback to the architecture of the host
+if [ -z "$LLVM_ARCH" ]; then
+    arch=$(uname -m)
+    if [ "$arch" = "x86_64" ]; then
+        LLVM_ARCH="x86_64"
+    elif [ "$arch" = "aarch64" ] || [ "$arch" = "arm64" ]; then
+        LLVM_ARCH="arm64"
+    else
+        echo "Unknown architecture: $arch"
+        exit 1
+    fi
+fi
+
+# todo!: These 2 outputs are only for debugging and we don't use them actually so at a certain point we could also remove them...
 llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/${LLVM_ARCH}/usm-debug.o > $OUTPUTDIR/usm_debug.txt
 llvm-objdump -S $WORKDIR/pkg/ebpf/bytecode/build/${LLVM_ARCH}/usm.o > $OUTPUTDIR/usm.txt
 

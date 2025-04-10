@@ -32,7 +32,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: server
-        image: andreater/test-server:v4
+        image: andreater/test-server:v5
         ports:
         - containerPort: 7077
         volumeMounts:

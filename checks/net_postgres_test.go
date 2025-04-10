@@ -2,6 +2,8 @@ package checks
 
 import (
 	"math"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/postgres"
@@ -26,20 +28,26 @@ func createPostgresKeyFromConn(c *types.ConnectionKey, operation postgres.Operat
 	}
 }
 
-func assertPostgresRequestsDelta(t *testing.T, formattedMetric *model.ConnectionMetric, expectedValue float64) {
+func assertPostgresRequestsDelta(t *testing.T, formattedMetric *model.ConnectionMetric, DBname, SQLcommand string, expectedValue float64) {
 	assert.Equal(t, string(postgresRequestsDelta), formattedMetric.Name)
-	assert.Equal(t, map[string]string{}, formattedMetric.Tags)
-	// formattedMetric.Value.GetNumber() could be for example `1.999999999999993` instead of `2`.
-	// todo!: Do we round it in the platform?
-	assert.Equal(t, expectedValue, math.Round(formattedMetric.Value.GetNumber()))
+	expectedTags := map[string]string{
+		postgresDatabaseNameTag: DBname,
+		postgresSQLCommandTag:   SQLcommand,
+	}
+	assert.Equal(t, expectedTags, formattedMetric.Tags)
+	assert.Equal(t, expectedValue, formattedMetric.Value.GetNumber())
 }
 
-func assertPostgresResponseTime(t *testing.T, formattedMetric *model.ConnectionMetric, samplesCount int, expectedMaxNs, expectedMinNs float64) {
+func assertPostgresResponseTime(t *testing.T, formattedMetric *model.ConnectionMetric, DBname, SQLcommand string, samplesCount float64, expectedMaxNs, expectedMinNs float64) {
 	assert.Equal(t, string(postgresResponseTime), formattedMetric.Name)
-	assert.Equal(t, map[string]string{}, formattedMetric.Tags)
+	expectedTags := map[string]string{
+		postgresDatabaseNameTag: DBname,
+		postgresSQLCommandTag:   SQLcommand,
+	}
+	assert.Equal(t, expectedTags, formattedMetric.Tags)
 	actualSketch, err := ddsketch.FromProto(formattedMetric.Value.GetHistogram())
 	assert.NoError(t, err)
-	assert.Equal(t, samplesCount, int(math.Round(actualSketch.GetCount())))
+	assert.Equal(t, samplesCount, math.Round(actualSketch.GetCount()))
 	actualMinS, err := actualSketch.GetMinValue()
 	assert.NoError(t, err)
 	actualMaxS, err := actualSketch.GetMaxValue()
@@ -47,6 +55,24 @@ func assertPostgresResponseTime(t *testing.T, formattedMetric *model.ConnectionM
 	// we could have an error of 3% on the min and max values
 	assert.InEpsilon(t, expectedMaxNs*nsToS, actualMaxS, 0.03)
 	assert.InEpsilon(t, expectedMinNs*nsToS, actualMinS, 0.03)
+}
+
+func sortPostgresMetrics(metrics []*model.ConnectionMetric) {
+	sort.Slice(metrics, func(i, j int) bool {
+		// Order by metric name
+		if cmp := strings.Compare(metrics[i].Name, metrics[j].Name); cmp != 0 {
+			return cmp < 0
+		}
+		// Order by Database Name
+		if cmp := strings.Compare(metrics[i].Tags[postgresDatabaseNameTag], metrics[j].Tags[postgresDatabaseNameTag]); cmp != 0 {
+			return cmp < 0
+		}
+		// Order by SQL command
+		if cmp := strings.Compare(metrics[i].Tags[postgresSQLCommandTag], metrics[j].Tags[postgresSQLCommandTag]); cmp != 0 {
+			return cmp < 0
+		}
+		return false
+	})
 }
 
 // todo!: we can remove this if we adopt the datadog connection model.
@@ -83,7 +109,7 @@ func TestPostgresAggregation(t *testing.T) {
 		///////////////////
 		createPostgresKeyFromConn(&connSeenFromNs, postgres.SelectOP, "dummy_table"): {},
 		///////////////////
-		createPostgresKeyFromConn(&anotherConn, postgres.SelectOP, "dummy_table"): {},
+		createPostgresKeyFromConn(&anotherConn, postgres.ShowOP, "dummy_table"): {},
 	}
 
 	maxLatNs := 7980000430.0 // ~ 7.98 s
@@ -106,33 +132,25 @@ func TestPostgresAggregation(t *testing.T) {
 		if compareWithDataDogDual(&k, &conn) {
 			// we expect 6 metrics
 			assert.Len(t, metrics, 6)
-			for _, m := range metrics {
-				if isPostgresRequestsDeltaMetric(m) {
-					assertPostgresRequestsDelta(t, m, 2)
-				} else {
-					assertPostgresResponseTime(t, m, 2, maxLatNs, minLatNs)
-				}
-			}
+			sortPostgresMetrics(metrics)
+			assertPostgresRequestsDelta(t, metrics[0], "dummy_table", "INSERT", 2)
+			assertPostgresRequestsDelta(t, metrics[1], "dummy_table", "SELECT", 2)
+			assertPostgresRequestsDelta(t, metrics[2], "dummy_table_2", "SELECT", 2)
+			assertPostgresResponseTime(t, metrics[3], "dummy_table", "INSERT", 2, maxLatNs, minLatNs)
+			assertPostgresResponseTime(t, metrics[4], "dummy_table", "SELECT", 2, maxLatNs, minLatNs)
+			assertPostgresResponseTime(t, metrics[5], "dummy_table_2", "SELECT", 2, maxLatNs, minLatNs)
 		} else if compareWithDataDogDual(&k, &connSeenFromNs) {
 			// we expect 2 metrics
 			assert.Len(t, metrics, 2)
-			for _, m := range metrics {
-				if isPostgresRequestsDeltaMetric(m) {
-					assertPostgresRequestsDelta(t, m, 2)
-				} else {
-					assertPostgresResponseTime(t, m, 2, maxLatNs, minLatNs)
-				}
-			}
+			sortPostgresMetrics(metrics)
+			assertPostgresRequestsDelta(t, metrics[0], "dummy_table", "SELECT", 2)
+			assertPostgresResponseTime(t, metrics[1], "dummy_table", "SELECT", 2, maxLatNs, minLatNs)
 		} else if compareWithDataDogDual(&k, &anotherConn) {
 			// we expect 2 metrics
 			assert.Len(t, metrics, 2)
-			for _, m := range metrics {
-				if isPostgresRequestsDeltaMetric(m) {
-					assertPostgresRequestsDelta(t, m, 2)
-				} else {
-					assertPostgresResponseTime(t, m, 2, maxLatNs, minLatNs)
-				}
-			}
+			sortPostgresMetrics(metrics)
+			assertPostgresRequestsDelta(t, metrics[0], "dummy_table", "SHOW", 2)
+			assertPostgresResponseTime(t, metrics[1], "dummy_table", "SHOW", 2, maxLatNs, minLatNs)
 		}
 	}
 

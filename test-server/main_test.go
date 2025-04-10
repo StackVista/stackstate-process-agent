@@ -32,8 +32,10 @@ func TestServerTerminationConditions(t *testing.T) {
 						{
 							Pid:                 1234,
 							ApplicationProtocol: config.PostgresProtocolName,
-							// right now we just check for at least 2 metrics even if they are empty
-							Metrics: []*model.ConnectionMetric{{}, {}},
+							Metrics: []*model.ConnectionMetric{{Tags: map[string]string{
+								"command":  "SELECT",
+								"database": "demo",
+							}}, {}},
 						},
 					},
 				}
@@ -115,6 +117,7 @@ func TestServerTerminationConditions(t *testing.T) {
 			go func() {
 				// Backup goroutine to terminate the test if the server does not answer in time
 				time.Sleep(10 * time.Second)
+				t.Log("Server did not respond in time, terminating test")
 				wg.Done()
 			}()
 

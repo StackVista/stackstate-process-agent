@@ -95,6 +95,14 @@ func dumpData(w http.ResponseWriter, r *http.Request) {
 		for _, c := range collectorConn.Connections {
 			if c.ApplicationProtocol == config.PostgresProtocolName {
 				if len(c.GetMetrics()) > 1 {
+					v, ok := c.GetMetrics()[0].GetTags()["database"]
+					if !ok || v != "demo" {
+						continue
+					}
+					v, ok = c.GetMetrics()[0].GetTags()["command"]
+					if !ok || v != "SELECT" {
+						continue
+					}
 					log.Println("Desired data received, triggering shutdown")
 					select {
 					case shutdownChan <- true:

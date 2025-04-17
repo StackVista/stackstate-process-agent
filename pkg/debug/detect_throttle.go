@@ -2,12 +2,13 @@ package debug
 
 import (
 	"fmt"
-	log "github.com/cihub/seelog"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
 
 // DetectThrottle detects whether cgroups is being throttled and logs a warning.

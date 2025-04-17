@@ -5,13 +5,13 @@ package checks
 
 import (
 	"fmt"
-	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 	"strings"
 	"time"
 
 	ddmodel "github.com/DataDog/agent-payload/v5/process"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
 )
 
 func retrieveMetricsAndFormat(cfg *config.AgentConfig, ctrList []*ddmodel.Container) ([]*model.Container, []telemetry.RawMetric) {

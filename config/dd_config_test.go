@@ -1,12 +1,12 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	modelconfig "github.com/DataDog/datadog-agent/pkg/config/model"
 	pkgconfigsetup "github.com/DataDog/datadog-agent/pkg/config/setup"
 	"github.com/stretchr/testify/assert"
-	"strings"
 )
 
 // We test the unique configs we override in datadog to be sure they are always there between versions.

@@ -1,10 +1,11 @@
 package checks
 
 import (
+	"time"
+
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
-	"time"
 )
 
 // Check is an interface for Agent checks that collect data. Each check returns

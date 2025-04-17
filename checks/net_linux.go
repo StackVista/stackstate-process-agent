@@ -6,12 +6,12 @@ package checks
 import (
 	"bytes"
 	"fmt"
-	"github.com/DataDog/datadog-agent/pkg/network/tracer"
-	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	"time"
 
+	"github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
+	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	log "github.com/cihub/seelog"
 )
 

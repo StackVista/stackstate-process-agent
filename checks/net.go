@@ -100,7 +100,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 	// Add aggregated HTTP stats to the connection stats
 	for k, v := range aggregateHTTPStats(conns.HTTP, cfg.HTTPStatsPerPath) {
 		connectionStats[k] = v
-		protocolMap[k] = "http"
+		protocolMap[k] = config.HTTPProtocolName
 	}
 
 	// Add aggregated HTTP2 stats to the connection stats
@@ -111,7 +111,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 		}
 
 		connectionStats[k] = v
-		protocolMap[k] = "http" // http2 is just another version of http to us for now.
+		protocolMap[k] = config.HTTPProtocolName // http2 is just another version of http to us for now.
 	}
 
 	// Add aggregated Mongo stats to the connection stats
@@ -122,7 +122,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 		}
 
 		connectionStats[k] = v
-		protocolMap[k] = "mongo"
+		protocolMap[k] = config.MongoProtocolName
 	}
 
 	// Add aggregated AMQP stats to the connection stats
@@ -133,7 +133,7 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 		}
 
 		connectionStats[k] = v
-		protocolMap[k] = "amqp"
+		protocolMap[k] = config.AMQPProtocolName
 	}
 
 	// Add aggregated Postgres stats to the connection stats
@@ -394,7 +394,7 @@ func (c *ConnectionsCheck) formatConnections(
 		}
 
 		if len(observations) > 0 {
-			appProto = "http"
+			appProto = config.HTTPProtocolName
 		}
 
 		metrics = append(metrics, &model.ConnectionMetric{

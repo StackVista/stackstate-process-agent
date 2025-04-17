@@ -2,6 +2,10 @@ package checks
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/DataDog/datadog-agent/comp/core/telemetry"
 	"github.com/DataDog/datadog-agent/comp/core/telemetry/telemetryimpl"
 	"github.com/DataDog/datadog-agent/pkg/network"
@@ -10,11 +14,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
-
 	log "github.com/cihub/seelog"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // CreateNetworkRelationIdentifier returns an identification for the relation this connection may contribute to

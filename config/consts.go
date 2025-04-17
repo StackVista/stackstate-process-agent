@@ -3,7 +3,7 @@ package config
 const (
 	// PostgresProtocolName is the protocol name for Postgres
 	PostgresProtocolName = "postgres"
-	// HTTPProtocolName is the protocol name for HTTP (todo!: use this constants instead of the hardcoded strings)
+	// HTTPProtocolName is the protocol name for HTTP
 	HTTPProtocolName = "http"
 	// HTTP2ProtocolName is the protocol name for HTTP2
 	HTTP2ProtocolName = "http2"

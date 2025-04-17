@@ -595,7 +595,7 @@ network_tracer_config:
 	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(err)
 
-	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, "amqp"))
+	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, AMQPProtocolName))
 }
 
 func TestStackStateHttpTracingDisabled(t *testing.T) {
@@ -701,8 +701,8 @@ func TestEnvOverrides(t *testing.T) {
 	assert.Equal(true, agentConfig.NetworkTracer.EnableHTTPTracing)
 	assert.Equal(150000, agentConfig.NetworkTracer.MaxHTTPStatsBuffered)
 	assert.Equal(160000, agentConfig.NetworkTracer.MaxHTTPObservationsBuffered)
-	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, "amqp"))
-	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, "http"))
+	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, AMQPProtocolName))
+	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, HTTPProtocolName))
 }
 
 func TestEnvSiteConfig(t *testing.T) {

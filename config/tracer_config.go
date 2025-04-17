@@ -52,15 +52,15 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 
 		ProtocolClassificationEnabled: cfg.NetworkTracer.EnableProtocolInspection,
 
-		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "http"),
-		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "http2"),
+		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, HTTPProtocolName),
+		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, HTTP2ProtocolName),
 
-		EnableKafkaMonitoring: false && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "kafka"),
+		EnableKafkaMonitoring: false && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, KafkaProtocolName),
 
-		EnableMongoMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "mongo"),
+		EnableMongoMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, MongoProtocolName),
 		MaxMongoStatsBuffered: 100000,
 
-		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "amqp"),
+		EnableAMQPMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, AMQPProtocolName),
 		MaxAMQPStatsBuffered: 100000,
 
 		EnablePostgresMonitoring:   cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, PostgresProtocolName),

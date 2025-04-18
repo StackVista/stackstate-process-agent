@@ -162,8 +162,10 @@ publish_binaries:
 
 publish_linux_docker:
   extends: [ .publish_linux_docker ]
+  # Arm builders are spot nodes, so we add retries
+  retry: 2
   tags:
-    - sts-k8s-m-arm64-runner
+    - sts-k8s-xl-arm64-runner
   variables:
     REPO: $STS_DOCKER_TEST_REPO
     TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA-$SHORT_ARCH"
@@ -171,8 +173,10 @@ publish_linux_docker:
 
 publish_k8s_docker:
   extends: [ .publish_linux_docker ]
+  # Arm builders are spot nodes, so we add retries
+  retry: 2
   tags:
-    - sts-k8s-m-arm64-runner
+    - sts-k8s-xl-arm64-runner
   variables:
     REPO: $STS_DOCKER_K8S_REPO
     TAG: "$CI_COMMIT_REF_NAME-$SHORT_ARCH"
@@ -180,8 +184,10 @@ publish_k8s_docker:
 
 publish_linux_docker_release:
   extends: [ .publish_linux_docker ]
+  # Arm builders are spot nodes, so we add retries
+  retry: 2
   tags:
-    - sts-k8s-m-arm64-runner
+    - sts-k8s-xl-arm64-runner
   variables:
     REPO: $STS_DOCKER_RELEASE_REPO
     TAG: $CI_COMMIT_REF_NAME-$SHORT_ARCH

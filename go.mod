@@ -47,7 +47,7 @@ require (
 	github.com/DataDog/sketches-go v1.4.6
 	github.com/DataDog/zstd v1.5.6
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230322143705-a49da23e37d6
+	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20250224145616-f9b4a1fa7d2b
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/gofrs/uuid v4.3.1+incompatible
 	github.com/gogo/protobuf v1.3.2

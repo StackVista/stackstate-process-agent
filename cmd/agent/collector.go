@@ -332,9 +332,9 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 		if err != nil {
 			log.Warnf("Error reading respons body: %v.", err)
 			return resp, fmt.Errorf("unexpected response from %s. Status: %s, Body: failed to retroieve", url, resp.Status)
-		} else {
-			return resp, fmt.Errorf("unexpected response from %s. Status: %s, Body: %v", url, resp.Status, string(body))
 		}
+
+		return resp, fmt.Errorf("unexpected response from %s. Status: %s, Body: %v", url, resp.Status, string(body))
 	}
 	log.Debugf("Response from %s is %d", url, resp.StatusCode)
 

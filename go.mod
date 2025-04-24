@@ -21,6 +21,13 @@ replace (
 
 replace k8s.io/cri-api => k8s.io/cri-api v0.25.5
 
+// Internal deps fix copied from datadog-agent-upstream (should be updated on update)
+replace (
+	github.com/coreos/go-systemd => github.com/coreos/go-systemd v0.0.0-20180202092358-40e2722dffea
+	github.com/spf13/cast => github.com/DataDog/cast v1.8.0
+	github.com/ugorji/go => github.com/ugorji/go v1.1.7
+)
+
 // Internal deps fix version
 replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d

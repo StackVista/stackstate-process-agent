@@ -328,8 +328,13 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 
 	if resp.StatusCode < 200 || resp.StatusCode > 300 {
 		defer resp.Body.Close()
-		io.Copy(io.Discard, resp.Body)
-		return resp, fmt.Errorf("unexpected response from %s. Status: %s, Body: %v", url, resp.Status, resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Warnf("Error reading response body: %v.", err)
+			return nil, fmt.Errorf("unexpected response from %s. Status: %s, Body: failed to retrieve", url, resp.Status)
+		}
+
+		return nil, fmt.Errorf("unexpected response from %s. Status: %s, Body: %v", url, resp.Status, string(body))
 	}
 	log.Debugf("Response from %s is %d", url, resp.StatusCode)
 

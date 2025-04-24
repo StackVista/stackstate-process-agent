@@ -21,6 +21,13 @@ replace (
 
 replace k8s.io/cri-api => k8s.io/cri-api v0.25.5
 
+// Internal deps fix copied from datadog-agent-upstream (should be updated on update)
+replace (
+	github.com/coreos/go-systemd => github.com/coreos/go-systemd v0.0.0-20180202092358-40e2722dffea
+	github.com/spf13/cast => github.com/DataDog/cast v1.8.0
+	github.com/ugorji/go => github.com/ugorji/go v1.1.7
+)
+
 // Internal deps fix version
 replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
@@ -40,7 +47,7 @@ require (
 	github.com/DataDog/sketches-go v1.4.6
 	github.com/DataDog/zstd v1.5.6
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20230322143705-a49da23e37d6
+	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20250224145616-f9b4a1fa7d2b
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/gofrs/uuid v4.3.1+incompatible
 	github.com/gogo/protobuf v1.3.2

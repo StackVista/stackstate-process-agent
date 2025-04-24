@@ -331,10 +331,10 @@ func (l *Collector) accessAPIwithEncoding(endpoint config.APIEndpoint, method st
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			log.Warnf("Error reading response body: %v.", err)
-			return resp, fmt.Errorf("unexpected response from %s. Status: %s, Body: failed to retrieve", url, resp.Status)
+			return nil, fmt.Errorf("unexpected response from %s. Status: %s, Body: failed to retrieve", url, resp.Status)
 		}
 
-		return resp, fmt.Errorf("unexpected response from %s. Status: %s, Body: %v", url, resp.Status, string(body))
+		return nil, fmt.Errorf("unexpected response from %s. Status: %s, Body: %v", url, resp.Status, string(body))
 	}
 	log.Debugf("Response from %s is %d", url, resp.StatusCode)
 

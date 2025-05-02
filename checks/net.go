@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/DataDog/datadog-agent/pkg/ebpf"
@@ -751,8 +752,15 @@ const (
 	postgresResponseTime  metricName = "postgres_response_time_seconds"
 	postgresRequestsDelta metricName = "postgres_requests_delta"
 
+	postgresSQLCommandTag   = "command"
+	postgresDatabaseNameTag = "database"
+	postgresTableNameTag    = "table"
+
 	amqpMessagesDeliveredDelta metricName = "amqp_messages_delivered_delta"
 	amqpMessagesPublishedDelta metricName = "amqp_messages_published_delta"
+
+	amqpExchangeNameTag = "exchange"
+	amqpQueueNameTag    = "queue"
 )
 
 func emptySketch() *ddsketch.DDSketch {
@@ -908,11 +916,14 @@ func aggregateMongoStats(mongoStats map[mongo.Key]*mongo.RequestStat) map[connKe
 func aggregatePostgresStats(postgresStats map[postgres.Key]*postgres.RequestStat) map[connKey][]*model.ConnectionMetric {
 	result := map[connKey][]*model.ConnectionMetric{}
 
-	// todo!: support SQL command and database name.
-	tags := map[string]string{}
-
 	for key, stat := range postgresStats {
 		connKey := getConnectionKeyForPostgresStats(key)
+		tags := map[string]string{
+			postgresTableNameTag:    key.TableName,
+			postgresDatabaseNameTag: key.DatabaseName,
+			postgresSQLCommandTag:   key.Operation.String(),
+		}
+
 		scaled := emptySketch()
 		if scaled == nil {
 			log.Warn("cannot create the sketch for connection: %v", key)
@@ -920,12 +931,13 @@ func aggregatePostgresStats(postgresStats map[postgres.Key]*postgres.RequestStat
 		}
 
 		scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), nsToS)
-		requestCount := scaled.GetCount()
+		// we want a rounded number for the requestCount
+		requestCount := math.Round(scaled.GetCount())
 
 		result[connKey] = append(result[connKey],
 			makeConnectionMetricWithNumber(
 				postgresRequestsDelta, tags,
-				float64(requestCount),
+				requestCount,
 			),
 			makeConnectionMetricWithHistogram(
 				postgresResponseTime, tags,
@@ -943,8 +955,8 @@ func aggregateAMQPStats(amqpStats map[amqp.Key]*amqp.RequestStat) map[connKey][]
 	for amqpKey, stat := range amqpStats {
 		connKey := getConnectionKeyForAMQPStats(amqpKey)
 		tags := map[string]string{
-			"exchange": amqpKey.ExchangeName,
-			"queue":    amqpKey.QueueName,
+			amqpExchangeNameTag: amqpKey.ExchangeName,
+			amqpQueueNameTag:    amqpKey.QueueName,
 		}
 
 		if stat.MessagesDelivered != 0 {

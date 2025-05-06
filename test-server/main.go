@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -17,13 +18,12 @@ import (
 )
 
 const (
-	// Maximum number of requests after which the server will shut down
-	maxRequests    = 100
-	port           = "7077"
-	outputFilePath = "./output/output.json"
+	configEnvVar      = "CONFIG_PATH"
+	defaultConfigPath = "config.json"
 )
 
 var (
+	cfg *Config
 	// Counter for received requests (using atomic operations for thread safety)
 	requestCount int32
 
@@ -76,38 +76,42 @@ func dumpData(w http.ResponseWriter, r *http.Request) {
 	case *model.CollectorConnections:
 		collectorConn := m.Body.(*model.CollectorConnections)
 
-		jsonConn, err := json.MarshalIndent(collectorConn, "", "  ")
-		if err != nil {
-			log.Println("cannot serialize JSON:", err)
-			return
-		}
-
-		fileMutex.Lock()
-		_, err = file.Write(jsonConn)
-		fileMutex.Unlock()
-		if err != nil {
-			log.Println("cannot write Json to file:", err)
-			return
-		}
-
-		// check if we need to terminate
-		// todo!: we need to validate when we find a particular Json
 		for _, c := range collectorConn.Connections {
 			if c.ApplicationProtocol == config.PostgresProtocolName {
-				if len(c.GetMetrics()) > 1 {
-					log.Println("Desired data received, triggering shutdown")
-					select {
-					case shutdownChan <- true:
-					default:
-					}
+				jsonConn, err := json.MarshalIndent(c, "", "  ")
+				if err != nil {
+					log.Println("cannot serialize JSON:", err)
+					return
+				}
+
+				fileMutex.Lock()
+				_, err = file.Write(jsonConn)
+				fileMutex.Unlock()
+				if err != nil {
+					log.Println("cannot write Json to file:", err)
+					return
 				}
 			}
 		}
 
+		// jsonConn, err := json.MarshalIndent(collectorConn, "", "  ")
+		// if err != nil {
+		// 	log.Println("cannot serialize JSON:", err)
+		// 	return
+		// }
+
+		// fileMutex.Lock()
+		// _, err = file.Write(jsonConn)
+		// fileMutex.Unlock()
+		// if err != nil {
+		// 	log.Println("cannot write Json to file:", err)
+		// 	return
+		// }
+
 		newCount := atomic.AddInt32(&requestCount, 1)
 		log.Printf("Request received, count: %d", newCount)
-		if newCount >= maxRequests {
-			log.Printf("Maximum number of requests (%d) reached, triggering shutdown", maxRequests)
+		if newCount >= int32(cfg.RequestCount) {
+			log.Printf("Maximum number of requests (%d) reached, triggering shutdown", cfg.RequestCount)
 			select {
 			case shutdownChan <- false:
 			default:
@@ -118,20 +122,33 @@ func dumpData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func loadConfig() (*Config, error) {
+	envPath := os.Getenv(configEnvVar)
+	if envPath == "" {
+		envPath = defaultConfigPath
+	}
+
+	f, err := os.Open(envPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open config at '%s': %w", envPath, err)
+	}
+	defer f.Close()
+
+	var cfg Config
+	decoder := json.NewDecoder(f)
+	if err := decoder.Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("cannot decode JSON config: %w", err)
+	}
+	return &cfg, nil
+}
+
 func run() bool {
-
-	// Clear the request count
-	requestCount = 0
-
-	// todo!: add a configuration file to configure the server
-	// todo!: manage logging...
-	var err error
-	err = os.MkdirAll(filepath.Dir(outputFilePath), 0755)
+	err := os.MkdirAll(filepath.Dir(cfg.OutputFile), 0755)
 	if err != nil {
 		log.Fatalf("Error creating directory: %v\n", err)
 	}
 
-	file, err = os.OpenFile(outputFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	file, err = os.OpenFile(cfg.OutputFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("Error opening file: %v", err)
 	}
@@ -154,12 +171,12 @@ func run() bool {
 
 	// Configure the HTTP server
 	server := &http.Server{
-		Addr:    ":" + port,
+		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,
 		Handler: mux,
 	}
 
 	go func() {
-		log.Printf("Server listening on port %s...", port)
+		log.Printf("Server listening on port %s...", cfg.Server.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Error while running the server: %v", err)
 		}
@@ -178,7 +195,15 @@ func run() bool {
 	return match
 }
 
+// todo!: manage logging...
+// todo!: use Viper for the config
 func main() {
+	var err error
+	cfg, err = loadConfig()
+	if err != nil {
+		log.Fatalf("Error loading config: %v", err)
+	}
+
 	match := run()
 	if match {
 		log.Println("Shutdown triggered by match")

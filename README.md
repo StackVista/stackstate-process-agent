@@ -15,11 +15,20 @@ If you want to use a custom version of `datadog-agent-upstream-for-process-agent
 ```
 
 ```bash
+# to have a clean build
+sudo rm -rf ./prebuild_artifacts
+sudo rm -rf ./ebpf-object-files
 rake local_build
 # The dockerfile and the config `conf-dev.yaml` expect the .o files under a specific folder. This command just moves these files.
 ./prebuild-datadog-agent.sh --install-ebpf
 # DataDog checks that ebpf .o files are owned by root,
 sudo chown root:root -R ./ebpf-object-files/x86_64
+```
+
+## Run linters locally
+
+```bash
+rake lint
 ```
 
 ## Run the agent locally

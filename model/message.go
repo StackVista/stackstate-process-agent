@@ -34,8 +34,8 @@ type MessageVersion uint8
 // Message versioning constants.
 const (
 	MessageV1 MessageVersion = 1
-	MessageV2                = 2
-	MessageV3                = 3
+	MessageV2 MessageVersion = 2
+	MessageV3 MessageVersion = 3
 )
 
 // MessageHeader is attached to all messages at the head of the message. Some
@@ -266,23 +266,23 @@ func readHeaderV2(data []byte) (MessageHeader, int, error) {
 func readHeaderV3(data []byte) (MessageHeader, int, error) {
 	b := bytes.NewBuffer(data[1:])
 	var msgEnc uint8
-	if err := binary.Read(b, binary.LittleEndian, &msgEnc); err != nil {
+	if err := binary.Read(b, binary.BigEndian, &msgEnc); err != nil {
 		return MessageHeader{}, 0, err
 	}
 	var msgType uint8
-	if err := binary.Read(b, binary.LittleEndian, &msgType); err != nil {
+	if err := binary.Read(b, binary.BigEndian, &msgType); err != nil {
 		return MessageHeader{}, 0, err
 	}
 	var subID uint8
-	if err := binary.Read(b, binary.LittleEndian, &subID); err != nil {
+	if err := binary.Read(b, binary.BigEndian, &subID); err != nil {
 		return MessageHeader{}, 0, err
 	}
 	var orgID int32
-	if err := binary.Read(b, binary.LittleEndian, &orgID); err != nil {
+	if err := binary.Read(b, binary.BigEndian, &orgID); err != nil {
 		return MessageHeader{}, 0, err
 	}
 	var timestamp int64
-	if err := binary.Read(b, binary.LittleEndian, &timestamp); err != nil {
+	if err := binary.Read(b, binary.BigEndian, &timestamp); err != nil {
 		return MessageHeader{}, 0, err
 	}
 	return MessageHeader{

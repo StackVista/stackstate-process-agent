@@ -9,10 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	port = "7077"
 )
 
 func TestServerTerminationConditions(t *testing.T) {
@@ -23,49 +26,52 @@ func TestServerTerminationConditions(t *testing.T) {
 		terminationFunc func(t *testing.T)
 		expectedMatch   bool
 	}{
-		{
-			name: "Valid postgres message triggers shutdown",
-			terminationFunc: func(t *testing.T) {
-				// Craft a fake `TypeCollectorConnections` message
-				m := &model.CollectorConnections{
-					Connections: []*model.Connection{
-						{
-							Pid:                 1234,
-							ApplicationProtocol: config.PostgresProtocolName,
-							// right now we just check for at least 2 metrics even if they are empty
-							Metrics: []*model.ConnectionMetric{{}, {}},
-						},
-					},
-				}
+		// todo!: reintroduce a test like this when we will introduce pattern matching
+		// {
+		// 	name: "Valid postgres message triggers shutdown",
+		// 	terminationFunc: func(t *testing.T) {
+		// 		// Craft a fake `TypeCollectorConnections` message
+		// 		m := &model.CollectorConnections{
+		// 			Connections: []*model.Connection{
+		// 				{
+		// 					Pid:                 1234,
+		// 					ApplicationProtocol: config.PostgresProtocolName,
+		// 					Metrics: []*model.ConnectionMetric{{Tags: map[string]string{
+		// 						"command":  "SELECT",
+		// 						"database": "demo",
+		// 					}}, {}},
+		// 				},
+		// 			},
+		// 		}
 
-				body, err := model.EncodeMessage(model.Message{
-					Header: model.MessageHeader{
-						Version:  model.MessageV3,
-						Encoding: model.MessageEncodingZstdPB,
-						Type:     model.TypeCollectorConnections,
-					},
-					Body: m,
-				})
-				if err != nil {
-					t.Fatalf("Error encoding message: %v", err)
-				}
+		// 		body, err := model.EncodeMessage(model.Message{
+		// 			Header: model.MessageHeader{
+		// 				Version:  model.MessageV3,
+		// 				Encoding: model.MessageEncodingZstdPB,
+		// 				Type:     model.TypeCollectorConnections,
+		// 			},
+		// 			Body: m,
+		// 		})
+		// 		if err != nil {
+		// 			t.Fatalf("Error encoding message: %v", err)
+		// 		}
 
-				resp, err := http.Post(url, "application/x-protobuf", bytes.NewReader(body))
-				if err != nil {
-					t.Fatalf("Request failed: %v", err)
-				}
-				defer resp.Body.Close()
+		// 		resp, err := http.Post(url, "application/x-protobuf", bytes.NewReader(body))
+		// 		if err != nil {
+		// 			t.Fatalf("Request failed: %v", err)
+		// 		}
+		// 		defer resp.Body.Close()
 
-				// Read response
-				res, _ := io.ReadAll(resp.Body)
-				if resp.StatusCode != http.StatusOK {
-					t.Fatalf("Unexpected response status: %d, body: %s", resp.StatusCode, string(res))
-				}
+		// 		// Read response
+		// 		res, _ := io.ReadAll(resp.Body)
+		// 		if resp.StatusCode != http.StatusOK {
+		// 			t.Fatalf("Unexpected response status: %d, body: %s", resp.StatusCode, string(res))
+		// 		}
 
-				t.Logf("Server response OK")
-			},
-			expectedMatch: true,
-		},
+		// 		t.Logf("Server response OK")
+		// 	},
+		// 	expectedMatch: true,
+		// },
 		{
 			name: "Reach max requests limit",
 			terminationFunc: func(t *testing.T) {
@@ -82,7 +88,7 @@ func TestServerTerminationConditions(t *testing.T) {
 					t.Fatalf("Error encoding message: %v", err)
 				}
 
-				for i := 0; i < maxRequests; i++ {
+				for i := 0; i < cfg.RequestCount; i++ {
 					resp, err := http.Post(url, "application/x-protobuf", bytes.NewReader(body))
 					if err != nil {
 						t.Fatalf("Request failed: %v", err)
@@ -107,6 +113,18 @@ func TestServerTerminationConditions(t *testing.T) {
 			var wg sync.WaitGroup
 			wg.Add(1)
 			go func() {
+				cfg = &Config{
+					Server: struct {
+						Host string "json:\"host\""
+						Port string "json:\"port\""
+					}{
+						Host: "",
+						Port: port,
+					},
+					OutputFile:   "output.json",
+					RequestCount: 10,
+				}
+
 				match := run()
 				assert.Equal(t, tt.expectedMatch, match)
 				wg.Done()
@@ -115,6 +133,7 @@ func TestServerTerminationConditions(t *testing.T) {
 			go func() {
 				// Backup goroutine to terminate the test if the server does not answer in time
 				time.Sleep(10 * time.Second)
+				t.Log("Server did not respond in time, terminating test")
 				wg.Done()
 			}()
 

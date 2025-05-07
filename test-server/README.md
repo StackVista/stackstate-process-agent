@@ -23,6 +23,13 @@ Run it:
 ./main
 ```
 
+Test it:
+
+```bash
+curl http://127.0.0.1:7077/stsAgent/generic
+curl http://127.0.0.1:7077/stsAgent/stop
+```
+
 ## Build docker image
 
 In this folder

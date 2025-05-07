@@ -1,0 +1,9 @@
+{
+    "server": {
+        "host": "",
+        "port": "7077"
+    },
+    "patterns": [],
+    "output_file": "output.json",
+    "request_count": 10000
+}

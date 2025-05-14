@@ -126,5 +126,5 @@ var defaultBlacklistPatterns = []string{
 	// matches /usr/bin/kubelet, /usr/local/bin/kubelet, kubelet for Kubernetes + OpenShift variations and expects kubelet config to be passed
 	"^(/usr(/local)?/bin/)?kubelet.*--config=.*/kubelet.conf",
 	// Match k3s
-	"^/var/lib/rancher/k3s/.*/bin/k3s",
+	"^/usr/local/bin/k3s server$",
 }

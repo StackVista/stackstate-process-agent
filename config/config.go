@@ -768,6 +768,8 @@ func IsBlacklisted(cmdline []string, blacklist []*regexp.Regexp) bool {
 			return true
 		}
 	}
+
+	log.Debugf("Not filtering process: %s", cmd)
 	return false
 }
 

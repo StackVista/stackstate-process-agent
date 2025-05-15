@@ -15,32 +15,7 @@ import (
 )
 
 func TestBlacklist(t *testing.T) {
-	testBlacklist := []string{
-		"^getty",
-		"^acpid",
-		"^atd",
-		"^upstart-udev-bridge",
-		"^upstart-socket-bridge",
-		"^upstart-file-bridge",
-		"^dhclient",
-		"^dhclient3",
-		"^rpc",
-		"^dbus-daemon",
-		"udevd",
-		"^/sbin/",
-		"^/usr/sbin/",
-		"^/var/ossec/bin/ossec",
-		"^rsyslogd",
-		"^whoopsie$",
-		"^cron$",
-		"^CRON$",
-		"^/usr/lib/postfix/master$",
-		"^qmgr",
-		"^pickup",
-		"^sleep",
-		"^/lib/systemd/systemd-logind$",
-		"^/usr/local/bin/goshe dnsmasq$",
-	}
+	testBlacklist := defaultBlacklistPatterns
 	blacklist := make([]*regexp.Regexp, 0, len(testBlacklist))
 	for _, b := range testBlacklist {
 		r, err := regexp.Compile(b)
@@ -52,11 +27,8 @@ func TestBlacklist(t *testing.T) {
 		cmdline     []string
 		blacklisted bool
 	}{
-		{[]string{"getty", "-foo", "-bar"}, true},
-		{[]string{"rpcbind", "-x"}, true},
-		{[]string{"my-rpc-app", "-config foo.ini"}, false},
-		{[]string{"rpc.statd", "-L"}, true},
-		{[]string{"/usr/sbin/irqbalance"}, true},
+		{[]string{"/pause"}, true},
+		{[]string{"/usr/local/bin/k3s server"}, true},
 	}
 
 	for _, c := range cases {

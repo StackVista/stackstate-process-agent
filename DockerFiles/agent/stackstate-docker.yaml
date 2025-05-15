@@ -42,34 +42,8 @@ process_config:
       - "^\\(sd-pam\\)"
       - "^(/usr(/local)?/bin/)?kubelet.*--config=.*/kubelet.conf" # matches /usr/bin/kubelet, /usr/local/bin/kubelet, kubelet for Kubernetes + OpenShift variations and expects kubelet config to be passed
       - "/home/kubernetes/bin/kubelet.*" # matches kubelet on gke
-      # Windows Specific patterns
-      - "cmd.exe"
-      - "conhost.exe"
-      - "DllHost.exe"
-      - "dwm.exe"
-      - "Explorer.EXE"
-      - "lsass.exe"
-      - "msdtc.exe"
-      - "SearchUI.exe"
-      - "sihost.exe"
-      - "smartscreen.exe"
-      - "svchost.exe"
-      - "taskhostw.exe"
-      - "tasklist.exe"
-      - "VBoxService.exe"
-      - "vim.exe"
-      - "wininit.exe"
-      - "winlogon.exe"
-      - "wlms.exe"
-      - "wmiprvse.exe"
-      - "sshd.exe"
-      # Should be ignored, but gets reported with an empty command line
-      #- "sppsvc.exe"
-      #- "services.exe"
-      #- "csrss.exe"
-      #- "wininit.exe"
-      #- "System"
-      #- "smss.exe"
+      - "^/usr/local/bin/k3s server"
+      - "^/pause"
     # Process blacklist inclusions for top resource using processes
     inclusions:
       amount_top_cpu_pct_usage: 0

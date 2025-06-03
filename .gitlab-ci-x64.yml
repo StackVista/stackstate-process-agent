@@ -157,7 +157,7 @@ publish_binaries:
     - prebuild_agent
   script:
     - export BUILD_TAG="${REPO}:${TAG}"
-    - docker build --build-arg EBPF_SUBFOLDER=$LLVM_ARCH --build-arg LONG_ARCH=$LONG_ARCH --build-arg SHORT_ARCH=$SHORT_ARCH -t "${BUILD_TAG}" .
+    - docker build --build-arg EBPF_SUBFOLDER=$LLVM_ARCH --build-arg LONG_ARCH=$LONG_ARCH --build-arg SHORT_ARCH=$SHORT_ARCH -t "${BUILD_TAG}" -f BCI.dockerfile .
     - ./packaging/publish_image.sh $BUILD_TAG $REPO $TAG $EXTRA_TAG
 
 publish_linux_docker:

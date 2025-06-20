@@ -222,6 +222,8 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 	if len(c.initialConnections) == 0 {
 		c.initialConnections = map[connKey]interface{}{}
 		for _, conn := range cs.Conns {
+			// this doesn't collect "all" the active connections in the system at startup time.
+			// Some connections might not send any message in the first 30 seconds, so we might not see them.
 			c.initialConnections[getConnectionKey(conn)] = nil
 		}
 	} else {
@@ -229,7 +231,6 @@ func (c *ConnectionsCheck) getConnections() (*network.Connections, error) {
 			if _, ok := c.initialConnections[getConnectionKey(conn)]; (!ok) && conn.InitialTCPSeq.Seq == 0 && conn.InitialTCPSeq.Ack_seq == 0 && conn.Direction != network.NONE {
 				log.Debugf("Got new connection without initial handshake: %v", conn)
 			}
-			c.initialConnections[getConnectionKey(conn)] = nil
 		}
 	}
 	return cs, err

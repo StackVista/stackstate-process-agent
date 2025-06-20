@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	threshold = 0.9             // Default threshold for GOMEMLIMIT watcher (90%)
+	threshold = 0.95            // Default threshold for GOMEMLIMIT watcher
 	interval  = 5 * time.Minute // Default check interval
 )
 
@@ -37,12 +37,15 @@ func runMemWatcher() {
 
 	for range ticker.C {
 		runtime.ReadMemStats(&memStats)
-		// we want to see all memory not yet freed by the GC.
-		heapAlloc := memStats.HeapAlloc
-		log.Infof("allocated heap objects: %f MB", bytesToMB(heapAlloc))
-		if heapAlloc >= thresholdBytes {
-			log.Warnf(`heap memory usage is over (%f * GOMEMLIMIT)! Current usage: %f MB, GOMEMLIMIT: %f MB`, threshold,
-				bytesToMB(heapAlloc), bytesToMB(uint64(limit)))
+		// The limit includes all memory mapped, managed, and not released by the Go runtime.
+		// So we try to recover this value from the runtime.
+		// See here for more details: https://pkg.go.dev/runtime/debug@go1.24.4#SetMemoryLimit
+		mem := memStats.Sys - memStats.HeapReleased
+		if mem >= thresholdBytes {
+			log.Warnf(`memory usage is over (%f * GOMEMLIMIT)! Current usage: %f MB, GOMEMLIMIT: %f MB`, threshold,
+				bytesToMB(mem), bytesToMB(uint64(limit)))
+		} else {
+			log.Infof("memory usage: %f MB", bytesToMB(mem))
 		}
 	}
 }

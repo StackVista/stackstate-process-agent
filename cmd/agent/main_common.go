@@ -185,6 +185,10 @@ func runAgent(exit chan bool) {
 		return
 	}
 
+	go func() {
+		runMemWatcher()
+	}()
+
 	// Run a profile server.
 	go func() {
 		http.ListenAndServe("localhost:6062", nil)

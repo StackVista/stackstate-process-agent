@@ -11,7 +11,7 @@ import (
 
 const (
 	threshold = 0.95            // Default threshold for GOMEMLIMIT watcher
-	interval  = 5 * time.Minute // Default check interval
+	interval  = 1 * time.Minute // This interval should allow us to get a log before the container is OOMKilled
 )
 
 func bytesToMB(bytes uint64) float64 {

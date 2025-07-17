@@ -160,7 +160,9 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 // Chunks processes into predefined max per message size
 func chunkProcesses(processes []*model.Process, maxPerMessage int, chunked [][]*model.Process) [][]*model.Process {
 	if maxPerMessage < len(processes) {
-		log.Warnf("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processes), maxPerMessage)
+		// We are not dropping any data agent-side, this log just means that we will send more messages to the receiver
+		// because all the processes cannot fit into a single message.
+		log.Infof("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processes), maxPerMessage)
 	}
 
 	for maxPerMessage < len(processes) {

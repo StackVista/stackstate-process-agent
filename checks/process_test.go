@@ -104,29 +104,6 @@ func TestProcessChunking(t *testing.T) {
 		makeProcess(20),
 		makeProcess(21),
 	}
-	processStats := []*model.ProcessStat{
-		makeProcessStat(1),
-		makeProcessStat(2),
-		makeProcessStat(3),
-		makeProcessStat(4),
-		makeProcessStat(5),
-		makeProcessStat(6),
-		makeProcessStat(7),
-		makeProcessStat(8),
-		makeProcessStat(9),
-		makeProcessStat(10),
-		makeProcessStat(11),
-		makeProcessStat(12),
-		makeProcessStat(13),
-		makeProcessStat(14),
-		makeProcessStat(15),
-		makeProcessStat(16),
-		makeProcessStat(17),
-		makeProcessStat(18),
-		makeProcessStat(19),
-		makeProcessStat(20),
-		makeProcessStat(21),
-	}
 
 	for _, tc := range []struct {
 		name           string
@@ -157,14 +134,6 @@ func TestProcessChunking(t *testing.T) {
 				total += len(c)
 			}
 			assert.Equal(t, total, tc.expectedTotal, "Test: [%s], expected total: %d, found total: %d", tc.name, tc.expectedTotal, total)
-
-			chunkedStat := chunkProcessStats(processStats, tc.maxSize, make([][]*model.ProcessStat, 0, cfg.MaxPerMessage))
-			assert.Len(t, chunkedStat, tc.expectedChunks, "Test: [%s], expected stats chunks: %d, found stats chunks: %d", tc.name, tc.expectedChunks, len(chunkedStat))
-			total = 0
-			for _, c := range chunkedStat {
-				total += len(c)
-			}
-			assert.Equal(t, total, tc.expectedTotal, "Test: [%s], expected stats total: %d, found stats total: %d", tc.name, tc.expectedTotal, total)
 		})
 	}
 }

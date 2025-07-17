@@ -40,10 +40,11 @@ process_config:
 #      mem_usage_threshold: 35
 network_tracer_config:
   network_tracing_enabled: 'true'
-  initial_connections_from_proc: 'true'
-  ebpf_debuglog_enabled: 'true'
   protocol_inspection_enabled: 'true'
+  initial_connections_from_proc: 'true'
+  ebpf_debuglog_enabled: 'false'
   ebpf_artifact_dir: './ebpf-object-files/x86_64'
+  http_tracing_enabled: 'false'
 transaction_manager:
   # for testing purposes
   timeout_duration_seconds: 5

@@ -157,22 +157,6 @@ func getProcessInclusions(commonProcesses []*ProcessCommon, cfg *config.AgentCon
 	return append(append(append(<-cpuProcessChan, <-ioReadProcessesChan...), <-ioWriteProcessesChan...), <-memoryProcessesChan...)
 }
 
-// Chunks process stats into predefined max per message size
-func chunkProcessStats(processStats []*model.ProcessStat, maxPerMessage int, chunked [][]*model.ProcessStat) [][]*model.ProcessStat {
-	if maxPerMessage < len(processStats) {
-		log.Warnf("Amount of Processes: %d discovered exceeded MaxPerMessage: %d\n", len(processStats), maxPerMessage)
-	}
-
-	for maxPerMessage < len(processStats) {
-		processStats, chunked = processStats[maxPerMessage:], append(chunked, processStats[0:maxPerMessage:maxPerMessage])
-	}
-	// checks the length of the processStats otherwise it appends an empty array to the chunked
-	if len(processStats) == 0 {
-		return chunked
-	}
-	return append(chunked, processStats)
-}
-
 // Chunks processes into predefined max per message size
 func chunkProcesses(processes []*model.Process, maxPerMessage int, chunked [][]*model.Process) [][]*model.Process {
 	if maxPerMessage < len(processes) {

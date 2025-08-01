@@ -315,7 +315,8 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 	cfg = mergeEnvironmentVariables(cfg)
 
 	// Python-style log level has WARNING vs WARN
-	if strings.ToLower(cfg.LogLevel) == "warning" {
+	cfg.LogLevel = strings.ToLower(cfg.LogLevel)
+	if cfg.LogLevel == "warning" {
 		cfg.LogLevel = "warn"
 	}
 

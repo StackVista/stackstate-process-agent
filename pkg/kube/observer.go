@@ -2,6 +2,7 @@ package kube
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -21,6 +22,8 @@ const (
 	prometheusNamespace = "stackstate_process_agent"
 	prometheusSubsystem = "observer"
 )
+
+var exceedCPLatencyWarning sync.Once
 
 // Observer implements the informer.Observer interface to observe Kubernetes events.
 type Observer struct {
@@ -45,6 +48,8 @@ type Observer struct {
 	// Configurable by the user
 	cleanCacheInterval time.Duration
 	deletePodsAfter    time.Duration
+	// maximum latency we assume can happen between control plane and our node.
+	maxControlPlaneLatency int64
 	// just used for testing
 	nowFunc func() time.Time
 
@@ -76,6 +81,13 @@ func WithDeletePodsAfter(deleteAfter time.Duration) ObserverOption {
 	}
 }
 
+// WithMaxControlPlaneLatency sets the maximum allowed control plane latency.
+func WithMaxControlPlaneLatency(maxLatency time.Duration) ObserverOption {
+	return func(o *Observer) {
+		o.maxControlPlaneLatency = int64(maxLatency.Seconds())
+	}
+}
+
 // NewObserver creates a new Observer instance.
 func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, error) {
 	// we need the boot time because all what we receive from ebpf is the time in nanoseconds since boot
@@ -88,6 +100,7 @@ func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, 
 		podsByIP:                make(map[util.Address][]*PodInfo),
 		bootTime:                int64(bt),
 		lastControlPlaneLatency: int64(defaultMaxEstimatedCPLatency.Seconds()),
+		maxControlPlaneLatency:  int64(defaultMaxEstimatedCPLatency.Seconds()),
 		cleanCacheInterval:      defaultCleanCacheInterval,
 		deletePodsAfter:         defaultDeletePodsAfter,
 		nowFunc:                 time.Now,
@@ -256,6 +269,11 @@ outerLoop:
 		now := o.nowFunc().Unix()
 		o.lastControlPlaneLatency = now - meta.StatusTimeEpoch
 		o.controlPlaneLatency.Observe(float64(o.lastControlPlaneLatency))
+		if o.lastControlPlaneLatency > o.maxControlPlaneLatency {
+			exceedCPLatencyWarning.Do(func() {
+				log.Warnf("control plane latency exceed expected one: %d s > %d s", o.lastControlPlaneLatency, o.maxControlPlaneLatency)
+			})
+		}
 
 		// we need to understand if this is a new pod or an update of an existing pod
 		for _, podInfo := range o.podsByIP[addr] {
@@ -311,10 +329,11 @@ func (o *Observer) ResolvePodByIP(ip util.Address, nsFromBoot time.Duration) (*P
 
 func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duration) (*PodInfo, bool) {
 	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
-	controlPlaneLatency := o.lastControlPlaneLatency
+	lastControlPlaneLatency := o.lastControlPlaneLatency
+	maxControlPlaneLatency := o.maxControlPlaneLatency
 
 	// we do this to wait for possible control plane events that could be delayed.
-	if connCreationTime > o.nowFunc().Unix()-controlPlaneLatency {
+	if connCreationTime > o.nowFunc().Unix()-maxControlPlaneLatency {
 		// we need to store the connection and retry later
 		o.resolutionRetries.Inc()
 		return nil, true
@@ -326,87 +345,180 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 		return nil, false
 	}
 
-	// c -> connection creation time.
-	// C -> pod creation time as observed by us (so it includes the estimated latency).
-	// D -> pod deletion time as observed by us (so it includes the estimated latency).
-	// ++ -> latency we assume can happen between control plane and our node.
-	//
-	// Possible cases:
-	// 1.connection before first pod: c ++C ----------------- ++D
-	// 2.connection between 2 pods: ++C ----------------- ++D  c ++C ------------------ ++D
-	// 3.connection inside a pod still alive: ++C --------c--------
-	// 4.connection inside a pod alredy delete: ++C --------c-------- ++D
-	// 5.connection inside 2 pods. This case is artificially created by the fact that we use the estimated latency to resolve pods.
-	//   A wrong latency computation can lead to this case. ++C1 ----------- ++C2 --c- ++D1 ------------- ++D2
-	// 6.connection after last pod: ++C ----------------- ++D c
-
-	for i, podInfo := range podSlice {
-		estimatedPodCreateTime := podInfo.CreationTimestamp - controlPlaneLatency
-		if connCreationTime < estimatedPodCreateTime {
-			// We enter this if when:
-			// - The connection creation time is before the first pod creation time. (case 1)
-			// - The connection creation time is after the pod deletion time of the previous
-			// and before the pod creation time of the current one. So in the middle of 2 pods. (case 2)
-			//
-			// These are clearly ambiguous resolutions.
-			// todo!: A metric is ok but probably we should have a way to correlate that this specific connection is ambiguous.
-			o.resolutionAmbiguous.Inc()
-
-			// We try to pick the nearest pod. 2 cases:
-			// 1. if the pod is the first one, we assign the connection to it.
-			if i == 0 {
-				log.Infof("connection (IP %s) with creation time before the first pod. Assign to it the first pod (%s).", ip, podInfo)
-				return podInfo, false
-			}
-
-			// 2. if the pod is not the first one, we find the nearest pod and return it.
-			chosenPod := podInfo
-			if estimatedPodCreateTime-connCreationTime >= connCreationTime-podSlice[i-1].DeletionTimestamp {
-				// The previous pod was closer to the connection creation time.
-				chosenPod = podSlice[i-1]
-			}
-			log.Infof("connection (IP %s) with creation time in the middle of 2 pods(%s <-> %s). Assign to pod (%s).", ip, podSlice[i-1], podInfo, chosenPod)
-			return chosenPod, false
+	matchingPods := make([]*PodInfo, 0)
+	// Since we are doing `podInfo.CreationTimestamp-maxControlPlaneLatency` the pods could overlap between them, so the connection could match multiple pods.
+	// C1 ----------- C2 --c- D1 ------------- D2
+	for _, podInfo := range podSlice {
+		if podInfo.CreationTimestamp-maxControlPlaneLatency <= connCreationTime && (podInfo.DeletionTimestamp == 0 || podInfo.DeletionTimestamp >= connCreationTime) {
+			matchingPods = append(matchingPods, podInfo)
 		}
-
-		// if we arrive here it means `connCreationTime >= estimatedPodCreateTime`
-
-		if podInfo.DeletionTimestamp == 0 {
-			// The connection creation time is after the pod creation time and the pod is still running. (case 3)
-			o.resolutionHits.Inc()
-			return podInfo, false
-		}
-
-		if connCreationTime > podInfo.DeletionTimestamp {
-			// The connection doesn't match the pod because it was deleted before the connection creation time.
-			continue
-		}
-
-		// if we arrive here it means `connCreationTime <= podInfo.DeletionTimestamp`
-
-		// We have 2 cases here:
-		// 1. if the connection is only inside this pod and not the next one, we return it. (case 4)
-		//    The connection is for sure inside one pod if it is the last one.
-		if i == len(podSlice)-1 ||
-			connCreationTime < podSlice[i+1].CreationTimestamp-controlPlaneLatency {
-			o.resolutionHits.Inc()
-			return podInfo, false
-		}
-
-		// 2. The connection is inside 2 pods (case 5).
-		o.resolutionAmbiguous.Inc()
-		estimatedPodCreateTime = podSlice[i+1].CreationTimestamp - controlPlaneLatency
-		chosenPod := podSlice[i+1]
-		if connCreationTime-estimatedPodCreateTime >= podInfo.DeletionTimestamp-connCreationTime {
-			// The current pod is closer to the connection creation time.
-			chosenPod = podInfo
-		}
-		log.Infof("connection (IP %s) with creation time in the middle of 2 pods(%s <-> %s). Assign to pod (%s).", ip, podInfo, podSlice[i+1], chosenPod)
-		return chosenPod, false
 	}
 
-	// If we arrive here it means the connection is after the last pod (case 6)
+	if len(matchingPods) == 1 {
+		o.resolutionHits.Inc()
+		return matchingPods[0], false
+	}
+
+	if len(matchingPods) == 0 {
+		// c -> connection creation time.
+		// C -> pod creation time as observed by us (so it includes the estimated latency).
+		// D -> pod deletion time as observed by us (so it includes the estimated latency).
+		// M -> max control plane latency.
+		//
+		// If we arrive here it means the pod slice is not empty but we cannot match a pod
+		// We have at least the following cases:
+		// 1.connection before first pod: c   C-M-----------------D
+		// 2.connection between 2 pods: C-M-----------------D c C-M------------------D
+		// 3.connection after last pod: C-M-----------------D c
+		log.Infof("connection (IP %s) doesn't fall in any pod range. %v", ip, podSlice)
+		o.resolutionMisses.Inc()
+		return nil, false
+	}
+
+	// This is the tricky case. We got multiple potential matching pods (this can happen because we take potential network delays into account when calculating hits).
+	// We use the most accurate delay calculation here to find the pod which matches closest and call it good.
 	o.resolutionAmbiguous.Inc()
-	log.Infof("connection (IP %s) with creation time after the last pod. Assign to it the last pod (%s).", ip, podSlice[len(podSlice)-1])
-	return podSlice[len(podSlice)-1], false
+
+	var closestMatchingPod *PodInfo
+	var closestPodDistance int64 = math.MaxInt64
+	var podTimeDistance int64
+
+	// In this for loop we don't do `podInfo.CreationTimestamp-maxControlPlaneLatency` so pods don't overlap.
+	// To create more realistic pod intervals we can subtract the last control plane latency from the pod creation and deletion timestamps. Instead of doing that we add the last control plane latency to the connection creation time, because it is easier.
+	connCreationTime += lastControlPlaneLatency
+
+	// From the previous situation: C1 ----------- C2 --c- D1 ------------- D2
+	// We should obtain similar situations:
+	// * C1 ----------- D1 c C2 ------------ D2
+	// * C1 ----------c D1 C2 ------------ D2
+	// * C1 ----------- D1 C2 c----------- D2
+	// * c C1 - D1 C2 - D2
+	for _, matchingPod := range matchingPods {
+
+		if matchingPod.CreationTimestamp > connCreationTime {
+			// Conntime is before create
+			podTimeDistance = matchingPod.CreationTimestamp - connCreationTime
+		} else if matchingPod.DeletionTimestamp != 0 && matchingPod.DeletionTimestamp < connCreationTime {
+			// Conntime is after delete
+			podTimeDistance = connCreationTime - matchingPod.DeletionTimestamp
+		} else {
+			// Conntime is within the pod create/delete. We can do an early exit because we know pod
+			// times are disjoint
+			log.Infof("connection (IP %s) after disambiguation falls into pod '%s'. Available pods: %v", ip, matchingPod, podSlice)
+			return matchingPod, false
+		}
+
+		if podTimeDistance < closestPodDistance {
+			closestMatchingPod = matchingPod
+			closestPodDistance = podTimeDistance
+		}
+	}
+	log.Infof("connection (IP %s) after disambiguation doesn't fall in any pod. Pick the closest one '%s'. Available pods: %v", ip, closestMatchingPod, podSlice)
+	return closestMatchingPod, false
 }
+
+// This method models another resolution algorithm where we always try to match the closest pod to the
+// connection creation time if there is at least one pod associated to the IP. With the current model
+// connections that are "too far" from pods are not correlated even if we have pods in the cache.
+//
+// func (o *Observer) resolvePodByIPNoLockv2(ip util.Address, nsFromBoot time.Duration) (*PodInfo, bool) {
+// 	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
+// 	controlPlaneLatency := o.lastControlPlaneLatency
+
+// 	// we do this to wait for possible control plane events that could be delayed.
+// 	if connCreationTime > o.nowFunc().Unix()-controlPlaneLatency {
+// 		// we need to store the connection and retry later
+// 		o.resolutionRetries.Inc()
+// 		return nil, true
+// 	}
+
+// 	podSlice := o.podsByIP[ip]
+// 	if len(podSlice) == 0 {
+// 		o.resolutionMisses.Inc()
+// 		return nil, false
+// 	}
+
+// 	// c -> connection creation time.
+// 	// C -> pod creation time as observed by us (so it includes the estimated latency).
+// 	// D -> pod deletion time as observed by us (so it includes the estimated latency).
+// 	// ++ -> latency we assume can happen between control plane and our node.
+// 	//
+// 	// Possible cases:
+// 	// 1.connection before first pod: c ++C ----------------- ++D
+// 	// 2.connection between 2 pods: ++C ----------------- ++D  c ++C ------------------ ++D
+// 	// 3.connection inside a pod still alive: ++C --------c--------
+// 	// 4.connection inside a pod alredy delete: ++C --------c-------- ++D
+// 	// 5.connection inside 2 pods. This case is artificially created by the fact that we use the estimated latency to resolve pods.
+// 	//   A wrong latency computation can lead to this case. ++C1 ----------- ++C2 --c- ++D1 ------------- ++D2
+// 	// 6.connection after last pod: ++C ----------------- ++D c
+
+// 	for i, podInfo := range podSlice {
+// 		estimatedPodCreateTime := podInfo.CreationTimestamp - controlPlaneLatency
+// 		if connCreationTime < estimatedPodCreateTime {
+// 			// We enter this if when:
+// 			// - The connection creation time is before the first pod creation time. (case 1)
+// 			// - The connection creation time is after the pod deletion time of the previous
+// 			// and before the pod creation time of the current one. So in the middle of 2 pods. (case 2)
+// 			//
+// 			// These are clearly ambiguous resolutions.
+// 			// todo!: A metric is ok but probably we should have a way to correlate that this specific connection is ambiguous.
+// 			o.resolutionAmbiguous.Inc()
+
+// 			// We try to pick the nearest pod. 2 cases:
+// 			// 1. if the pod is the first one, we assign the connection to it.
+// 			if i == 0 {
+// 				log.Infof("connection (IP %s) with creation time before the first pod. Assign to it the first pod (%s).", ip, podInfo)
+// 				return podInfo, false
+// 			}
+
+// 			// 2. if the pod is not the first one, we find the nearest pod and return it.
+// 			chosenPod := podInfo
+// 			if estimatedPodCreateTime-connCreationTime >= connCreationTime-podSlice[i-1].DeletionTimestamp {
+// 				// The previous pod was closer to the connection creation time.
+// 				chosenPod = podSlice[i-1]
+// 			}
+// 			log.Infof("connection (IP %s) with creation time in the middle of 2 pods(%s <-> %s). Assign to pod (%s).", ip, podSlice[i-1], podInfo, chosenPod)
+// 			return chosenPod, false
+// 		}
+
+// 		// if we arrive here it means `connCreationTime >= estimatedPodCreateTime`
+
+// 		if podInfo.DeletionTimestamp == 0 {
+// 			// The connection creation time is after the pod creation time and the pod is still running. (case 3)
+// 			o.resolutionHits.Inc()
+// 			return podInfo, false
+// 		}
+
+// 		if connCreationTime > podInfo.DeletionTimestamp {
+// 			// The connection doesn't match the pod because it was deleted before the connection creation time.
+// 			continue
+// 		}
+
+// 		// if we arrive here it means `connCreationTime <= podInfo.DeletionTimestamp`
+
+// 		// We have 2 cases here:
+// 		// 1. if the connection is only inside this pod and not the next one, we return it. (case 4)
+// 		//    The connection is for sure inside one pod if it is the last one.
+// 		if i == len(podSlice)-1 ||
+// 			connCreationTime < podSlice[i+1].CreationTimestamp-controlPlaneLatency {
+// 			o.resolutionHits.Inc()
+// 			return podInfo, false
+// 		}
+
+// 		// 2. The connection is inside 2 pods (case 5).
+// 		o.resolutionAmbiguous.Inc()
+// 		estimatedPodCreateTime = podSlice[i+1].CreationTimestamp - controlPlaneLatency
+// 		chosenPod := podSlice[i+1]
+// 		if connCreationTime-estimatedPodCreateTime >= podInfo.DeletionTimestamp-connCreationTime {
+// 			// The current pod is closer to the connection creation time.
+// 			chosenPod = podInfo
+// 		}
+// 		log.Infof("connection (IP %s) with creation time in the middle of 2 pods(%s <-> %s). Assign to pod (%s).", ip, podInfo, podSlice[i+1], chosenPod)
+// 		return chosenPod, false
+// 	}
+
+// 	// If we arrive here it means the connection is after the last pod (case 6)
+// 	o.resolutionAmbiguous.Inc()
+// 	log.Infof("connection (IP %s) with creation time after the last pod. Assign to it the last pod (%s).", ip, podSlice[len(podSlice)-1])
+// 	return podSlice[len(podSlice)-1], false
+// }

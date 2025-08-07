@@ -25,8 +25,8 @@ func withBootTime(bootTime time.Time) ObserverOption {
 	}
 }
 
-// withControlPlaneLatency allows to set a custom control plane latency for the observer. (Testing purposes)
-func withControlPlaneLatency(latency time.Duration) ObserverOption {
+// withLastControlPlaneLatency allows to set a custom control plane latency for the observer. (Testing purposes)
+func withLastControlPlaneLatency(latency time.Duration) ObserverOption {
 	return func(o *Observer) {
 		o.lastControlPlaneLatency = int64(latency.Seconds())
 	}
@@ -332,25 +332,26 @@ func TestResolvePodByIP(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                string
-		time                time.Time
-		bootTime            time.Time
-		controlPlaneLatency time.Duration
-		nsFromBoot          time.Duration
-		podsByIP            map[util.Address][]*PodInfo
-		expectedInfoPos     int
-		expectedRetry       bool
-		resolutionHits      float64
-		resolutionRetries   float64
-		resolutionMisses    float64
-		resolutionAmbiguous float64
+		name                    string
+		time                    time.Time
+		bootTime                time.Time
+		lastControlPlaneLatency time.Duration
+		maxControlPlaneLatency  time.Duration
+		nsFromBoot              time.Duration
+		podsByIP                map[util.Address][]*PodInfo
+		expectedInfoPos         int
+		expectedRetry           bool
+		resolutionHits          float64
+		resolutionRetries       float64
+		resolutionMisses        float64
+		resolutionAmbiguous     float64
 	}{
 		{
-			name:                "retry",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          5 * time.Second,
-			controlPlaneLatency: 60 * time.Second,
-			time:                time.Unix(30, 0),
+			name:                    "retry",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              5 * time.Second,
+			lastControlPlaneLatency: 60 * time.Second,
+			time:                    time.Unix(30, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {pod1Info.withCreationTimestamp(14).withDeletionTimestamp(0)},
 			},
@@ -359,67 +360,67 @@ func TestResolvePodByIP(t *testing.T) {
 			resolutionRetries: 1.0,
 		},
 		{
-			name:                "no pod into the cache",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          5 * time.Second,
-			controlPlaneLatency: 10 * time.Second,
-			time:                time.Unix(30, 0),
-			podsByIP:            make(map[util.Address][]*PodInfo),
-			expectedInfoPos:     -1,
-			expectedRetry:       false,
-			resolutionMisses:    1.0,
+			name:                    "no pod into the cache",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              5 * time.Second,
+			lastControlPlaneLatency: 10 * time.Second,
+			time:                    time.Unix(30, 0),
+			podsByIP:                make(map[util.Address][]*PodInfo),
+			expectedInfoPos:         -1,
+			expectedRetry:           false,
+			resolutionMisses:        1.0,
 		},
 		{
-			name:                "creation time before first pod",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          5 * time.Second,
-			controlPlaneLatency: 10 * time.Second,
-			time:                time.Unix(40, 0),
+			name:                    "creation time before first pod",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              5 * time.Second,
+			lastControlPlaneLatency: 10 * time.Second,
+			time:                    time.Unix(40, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {pod1Info.withCreationTimestamp(26).withDeletionTimestamp(0)},
 			},
-			expectedInfoPos:     0,
-			expectedRetry:       false,
-			resolutionAmbiguous: 1.0,
+			expectedInfoPos:  -1,
+			expectedRetry:    false,
+			resolutionMisses: 1.0,
 		},
 		{
-			name:                "creation time between first pod and second pod, pick first pod",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          20 * time.Second,
-			controlPlaneLatency: 1 * time.Second,
-			time:                time.Unix(60, 0),
+			name:                    "creation time between first pod and second pod, first nearer",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              20 * time.Second,
+			lastControlPlaneLatency: 1 * time.Second,
+			time:                    time.Unix(60, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {
 					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(27),
 					pod2Info.withCreationTimestamp(35).withDeletionTimestamp(0),
 				},
 			},
-			expectedInfoPos:     0,
-			expectedRetry:       false,
-			resolutionAmbiguous: 1.0,
+			expectedInfoPos:  -1,
+			expectedRetry:    false,
+			resolutionMisses: 1.0,
 		},
 		{
-			name:                "creation time between first pod and second pod, pick second pod",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          20 * time.Second,
-			controlPlaneLatency: 1 * time.Second,
-			time:                time.Unix(60, 0),
+			name:                    "creation time between first pod and second pod, second nearer",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              20 * time.Second,
+			lastControlPlaneLatency: 1 * time.Second,
+			time:                    time.Unix(60, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {
 					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(27),
 					pod2Info.withCreationTimestamp(32).withDeletionTimestamp(0),
 				},
 			},
-			expectedInfoPos:     1,
-			expectedRetry:       false,
-			resolutionAmbiguous: 1.0,
+			expectedInfoPos:  -1,
+			expectedRetry:    false,
+			resolutionMisses: 1.0,
 		},
 		{
-			name:                "creation time inside a pod still alive",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          20 * time.Second,
-			controlPlaneLatency: 1 * time.Second,
-			time:                time.Unix(60, 0),
+			name:                    "creation time inside a pod still alive",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              20 * time.Second,
+			lastControlPlaneLatency: 1 * time.Second,
+			time:                    time.Unix(60, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {
 					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(0),
@@ -430,11 +431,11 @@ func TestResolvePodByIP(t *testing.T) {
 			resolutionHits:  1.0,
 		},
 		{
-			name:                "creation time inside a pod already deleted, only 1 pod",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          20 * time.Second,
-			controlPlaneLatency: 1 * time.Second,
-			time:                time.Unix(60, 0),
+			name:                    "creation time inside a pod already deleted, only 1 pod",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              20 * time.Second,
+			lastControlPlaneLatency: 1 * time.Second,
+			time:                    time.Unix(60, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {
 					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(58),
@@ -445,11 +446,11 @@ func TestResolvePodByIP(t *testing.T) {
 			resolutionHits:  1.0,
 		},
 		{
-			name:                "creation time inside a pod already deleted, no overlapping",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          20 * time.Second,
-			controlPlaneLatency: 1 * time.Second,
-			time:                time.Unix(120, 0),
+			name:                    "creation time inside a pod already deleted, no overlapping",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              20 * time.Second,
+			lastControlPlaneLatency: 1 * time.Second,
+			time:                    time.Unix(120, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {
 					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(58),
@@ -461,15 +462,16 @@ func TestResolvePodByIP(t *testing.T) {
 			resolutionHits:  1.0,
 		},
 		{
-			name:                "creation time inside 2 pods, pick the first one",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          20 * time.Second,
-			controlPlaneLatency: 5 * time.Second,
-			time:                time.Unix(120, 0),
+			name:                    "creation time inside 2 pods, inside the first one",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              20 * time.Second,
+			lastControlPlaneLatency: 5 * time.Second,
+			maxControlPlaneLatency:  10 * time.Second,
+			time:                    time.Unix(120, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {
-					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(31),
-					pod2Info.withCreationTimestamp(32).withDeletionTimestamp(0),
+					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(37),
+					pod2Info.withCreationTimestamp(40).withDeletionTimestamp(0),
 				},
 			},
 			expectedInfoPos:     0,
@@ -477,14 +479,15 @@ func TestResolvePodByIP(t *testing.T) {
 			resolutionAmbiguous: 1.0,
 		},
 		{
-			name:                "creation time inside 2 pods, pick the second one",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          20 * time.Second,
-			controlPlaneLatency: 5 * time.Second,
-			time:                time.Unix(120, 0),
+			name:                    "creation time inside 2 pods, inside the second one",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              20 * time.Second,
+			lastControlPlaneLatency: 5 * time.Second,
+			maxControlPlaneLatency:  10 * time.Second,
+			time:                    time.Unix(120, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {
-					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(34),
+					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(31),
 					pod2Info.withCreationTimestamp(32).withDeletionTimestamp(0),
 				},
 			},
@@ -493,29 +496,53 @@ func TestResolvePodByIP(t *testing.T) {
 			resolutionAmbiguous: 1.0,
 		},
 		{
-			name:                "creation time after the last pod",
-			bootTime:            time.Unix(10, 0),
-			nsFromBoot:          45 * time.Second,
-			controlPlaneLatency: 5 * time.Second,
-			time:                time.Unix(120, 0),
+			name:                    "creation time inside 2 pods, outside both, pick closest",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              20 * time.Second,
+			lastControlPlaneLatency: 5 * time.Second,
+			maxControlPlaneLatency:  10 * time.Second,
+			time:                    time.Unix(120, 0),
+			podsByIP: map[util.Address][]*PodInfo{
+				pod1IP: {
+					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(31),
+					pod2Info.withCreationTimestamp(40).withDeletionTimestamp(0),
+				},
+			},
+			expectedInfoPos:     0,
+			expectedRetry:       false,
+			resolutionAmbiguous: 1.0,
+		},
+		{
+			name:                    "creation time after the last pod",
+			bootTime:                time.Unix(10, 0),
+			nsFromBoot:              45 * time.Second,
+			lastControlPlaneLatency: 5 * time.Second,
+			time:                    time.Unix(120, 0),
 			podsByIP: map[util.Address][]*PodInfo{
 				pod1IP: {
 					pod1Info.withCreationTimestamp(10).withDeletionTimestamp(33),
 					pod2Info.withCreationTimestamp(32).withDeletionTimestamp(40),
 				},
 			},
-			expectedInfoPos:     1,
-			expectedRetry:       false,
-			resolutionAmbiguous: 1.0,
+			expectedInfoPos:  -1,
+			expectedRetry:    false,
+			resolutionMisses: 1.0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reg := prometheus.NewRegistry()
+
+			// this is a workaround to avoid setting the max control plane latency in each test case.
+			if tt.maxControlPlaneLatency == 0 {
+				tt.maxControlPlaneLatency = tt.lastControlPlaneLatency
+			}
+
 			obs, err := NewObserver(reg,
 				withBootTime(tt.bootTime),
-				withControlPlaneLatency(tt.controlPlaneLatency),
+				withLastControlPlaneLatency(tt.lastControlPlaneLatency),
+				WithMaxControlPlaneLatency(tt.maxControlPlaneLatency),
 				withNowFunc(func() time.Time { return tt.time }))
 			require.NoError(t, err)
 

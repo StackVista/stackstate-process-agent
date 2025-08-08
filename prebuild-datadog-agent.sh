@@ -79,35 +79,29 @@ while [ $# -gt 0 ]; do
 done
 
 # First make sure all dependencies are downloaded
-echo "Downloading go files.\n"
 go mod download
 
-ALL_ARTIFACTS_DIR="$DIR/prebuild_artifacts"
-GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Dir }}' -m github.com/DataDog/datadog-agent)
-
-# Check if the dependency was replaced
+# Check if the dependency was replaced, if not return an error
 if [ "$(go list -f '{{ .Replace }}' -m github.com/DataDog/datadog-agent)" = "<nil>" ]; then
-    DEPENDENCY_VERSION=$(go list -f '{{ .Version }}' -m github.com/DataDog/datadog-agent)
-    REPO_PATH="https://github.com/DataDog/datadog-agent"
-    SOURCE_DIR="$ALL_ARTIFACTS_DIR/checkout/$DEPENDENCY_VERSION"
-else
-  GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Replace.Dir }}' -m github.com/DataDog/datadog-agent)
-
-  if [ -d "$GO_MOD_DEPENDENCY_DIR/.git" ]; then
-    echo "Running the data prebuild for local repo '$GO_MOD_DEPENDENCY_DIR'.\nBe aware that generate will not automatically pickup changes. Be sure to run '--clean' whenever the generated code would change.\n"
-    # The dependency is a local git repo. No need to pull or pick a version
-    DEPENDENCY_VERSION="local"
-    SOURCE_DIR=$GO_MOD_DEPENDENCY_DIR
-  elif [ -d "$GO_MOD_DEPENDENCY_DIR" ]; then
-    echo "Running for replacement git remote"
-    DEPENDENCY_VERSION=$(go list -f '{{ .Replace.Version }}' -m github.com/DataDog/datadog-agent)
-    REPO_PATH="https://$(go list -f '{{ .Replace.Path }}' -m github.com/DataDog/datadog-agent)"
-    SOURCE_DIR="$ALL_ARTIFACTS_DIR/checkout/$DEPENDENCY_VERSION"
-  else
-    echo "Unknown path in go.mod: '$GO_MOD_DEPENDENCY_DIR'"
-    exit 1
-  fi
+  echo "We cannot build against upstream datadog we need to replace it with a local copy." >&2
+  exit 1
 fi
+
+ALL_ARTIFACTS_DIR="$DIR/prebuild_artifacts"
+GO_MOD_DEPENDENCY_DIR=$(go list -f '{{ .Replace.Dir }}' -m github.com/DataDog/datadog-agent)
+if [ -d "$GO_MOD_DEPENDENCY_DIR/.git" ]; then
+  # The dependency is a local git repo. No need to pull or pick a version
+  DEPENDENCY_VERSION="local"
+  SOURCE_DIR=$GO_MOD_DEPENDENCY_DIR
+elif [ -d "$GO_MOD_DEPENDENCY_DIR" ]; then
+  DEPENDENCY_VERSION=$(go list -f '{{ .Replace.Version }}' -m github.com/DataDog/datadog-agent)
+  REPO_PATH="https://$(go list -f '{{ .Replace.Path }}' -m github.com/DataDog/datadog-agent)"
+  SOURCE_DIR="$ALL_ARTIFACTS_DIR/checkout/$DEPENDENCY_VERSION"
+else
+  echo "Unknown path in go.mod: '$GO_MOD_DEPENDENCY_DIR'"
+  exit 1
+fi
+echo "[DATADOG_SOURCE_DIR=$GO_MOD_DEPENDENCY_DIR]"
 
 # obtain the docker image from datadog repo
 source $GO_MOD_DEPENDENCY_DIR/sts_tests/docker_image.sh
@@ -167,32 +161,43 @@ runPrebuildInDocker() {
 }
 
 if [ "$ACTION" = "generate" ]; then
-  echo "Generating code"
+  echo "- Generating ebpf artifacts and go files inside docker container"
   if [ -d "$DEPENDENCY_ARTIFACTS_DIR/gofiles" ]; then
-    echo "Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
+    echo "- Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
     exit 0
   fi
 
   mkdir -p "$DEPENDENCY_ARTIFACTS_DIR"
   runPrebuildInDocker "$DOCKER_IMAGE" /scripts/run-datadog-agent-prebuild.sh
 elif [ "$ACTION" = "generate-no-docker" ]; then
-  echo "Generating code in the current environment"
+  echo "- Generating ebpf artifacts and go files in the current environment"
   if [ -d "$DEPENDENCY_ARTIFACTS_DIR" ]; then
-    echo "Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
+    echo "- Prebuild artifacts were already generated under $DEPENDENCY_ARTIFACTS_DIR. Skipping. To regenerate first run with --clean"
     exit 0
   fi
 
   mkdir -p "$DEPENDENCY_ARTIFACTS_DIR"
   runPrebuildNoDocker
 elif [ "$ACTION" = "install-go" ]; then
-  echo "Installing go files to $GO_MOD_DEPENDENCY_DIR"
+  echo "- Moving go files from '$DEPENDENCY_ARTIFACTS_DIR/gofiles' to '$GO_MOD_DEPENDENCY_DIR'"
   if [ ! -d "$DEPENDENCY_ARTIFACTS_DIR/gofiles" ]; then
-    echo "No generated files found at $DEPENDENCY_ARTIFACTS_DIR/gofiles, please run --generate first"
+    echo "- No generated files found at $DEPENDENCY_ARTIFACTS_DIR/gofiles, please run --generate first"
     exit 1
   fi
 
+  # Checks if the directory is writable by the current user.
+  # We need to write the go files to the directory where the datadog-agent dependency is located.
+  if [ ! -w "$GO_MOD_DEPENDENCY_DIR" ]; then
+    # try to do it by ourself if we have permissions
+    if ! chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR" 2>/dev/null; then
+      echo "Error: Directory '$GO_MOD_DEPENDENCY_DIR' is not writable by user '$(whoami)'." >&2
+      echo "Please fix the permissions before running this script. You can likely fix this by running:" >&2
+      echo "  sudo chmod -R ug+w '$GO_MOD_DEPENDENCY_DIR'" >&2
+      exit 1
+    fi
+  fi
+
   set -x
-  chmod -R ug+w "$GO_MOD_DEPENDENCY_DIR"
   if [ "$(cp -v -a -u "$DEPENDENCY_ARTIFACTS_DIR/gofiles"/* "$GO_MOD_DEPENDENCY_DIR")" != "" ]; then
     echo "Nuking GOCACHE after changing go files, because we messed with the 'mod' directory (which gets cached)"
     rm -rf "$(go env GOCACHE)"

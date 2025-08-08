@@ -554,4 +554,4 @@ replace github.com/cilium/ebpf v0.19.0 => github.com/cilium/ebpf v0.16.0
 
 replace github.com/moby/buildkit v0.11.0 => github.com/moby/buildkit v0.12.5
 
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250623081833-8b30ecbc0b2e
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250808083223-d90e66612b92

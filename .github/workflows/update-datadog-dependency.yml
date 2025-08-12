@@ -1,0 +1,101 @@
+name: Update Datadog upstream dependency
+
+on:
+  schedule:
+    # Every day at 09:15 UTC
+    - cron: '15 9 * * *'
+  workflow_dispatch:
+    inputs:
+      upstream_branch:
+        description: 'Branch in StackVista/datadog-agent-upstream-for-process-agent to track'
+        required: false
+        default: 'stackstate-7.62.2'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependency:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          # Use the Go version from go.mod
+          go-version-file: go.mod
+          cache: true
+
+      - name: Ensure jq is available
+        run: |
+          set -euo pipefail
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
+
+      - name: Run updater script
+        id: update
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Use provided input if present; otherwise default to the configured default value
+          BRANCH='${{ github.event.inputs.upstream_branch }}'
+          if [ -z "$BRANCH" ]; then BRANCH='stackstate-7.62.2'; fi
+          COMMIT=$(git ls-remote https://github.com/StackVista/datadog-agent-upstream-for-process-agent.git "${BRANCH}" | tail -n 1 | awk '{print $1}')
+          echo "Upstream branch: $BRANCH, commit: $COMMIT"
+          if [ -z "$COMMIT" ]; then
+            echo "Could not resolve commit for branch '$BRANCH'" >&2
+            exit 1
+          fi
+
+          SHORT_COMMIT=$(echo "$COMMIT" | cut -c1-12)
+          COMMIT_URL="https://github.com/StackVista/datadog-agent-upstream-for-process-agent/commit/${COMMIT}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
+          echo "short_commit=$SHORT_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "commit_url=$COMMIT_URL" >> "$GITHUB_OUTPUT"
+
+          chmod +x ./update-datadog-dependency.sh
+          ./update-datadog-dependency.sh --b "$BRANCH"
+
+          # Detect whether anything changed (e.g., go.mod / go.sum / others)
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create pull request if changes detected
+        if: steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: |
+            chore: update datadog-agent upstream (${{ steps.update.outputs.branch }}) -> ${{ steps.update.outputs.short_commit }}
+          commit-message: |
+            chore: update datadog-agent upstream to ${{ steps.update.outputs.commit }} (branch ${{ steps.update.outputs.branch }})
+          body: |
+            This automated PR updates all github.com/DataDog/datadog-agent module replaces to the upstream mirror at the latest commit.
+
+            • Branch: `${{ steps.update.outputs.branch }}`
+            • Commit: `${{ steps.update.outputs.commit }}`
+            • Link: ${{ steps.update.outputs.commit_url }}
+
+            Command executed:
+            `./update-datadog-dependency.sh --branch "${{ steps.update.outputs.branch }}"`
+
+            Re-run this workflow with a different `upstream_branch` to refresh the PR.
+          branch: chore/update-datadog-${{ steps.update.outputs.commit }}
+          delete-branch: true
+          labels: |
+            dependencies
+            automated pr
+
+      - name: No updates needed
+        if: steps.update.outputs.changed != 'true'
+        run: echo "No dependency updates detected; skipping PR creation."

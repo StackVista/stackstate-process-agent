@@ -90,7 +90,7 @@ jobs:
             `./update-datadog-dependency.sh -b "${{ steps.update.outputs.branch }}"`
 
             Re-run this workflow with a different `upstream_branch` to refresh the PR.
-          branch: chore/update-datadog-${{ steps.update.outputs.commit }}
+          branch: update-datadog-${{ steps.update.outputs.short_commit }}
           delete-branch: true
 
       - name: No updates needed

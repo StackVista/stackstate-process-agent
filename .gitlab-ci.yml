@@ -67,7 +67,7 @@ beest_k8s_1_33_containerd_trigger_verification:
   variables:
     PROCESS_AGENT_BRANCH_UNDER_TEST: "$CI_COMMIT_REF_NAME"
     PROCESS_AGENT_HASH_UNDER_TEST: "$CI_COMMIT_SHORT_SHA"
-    TRIGGER_X86_TESTS: "true"
+    TRIGGER_AGENT_X86_TESTS: "true"
   rules:
     - if: $CI_COMMIT_REF_NAME == "master"
       when: on_success

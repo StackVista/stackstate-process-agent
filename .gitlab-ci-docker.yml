@@ -12,6 +12,7 @@ services:
 
 stages:
   - merge-manifest
+  - acceptance
 
 merge-manifest:
   stage: merge-manifest

@@ -1,0 +1,24 @@
+log_level: INFO
+log_to_console: true
+# test server in the cluster
+sts_url: http://test-server-service:7077/stsAgent
+# we don't need an API key for the test server
+api_key: ""
+skip_kubelet_tls_verify: true
+incremental_publishing_enabled: true
+# we are running inside k8s so we want to enrich data with k8s
+local_run: false
+# process_agent_enabled: true
+process_config:
+  enabled: 'true'
+  queue_size: 10
+network_tracer_config:
+  network_tracing_enabled: 'true'
+  protocol_inspection_enabled: 'true'
+  initial_connections_from_proc: 'true'
+  ebpf_debuglog_enabled: 'false'
+  ebpf_artifact_dir: '/suse/ebpf-object-files/x86_64'
+  http_tracing_enabled: 'false'
+transaction_manager:
+  timeout_duration_seconds: 5
+  eviction_duration_seconds: 10

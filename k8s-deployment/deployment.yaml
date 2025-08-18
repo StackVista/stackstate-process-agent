@@ -1,0 +1,239 @@
+##############################
+# Service & ClusterRole
+##############################
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: process-agent
+  labels:
+    app.kubernetes.io/name: process-agent
+    app.kubernetes.io/instance: process-agent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: process-agent
+  labels:
+    app.kubernetes.io/name: process-agent
+    app.kubernetes.io/instance: process-agent
+rules:
+- apiGroups:  # Kubelet connectivity
+  - ""
+  resources:
+  - nodes/metrics
+  - nodes/proxy
+  - nodes/spec
+  - endpoints
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: process-agent
+  labels:
+    app.kubernetes.io/name: process-agent
+    app.kubernetes.io/instance: process-agent
+  annotations:
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: process-agent
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: process-agent
+  namespace: default
+---
+##############################
+# Agent daemonset
+##############################
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: process-agent
+  labels:
+    app: process-agent
+spec:
+  selector:
+    matchLabels:
+      app: process-agent
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 100
+    type: RollingUpdate
+  template:
+    metadata:        
+      labels:
+        app: process-agent
+    spec:
+      containers:
+      - name: process-agent
+        # We use the latest master image and then we will replace the binaries inside it.
+        image: "quay.io/stackstate/stackstate-k8s-process-agent:master"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 6063 #??
+        command:
+          - "/suse/process-agent"
+        args:
+          - "-config=/suse/config.yaml"
+        volumeMounts:
+        - name: crisocket
+          mountPath: /var/run/crio/crio.sock
+          readOnly: true
+        - name: containerdsocket
+          mountPath: /var/run/containerd/containerd.sock
+          readOnly: true
+        - name: sys-kernel-debug
+          mountPath: /sys/kernel/debug
+          # Having sys-kernel-debug as read only breaks specific monitors from receiving metrics
+          # readOnly: true
+        - name: dockersocket
+          mountPath: /var/run/docker.sock
+          readOnly: true
+        # The agent needs access to /etc to figure out what os it is running on.
+        - name: etcdir
+          mountPath: /host/etc
+          readOnly: true
+        - name: procdir
+          mountPath: /host/proc
+        # We have an agent option STS_DISABLE_BPF_JIT_HARDEN that write to /proc. this is a debug setting but if we want to use
+        # it, we have the option to make /proc writable.
+          readOnly: true
+        - name: passwd
+          mountPath: /etc/passwd
+          readOnly: true
+        - name: cgroups
+          mountPath: /host/sys/fs/cgroup
+          readOnly: true
+        - name: suse-folder
+          mountPath: /suse
+        securityContext:
+          privileged: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      hostPID: true
+      serviceAccountName: process-agent
+      nodeSelector:
+        kubernetes.io/os: linux
+      volumes:
+      - hostPath:
+          path: /var/lib/kubelet
+        name: kubelet
+      - hostPath:
+          path: /var/lib/nfs
+        name: nfs
+      - hostPath:
+          path: /var/lib/docker/overlay2
+        name: dockeroverlay2
+      - hostPath:
+          path: /run/docker/netns
+        name: dockernetns
+      - hostPath:
+          path: /var/run/crio/crio.sock
+        name: crisocket
+      - hostPath:
+          path: /var/run/containerd/containerd.sock
+        name: containerdsocket
+      - hostPath:
+          path: /sys/kernel/debug
+        name: sys-kernel-debug
+      - hostPath:
+          path: /var/run/docker.sock
+        name: dockersocket
+      - hostPath:
+          path: /proc
+        name: procdir
+      - hostPath:
+          path: /etc
+        name: etcdir
+      - hostPath:
+          path: /etc/passwd
+        name: passwd
+      - hostPath:
+          path: /sys/fs/cgroup
+        name: cgroups
+      - hostPath:
+          path: /suse
+        name: suse-folder
+---
+##############################
+# Loader agent to copy files on each node
+##############################
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: loader-agent
+  labels:    
+    app: loader-agent
+spec:
+  selector:
+    matchLabels:
+      app: loader-agent
+  template:
+    metadata:        
+      labels:
+        app: loader-agent
+    spec:
+      containers:
+      - name: loader-agent
+        image: ubuntu:latest
+        imagePullPolicy: IfNotPresent
+        command: ["sh","-c","sleep infinity"]
+        volumeMounts:
+        - name: suse-folder
+          mountPath: /suse
+      volumes:
+      - hostPath:
+          path: /suse
+        name: suse-folder
+---
+##############################
+# Test Server with its service
+##############################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-server
+  template:
+    metadata:
+      labels:
+        app: test-server
+    spec:
+      containers:
+      - name: test-server
+        image: ubuntu:latest
+        ports:
+          - containerPort: 7077
+        imagePullPolicy: IfNotPresent
+        command: ["/suse/test-server"]
+        volumeMounts:
+          - name: suse-folder
+            mountPath: /suse
+        env:
+          - name: CONFIG_PATH # Path to the configuration server configuration file
+            value: "/suse/config.json"
+      volumes:
+      - hostPath:
+          path: /suse
+        name: suse-folder
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-server-service
+spec:
+  selector:
+    app: test-server
+  ports:
+  - protocol: TCP
+    port: 7077
+    targetPort: 7077

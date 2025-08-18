@@ -335,7 +335,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -368,7 +367,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"incremental_publishing_enabled: false",
 		"incremental_publishing_refresh_interval: 120",
 		"process_config:",
@@ -399,7 +397,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'disabled'",
 		"  queue_size: 10",
@@ -422,7 +419,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'disabled'",
 		"  additional_endpoints:",
@@ -455,7 +451,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"site: " + site,
 		"process_config:",
 		"  enabled: 'true'",
@@ -474,7 +469,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"site: " + site,
 		"process_config:",
 		"  enabled: 'true'",
@@ -496,7 +490,6 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -729,7 +722,6 @@ func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
 		"sts_url: http://default-endpoint.test.stackstate.com",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -758,7 +750,6 @@ func TestStackStateFallbackAgentConfigToEnvSTSUrl(t *testing.T) {
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -787,7 +778,6 @@ func TestStackStateFallbackAgentConfigEmptyUrlToEnvSTSUrl(t *testing.T) {
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -818,7 +808,6 @@ func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -848,7 +837,6 @@ func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -879,7 +867,6 @@ func TestStackStatePreferPROCESS_AGENT_URLOverYamlsts_sts_url(t *testing.T) {
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
 		"sts_url: http://default-endpoint.test.stackstate.com",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",

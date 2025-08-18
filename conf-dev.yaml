@@ -13,7 +13,6 @@ sts_url: http://localhost:7077/stsAgent
 # Use this when running process agent with branch deploy
 #sts_url: https://<branch-name>.test.stackstate.io/stsAgent
 api_key: API_KEY
-process_agent_enabled: true
 incremental_publishing_enabled: true
 local_run: true
 process_config:

@@ -58,7 +58,7 @@ beest_k8s_1_33_containerd_trigger_verification:
     TRIGGER_AGENT_X86_TESTS: "true"
   rules:
     - if: $CI_COMMIT_REF_NAME == "master"
-      when: on_success
+      when: manual
     - if: $CI_COMMIT_BRANCH
       when: manual
       allow_failure: true

@@ -9,9 +9,7 @@ variables:
   STS_AWS_BUCKET: stackstate-process-agent-2-test
   STS_REPO_BRANCH_NAME: $CI_COMMIT_REF_NAME
   PACKAGING_BRANCH: $CI_COMMIT_REF_NAME
-  STS_DOCKER_RELEASE_REPO: stackstate-process-agent
-  STS_DOCKER_TEST_REPO: stackstate-process-agent-test
-  STS_DOCKER_K8S_REPO: stackstate-k8s-process-agent
+  STS_DOCKER_REPO: stackstate-k8s-process-agent
   GO111MODULE: "on"
   QUAY_REGISTRY: quay.io
   DOCKER_REGISTRY: docker.io
@@ -160,17 +158,6 @@ publish_binaries:
     - docker build --build-arg EBPF_SUBFOLDER=$LLVM_ARCH --build-arg LONG_ARCH=$LONG_ARCH --build-arg SHORT_ARCH=$SHORT_ARCH -t "${BUILD_TAG}" -f BCI.dockerfile .
     - ./packaging/publish_image.sh $BUILD_TAG $REPO $TAG $EXTRA_TAG
 
-publish_linux_docker:
-  extends: [ .publish_linux_docker ]
-  # Arm builders are spot nodes, so we add retries
-  retry: 2
-  tags:
-    - sts-k8s-xl-arm64-runner
-  variables:
-    REPO: $STS_DOCKER_TEST_REPO
-    TAG: "$CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA-$SHORT_ARCH"
-    EXTRA_TAG: $CI_COMMIT_REF_NAME-$SHORT_ARCH
-
 publish_k8s_docker:
   extends: [ .publish_linux_docker ]
   # Arm builders are spot nodes, so we add retries
@@ -178,21 +165,6 @@ publish_k8s_docker:
   tags:
     - sts-k8s-xl-arm64-runner
   variables:
-    REPO: $STS_DOCKER_K8S_REPO
+    REPO: $STS_DOCKER_REPO
     TAG: "$CI_COMMIT_REF_NAME-$SHORT_ARCH"
     EXTRA_TAG: $CI_COMMIT_SHORT_SHA-$SHORT_ARCH
-
-publish_linux_docker_release:
-  extends: [ .publish_linux_docker ]
-  # Arm builders are spot nodes, so we add retries
-  retry: 2
-  tags:
-    - sts-k8s-xl-arm64-runner
-  variables:
-    REPO: $STS_DOCKER_RELEASE_REPO
-    TAG: $CI_COMMIT_REF_NAME-$SHORT_ARCH
-    EXTRA_TAG: latest-$SHORT_ARCH
-  when: manual
-  only:
-    - tags
-    - trigger

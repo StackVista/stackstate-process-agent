@@ -1,3 +1,5 @@
+//go:build test
+
 package kube
 
 import (
@@ -10,27 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/obi/pkg/kubecache/informer"
 )
-
-// withNowFunc allows to set a custom function to get the current time. (Testing purposes)
-func withNowFunc(nowFunc func() time.Time) ObserverOption {
-	return func(o *Observer) {
-		o.nowFunc = nowFunc
-	}
-}
-
-// withBootTime allows to set a custom boot time for the observer. (Testing purposes)
-func withBootTime(bootTime time.Time) ObserverOption {
-	return func(o *Observer) {
-		o.bootTime = bootTime.Unix()
-	}
-}
-
-// withLastControlPlaneLatency allows to set a custom control plane latency for the observer. (Testing purposes)
-func withLastControlPlaneLatency(latency time.Duration) ObserverOption {
-	return func(o *Observer) {
-		o.lastControlPlaneLatency = int64(latency.Seconds())
-	}
-}
 
 func newMockClock(startTime time.Time, increment time.Duration) func() time.Time {
 	// captured variable to keep track of the current time
@@ -299,7 +280,7 @@ func TestObserverCallback(t *testing.T) {
 			obs, err := NewObserver(reg,
 				// we don't want a cache cleanup in these tests
 				WithCleanCacheInterval(10*time.Minute),
-				withNowFunc(func() time.Time {
+				WithNowFunc(func() time.Time {
 					// we always return the same start time for consistency in tests
 					return startTime
 				}),
@@ -340,25 +321,11 @@ func TestResolvePodByIP(t *testing.T) {
 		nsFromBoot              time.Duration
 		podsByIP                map[util.Address][]*PodInfo
 		expectedInfoPos         int
-		expectedRetry           bool
 		resolutionHits          float64
 		resolutionRetries       float64
 		resolutionMisses        float64
 		resolutionAmbiguous     float64
 	}{
-		{
-			name:                    "retry",
-			bootTime:                time.Unix(10, 0),
-			nsFromBoot:              5 * time.Second,
-			lastControlPlaneLatency: 60 * time.Second,
-			time:                    time.Unix(30, 0),
-			podsByIP: map[util.Address][]*PodInfo{
-				pod1IP: {pod1Info.withCreationTimestamp(14).withDeletionTimestamp(0)},
-			},
-			expectedInfoPos:   -1,
-			expectedRetry:     true,
-			resolutionRetries: 1.0,
-		},
 		{
 			name:                    "no pod into the cache",
 			bootTime:                time.Unix(10, 0),
@@ -367,7 +334,6 @@ func TestResolvePodByIP(t *testing.T) {
 			time:                    time.Unix(30, 0),
 			podsByIP:                make(map[util.Address][]*PodInfo),
 			expectedInfoPos:         -1,
-			expectedRetry:           false,
 			resolutionMisses:        1.0,
 		},
 		{
@@ -380,7 +346,6 @@ func TestResolvePodByIP(t *testing.T) {
 				pod1IP: {pod1Info.withCreationTimestamp(26).withDeletionTimestamp(0)},
 			},
 			expectedInfoPos:  -1,
-			expectedRetry:    false,
 			resolutionMisses: 1.0,
 		},
 		{
@@ -396,7 +361,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos:  -1,
-			expectedRetry:    false,
 			resolutionMisses: 1.0,
 		},
 		{
@@ -412,7 +376,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos:  -1,
-			expectedRetry:    false,
 			resolutionMisses: 1.0,
 		},
 		{
@@ -427,7 +390,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos: 0,
-			expectedRetry:   false,
 			resolutionHits:  1.0,
 		},
 		{
@@ -442,7 +404,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos: 0,
-			expectedRetry:   false,
 			resolutionHits:  1.0,
 		},
 		{
@@ -458,7 +419,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos: 0,
-			expectedRetry:   false,
 			resolutionHits:  1.0,
 		},
 		{
@@ -475,7 +435,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos:     0,
-			expectedRetry:       false,
 			resolutionAmbiguous: 1.0,
 		},
 		{
@@ -492,7 +451,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos:     1,
-			expectedRetry:       false,
 			resolutionAmbiguous: 1.0,
 		},
 		{
@@ -509,7 +467,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos:     0,
-			expectedRetry:       false,
 			resolutionAmbiguous: 1.0,
 		},
 		{
@@ -525,7 +482,6 @@ func TestResolvePodByIP(t *testing.T) {
 				},
 			},
 			expectedInfoPos:  -1,
-			expectedRetry:    false,
 			resolutionMisses: 1.0,
 		},
 	}
@@ -540,16 +496,15 @@ func TestResolvePodByIP(t *testing.T) {
 			}
 
 			obs, err := NewObserver(reg,
-				withBootTime(tt.bootTime),
-				withLastControlPlaneLatency(tt.lastControlPlaneLatency),
+				WithBootTime(tt.bootTime),
+				WithLastControlPlaneLatency(tt.lastControlPlaneLatency),
 				WithMaxControlPlaneLatency(tt.maxControlPlaneLatency),
-				withNowFunc(func() time.Time { return tt.time }))
+				WithNowFunc(func() time.Time { return tt.time }))
 			require.NoError(t, err)
 
 			obs.podsByIP = tt.podsByIP
 
-			info, retry := obs.resolvePodByIPNoLock(pod1IP, tt.nsFromBoot)
-			require.Equal(t, tt.expectedRetry, retry)
+			info := obs.resolvePodByIPNoLock(pod1IP, tt.nsFromBoot)
 			if tt.expectedInfoPos == -1 {
 				require.Nil(t, info)
 			} else {
@@ -624,7 +579,7 @@ func TestCleanup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			obs, err := NewObserver(reg,
-				withNowFunc(func() time.Time { return time.Unix(60, 0) }),
+				WithNowFunc(func() time.Time { return time.Unix(60, 0) }),
 				WithDeletePodsAfter(30*time.Second),
 			)
 			require.NoError(t, err)

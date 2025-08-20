@@ -267,14 +267,17 @@ outerLoop:
 			meta.Namespace, meta.Name, ip, meta.Labels)
 
 		now := o.nowFunc().Unix()
-		o.lastControlPlaneLatency = now - meta.StatusTimeEpoch
-		o.controlPlaneLatency.Observe(float64(o.lastControlPlaneLatency))
-		if o.lastControlPlaneLatency > o.maxControlPlaneLatency {
-			exceedCPLatencyWarning.Do(func() {
-				log.Warnf("control plane latency exceed expected one: %d s > %d s", o.lastControlPlaneLatency, o.maxControlPlaneLatency)
-			})
+		if eventType != informer.EventType_CREATED {
+			// We receive here CREATE events only at the beginning when we start the agent.
+			// Their initial timestamp is the time the pod started in the cluster so it's not useful to compare it with `now`
+			o.lastControlPlaneLatency = now - meta.StatusTimeEpoch
+			o.controlPlaneLatency.Observe(float64(o.lastControlPlaneLatency))
+			if o.lastControlPlaneLatency > o.maxControlPlaneLatency {
+				exceedCPLatencyWarning.Do(func() {
+					log.Warnf("control plane latency exceed expected one: %d s > %d s", o.lastControlPlaneLatency, o.maxControlPlaneLatency)
+				})
+			}
 		}
-
 		// we need to understand if this is a new pod or an update of an existing pod
 		for _, podInfo := range o.podsByIP[addr] {
 			if podInfo.Name == meta.Name && podInfo.Namespace == meta.Namespace {
@@ -311,38 +314,38 @@ outerLoop:
 	}
 }
 
+func (o *Observer) ConnectionNeedsRetry(nsFromBoot time.Duration) bool {
+	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
+	if connCreationTime > o.nowFunc().Unix()-o.maxControlPlaneLatency {
+		o.resolutionRetries.Inc()
+		return true
+	}
+	return false
+}
+
 // ResolvePodsByIPs resolves the pods by their IPs, returning the PodInfo for each IP.
-func (o *Observer) ResolvePodsByIPs(srcIP, dstIP util.Address, nsFromBoot time.Duration) (*PodInfo, *PodInfo, bool) {
+func (o *Observer) ResolvePodsByIPs(srcIP, dstIP util.Address, nsFromBoot time.Duration) (*PodInfo, *PodInfo) {
 	o.access.RLock()
 	defer o.access.RUnlock()
-	srcPod, srcRetry := o.resolvePodByIPNoLock(srcIP, nsFromBoot)
-	dstPod, dstRetry := o.resolvePodByIPNoLock(dstIP, nsFromBoot)
-	return srcPod, dstPod, srcRetry || dstRetry
+	return o.resolvePodByIPNoLock(srcIP, nsFromBoot), o.resolvePodByIPNoLock(dstIP, nsFromBoot)
 }
 
 // ResolvePodByIP resolves a pod by its IP, returning the PodInfo for the IP.
-func (o *Observer) ResolvePodByIP(ip util.Address, nsFromBoot time.Duration) (*PodInfo, bool) {
+func (o *Observer) ResolvePodByIP(ip util.Address, nsFromBoot time.Duration) *PodInfo {
 	o.access.RLock()
 	defer o.access.RUnlock()
 	return o.resolvePodByIPNoLock(ip, nsFromBoot)
 }
 
-func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duration) (*PodInfo, bool) {
+func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duration) *PodInfo {
 	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
 	lastControlPlaneLatency := o.lastControlPlaneLatency
 	maxControlPlaneLatency := o.maxControlPlaneLatency
 
-	// we do this to wait for possible control plane events that could be delayed.
-	if connCreationTime > o.nowFunc().Unix()-maxControlPlaneLatency {
-		// we need to store the connection and retry later
-		o.resolutionRetries.Inc()
-		return nil, true
-	}
-
 	podSlice := o.podsByIP[ip]
 	if len(podSlice) == 0 {
 		o.resolutionMisses.Inc()
-		return nil, false
+		return nil
 	}
 
 	matchingPods := make([]*PodInfo, 0)
@@ -356,7 +359,7 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 
 	if len(matchingPods) == 1 {
 		o.resolutionHits.Inc()
-		return matchingPods[0], false
+		return matchingPods[0]
 	}
 
 	if len(matchingPods) == 0 {
@@ -372,7 +375,7 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 		// 3.connection after last pod: C-M-----------------D c
 		log.Infof("connection (IP %s) doesn't fall in any pod range. %v", ip, podSlice)
 		o.resolutionMisses.Inc()
-		return nil, false
+		return nil
 	}
 
 	// This is the tricky case. We got multiple potential matching pods (this can happen because we take potential network delays into account when calculating hits).
@@ -405,7 +408,7 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 			// Conntime is within the pod create/delete. We can do an early exit because we know pod
 			// times are disjoint
 			log.Infof("connection (IP %s) after disambiguation falls into pod '%s'. Available pods: %v", ip, matchingPod, podSlice)
-			return matchingPod, false
+			return matchingPod
 		}
 
 		if podTimeDistance < closestPodDistance {
@@ -414,7 +417,7 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 		}
 	}
 	log.Infof("connection (IP %s) after disambiguation doesn't fall in any pod. Pick the closest one '%s'. Available pods: %v", ip, closestMatchingPod, podSlice)
-	return closestMatchingPod, false
+	return closestMatchingPod
 }
 
 // This method models another resolution algorithm where we always try to match the closest pod to the

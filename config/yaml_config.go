@@ -14,6 +14,32 @@ import (
 
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration
 // available in Agent versions >= 6
+//
+// todo!: we need to cleanup this flow and avoid manual merge of the configs.
+// - we should express the env variables in the yaml config -> APIKey string `yaml:"api_key" env:"STS_API_KEY"`
+// - we should initialize a default YamlAgentConfig
+// - we should marshal the yaml config into the default YamlAgentConfig
+// - we should parse the env variables and override the YamlAgentConfig
+// Something similar to this
+//
+//	func LoadConfig(file io.Reader) (*Config, error) {
+//		cfg := DefaultConfig
+//		if file != nil {
+//			cfgBuf, err := io.ReadAll(file)
+//			if err != nil {
+//				return nil, fmt.Errorf("reading YAML configuration: %w", err)
+//			}
+//			// replaces environment variables in YAML file
+//			cfgBuf = config.ReplaceEnv(cfgBuf)
+//			if err := yaml.Unmarshal(cfgBuf, &cfg); err != nil {
+//				return nil, fmt.Errorf("parsing YAML configuration: %w", err)
+//			}
+//		}
+//		if err := env.Parse(&cfg); err != nil {
+//			return nil, fmt.Errorf("reading env vars: %w", err)
+//		}
+//		return &cfg, nil
+//	}
 type YamlAgentConfig struct {
 	APIKey               string `yaml:"api_key"`
 	StsURL               string `yaml:"sts_url"`
@@ -144,7 +170,8 @@ type YamlAgentConfig struct {
 		DisabledProtocols           []string `yaml:"disabled_protocols"`
 		MaxHTTPStatsBuffered        int      `yaml:"http_stats_buffer_size"`
 		MaxHTTPObservationsBuffered int      `yaml:"http_observations_buffer_size"`
-		HTTPMetrics                 struct {
+		// todo!: this seems a dead config (?)
+		HTTPMetrics struct {
 			// Specifies which algorithm to use to collapse measurements: collapsing_lowest_dense, collapsing_highest_dense, unbounded
 			SketchType string `yaml:"sketch_type"`
 			// A maximum number of bins of the ddSketch we use to store percentiles
@@ -152,6 +179,23 @@ type YamlAgentConfig struct {
 			// Desired accuracy for computed percentiles. 0.01 means, for example, we can say that p99 is 100ms +- 1ms
 			Accuracy float64 `yaml:"accuracy"`
 		} `yaml:"http_metrics"`
+		PodCorrelation struct {
+			// If true, the agent will send pod correlated connections
+			Enabled bool `yaml:"enabled"`
+			// Address of the remote kube cache service, if any. (address:port)
+			RemoteKubeCacheAddr string `yaml:"remote_kube_cache_addr"`
+			// Path to the kubeconfig file, used for local informers (debugging purposes)
+			KubeConfigPath string `yaml:"kube_config_path"`
+			// If true, the agent will export protocol metrics
+			ExportProtocolMetrics bool `yaml:"export_protocol_metrics"`
+			// If true, we export connections/metrics if we have at least one pod between the source and destination.
+			ExportPartialCorrelation bool `yaml:"export_partial_correlation"`
+			Exporter                 struct {
+				Type     string `yaml:"type"`
+				Endpoint string `yaml:"endpoint"`
+				Interval int    `yaml:"interval"`
+			} `yaml:"exporter"`
+		} `yaml:"pod_correlation"`
 	} `yaml:"network_tracer_config"`
 	TransactionManager struct {
 		// ChannelBufferSize is the concurrent transactions before the tx manager begins backpressure
@@ -438,5 +482,49 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	if networkConf.Network.DisabledProtocols != nil {
 		agentConf.NetworkTracer.DisabledProtocols = networkConf.Network.DisabledProtocols
 	}
+	if err := validatePodCorrelationConfig(agentConf, networkConf); err != nil {
+		return nil, err
+	}
 	return agentConf, nil
+}
+
+func validatePodCorrelationConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig) error {
+	// We need this because if our default is true there is the risk we override it with false if the user did not set it
+	// we need to fix this, see the todo on YamlAgentConfig
+	if networkConf.Network.PodCorrelation.Enabled {
+		agentConf.NetworkTracer.PodCorrelation.Enabled = true
+	}
+	if networkConf.Network.PodCorrelation.RemoteKubeCacheAddr != "" {
+		agentConf.NetworkTracer.PodCorrelation.RemoteKubeCacheAddr = networkConf.Network.PodCorrelation.RemoteKubeCacheAddr
+	}
+	if networkConf.Network.PodCorrelation.KubeConfigPath != "" {
+		agentConf.NetworkTracer.PodCorrelation.KubeConfigPath = networkConf.Network.PodCorrelation.KubeConfigPath
+	}
+	if networkConf.Network.PodCorrelation.ExportProtocolMetrics {
+		agentConf.NetworkTracer.PodCorrelation.ExportProtocolMetrics = true
+	}
+	if networkConf.Network.PodCorrelation.ExportPartialCorrelation {
+		agentConf.NetworkTracer.PodCorrelation.ExportPartialCorrelation = true
+	}
+
+	exportType := networkConf.Network.PodCorrelation.Exporter.Type
+	if exportType != "" {
+		switch exportType {
+		case "manual":
+			agentConf.NetworkTracer.PodCorrelation.Exporter.Type = ExporterTypeManual
+		case "stdout":
+			agentConf.NetworkTracer.PodCorrelation.Exporter.Type = ExporterTypeStdout
+		case "otlp":
+			agentConf.NetworkTracer.PodCorrelation.Exporter.Type = ExporterTypeOTLP
+		default:
+			return fmt.Errorf("invalid pod correlation exporter type: %s", exportType)
+		}
+	}
+	if networkConf.Network.PodCorrelation.Exporter.Interval > 0 {
+		agentConf.NetworkTracer.PodCorrelation.Exporter.Interval = time.Duration(networkConf.Network.PodCorrelation.Exporter.Interval) * time.Second
+	}
+	if networkConf.Network.PodCorrelation.Exporter.Endpoint != "" {
+		agentConf.NetworkTracer.PodCorrelation.Exporter.Endpoint = networkConf.Network.PodCorrelation.Exporter.Endpoint
+	}
+	return nil
 }

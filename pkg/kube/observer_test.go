@@ -76,65 +76,59 @@ func TestObserverCallback(t *testing.T) {
 		Ips:       []string{"169.0.0.1", "169.0.0.2"},
 		Kind:      "Service",
 	}
-	pod1Info := &PodInfo{
-		Namespace:         "namespace-1",
-		Name:              "pod-1",
-		Labels:            map[string]string{"app": "test"},
-		CreationTimestamp: startTime.Unix(),
-		DeletionTimestamp: 0,
-	}
-	pod1InfoDeleted := &PodInfo{
-		Namespace:         pod1Info.Namespace,
-		Name:              pod1Info.Name,
-		Labels:            pod1Info.Labels,
-		CreationTimestamp: pod1Info.CreationTimestamp,
-		DeletionTimestamp: startTime.Unix(),
-	}
+	// Pod1
 	pod1 := &informer.ObjectMeta{
 		Ips:             []string{"1.1.1.1"},
 		Kind:            "Pod",
-		Name:            pod1Info.Name,
-		Namespace:       pod1Info.Namespace,
-		Labels:          pod1Info.Labels,
-		StatusTimeEpoch: int64(pod1Info.CreationTimestamp),
+		Name:            "pod-1",
+		Namespace:       "namespace-1",
+		Labels:          map[string]string{"app": "test"},
+		StatusTimeEpoch: int64(startTime.Unix()),
 	}
-	pod2Info := &PodInfo{
-		Namespace:         "namespace-2",
-		Name:              "pod-2",
-		Labels:            map[string]string{"app": "test2"},
-		CreationTimestamp: startTime.Unix(),
+	pod1Info := PodInfo{
+		Namespace:         pod1.Namespace,
+		Name:              pod1.Name,
+		Labels:            stringifyPodLabels(pod1.Labels),
+		CreationTimestamp: pod1.StatusTimeEpoch,
 		DeletionTimestamp: 0,
 	}
-	pod2InfoDeleted := &PodInfo{
-		Namespace:         pod2Info.Namespace,
-		Name:              pod2Info.Name,
-		Labels:            pod2Info.Labels,
-		CreationTimestamp: pod2Info.CreationTimestamp,
-		DeletionTimestamp: startTime.Unix(),
-	}
+	pod1InfoDeleted := pod1Info
+	pod1InfoDeleted.DeletionTimestamp = startTime.Unix()
+
+	// Pod2
 	pod2 := &informer.ObjectMeta{
 		Ips:             []string{"2.2.2.2", "3.3.3.3"},
 		Kind:            "Pod",
-		Name:            pod2Info.Name,
-		Namespace:       pod2Info.Namespace,
-		Labels:          pod2Info.Labels,
-		StatusTimeEpoch: int64(pod2Info.CreationTimestamp),
+		Name:            "pod-2",
+		Namespace:       "namespace-2",
+		Labels:          map[string]string{"app": "test2"},
+		StatusTimeEpoch: startTime.Unix(),
 	}
-	// Same ips of pod2
-	pod3Info := &PodInfo{
-		Namespace:         "namespace-3",
-		Name:              "pod-3",
-		Labels:            map[string]string{"app": "test3"},
-		CreationTimestamp: startTime.Unix(),
+	pod2Info := PodInfo{
+		Namespace:         pod2.Namespace,
+		Name:              pod2.Name,
+		Labels:            stringifyPodLabels(pod2.Labels),
+		CreationTimestamp: pod2.StatusTimeEpoch,
 		DeletionTimestamp: 0,
 	}
+	pod2InfoDeleted := pod2Info
+	pod2InfoDeleted.DeletionTimestamp = startTime.Unix()
+
+	// Pod3
 	pod3 := &informer.ObjectMeta{
 		Ips:             []string{"2.2.2.2", "3.3.3.3"},
 		Kind:            "Pod",
-		Name:            pod3Info.Name,
-		Namespace:       pod3Info.Namespace,
-		Labels:          pod3Info.Labels,
-		StatusTimeEpoch: int64(pod3Info.CreationTimestamp),
+		Namespace:       "namespace-3",
+		Name:            "pod-3",
+		Labels:          map[string]string{"app": "test3"},
+		StatusTimeEpoch: startTime.Unix(),
+	}
+	pod3Info := PodInfo{
+		Namespace:         pod3.Namespace,
+		Name:              pod3.Name,
+		Labels:            stringifyPodLabels(pod3.Labels),
+		CreationTimestamp: pod3.StatusTimeEpoch,
+		DeletionTimestamp: 0,
 	}
 
 	tests := []struct {
@@ -197,63 +191,63 @@ func TestObserverCallback(t *testing.T) {
 			name: "Pod create",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_CREATED, Resource: pod1}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("1.1.1.1"): {pod1Info},
+				util.AddressFromString("1.1.1.1"): {&pod1Info},
 			},
 		},
 		{
 			name: "Pod create with multiple IPs",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_CREATED, Resource: pod2}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("2.2.2.2"): {pod2Info},
-				util.AddressFromString("3.3.3.3"): {pod2Info},
+				util.AddressFromString("2.2.2.2"): {&pod2Info},
+				util.AddressFromString("3.3.3.3"): {&pod2Info},
 			},
 		},
 		{
 			name: "Multiple pod create",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_CREATED, Resource: pod1}, &informer.Event{Type: informer.EventType_CREATED, Resource: pod2}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("1.1.1.1"): {pod1Info},
-				util.AddressFromString("2.2.2.2"): {pod2Info},
-				util.AddressFromString("3.3.3.3"): {pod2Info},
+				util.AddressFromString("1.1.1.1"): {&pod1Info},
+				util.AddressFromString("2.2.2.2"): {&pod2Info},
+				util.AddressFromString("3.3.3.3"): {&pod2Info},
 			},
 		},
 		{
 			name: "Pod update",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_UPDATED, Resource: pod1}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("1.1.1.1"): {pod1Info},
+				util.AddressFromString("1.1.1.1"): {&pod1Info},
 			},
 		},
 		{
 			name: "Pod update with multiple IPs",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_UPDATED, Resource: pod2}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("2.2.2.2"): {pod2Info},
-				util.AddressFromString("3.3.3.3"): {pod2Info},
+				util.AddressFromString("2.2.2.2"): {&pod2Info},
+				util.AddressFromString("3.3.3.3"): {&pod2Info},
 			},
 		},
 		{
 			name: "Multiple pod update",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_UPDATED, Resource: pod1}, &informer.Event{Type: informer.EventType_UPDATED, Resource: pod2}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("1.1.1.1"): {pod1Info},
-				util.AddressFromString("2.2.2.2"): {pod2Info},
-				util.AddressFromString("3.3.3.3"): {pod2Info},
+				util.AddressFromString("1.1.1.1"): {&pod1Info},
+				util.AddressFromString("2.2.2.2"): {&pod2Info},
+				util.AddressFromString("3.3.3.3"): {&pod2Info},
 			},
 		},
 		{
 			name: "Pod create and delete",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_CREATED, Resource: pod1}, &informer.Event{Type: informer.EventType_DELETED, Resource: pod1}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("1.1.1.1"): {pod1InfoDeleted},
+				util.AddressFromString("1.1.1.1"): {&pod1InfoDeleted},
 			},
 		},
 		{
 			name: "Pod create and delete a different pod not existing in the store",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_CREATED, Resource: pod2}, &informer.Event{Type: informer.EventType_DELETED, Resource: pod1}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("2.2.2.2"): {pod2Info},
-				util.AddressFromString("3.3.3.3"): {pod2Info},
+				util.AddressFromString("2.2.2.2"): {&pod2Info},
+				util.AddressFromString("3.3.3.3"): {&pod2Info},
 				util.AddressFromString("1.1.1.1"): {&PodInfo{
 					Namespace: pod1Info.Namespace,
 					Name:      pod1Info.Name,
@@ -268,8 +262,8 @@ func TestObserverCallback(t *testing.T) {
 			name: "Delete pod and create it with the same IP",
 			objs: []*informer.Event{&informer.Event{Type: informer.EventType_CREATED, Resource: pod2}, &informer.Event{Type: informer.EventType_DELETED, Resource: pod2}, &informer.Event{Type: informer.EventType_CREATED, Resource: pod3}},
 			podsByIP: map[util.Address][]*PodInfo{
-				util.AddressFromString("2.2.2.2"): {pod2InfoDeleted, pod3Info},
-				util.AddressFromString("3.3.3.3"): {pod2InfoDeleted, pod3Info},
+				util.AddressFromString("2.2.2.2"): {&pod2InfoDeleted, &pod3Info},
+				util.AddressFromString("3.3.3.3"): {&pod2InfoDeleted, &pod3Info},
 			},
 		},
 	}
@@ -304,12 +298,12 @@ func TestResolvePodByIP(t *testing.T) {
 	pod1Info := &PodInfo{
 		Namespace: "namespace-1",
 		Name:      "pod-1",
-		Labels:    map[string]string{"app": "test1"},
+		Labels:    "app=test1",
 	}
 	pod2Info := &PodInfo{
 		Namespace: "namespace-2",
 		Name:      "pod-2",
-		Labels:    map[string]string{"app": "test2"},
+		Labels:    "app=test2",
 	}
 
 	tests := []struct {
@@ -526,7 +520,7 @@ func TestCleanup(t *testing.T) {
 	podInfo := &PodInfo{
 		Namespace:         "namespace",
 		Name:              "pod",
-		Labels:            map[string]string{"app": "test"},
+		Labels:            "app=test",
 		CreationTimestamp: 14,
 		DeletionTimestamp: 0,
 	}

@@ -98,12 +98,14 @@ func (pi *podCorrelationInfo) generateConnectionMetrics(conn *network.Connection
 		attribute.String(srcIP, conn.ConnectionTuple.Source.String()),
 		attribute.String(srcPod, srcPodInfo.Name),
 		attribute.String(srcNS, srcPodInfo.Namespace),
-		attribute.String(srcLabels, srcPodInfo.LabelsString()),
+		// todo!: if someone adds a new label to a pod we create a new metric serie, this is probably not what we want.
+		// should we filter the labels somehow?
+		attribute.String(srcLabels, srcPodInfo.Labels),
 
 		attribute.String(dstIP, conn.ConnectionTuple.Dest.String()),
 		attribute.String(dstPod, dstPodInfo.Name),
 		attribute.String(dstNS, dstPodInfo.Namespace),
-		attribute.String(dstLabels, dstPodInfo.LabelsString()),
+		attribute.String(dstLabels, dstPodInfo.Labels),
 		attribute.String(dstPort, fmt.Sprintf("%d", conn.ConnectionTuple.DPort)),
 	)
 	// We always call this method with `conn.Direction == network.INCOMING` so we want to invert the sent/received bytes

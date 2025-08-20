@@ -240,7 +240,7 @@ func (o *Observer) processPodMeta(meta *informer.ObjectMeta, eventType informer.
 	o.access.Lock()
 	defer o.access.Unlock()
 
-	if o.lastCacheClean.Add(o.cleanCacheInterval).After(o.nowFunc()) {
+	if o.lastCacheClean.Add(o.cleanCacheInterval).Before(o.nowFunc()) {
 		o.cleanup()
 		o.lastCacheClean = o.nowFunc()
 	}
@@ -264,7 +264,7 @@ outerLoop:
 		}
 
 		log.Debugf("[%s] pod to store: %s/%s with IP %v and labels %v", eventName(eventType),
-			meta.Namespace, meta.Name, ip, meta.Labels)
+			meta.Namespace, meta.Name, ip, stringifyPodLabels(meta.Labels))
 
 		now := o.nowFunc().Unix()
 		if eventType != informer.EventType_CREATED {
@@ -282,7 +282,7 @@ outerLoop:
 		for _, podInfo := range o.podsByIP[addr] {
 			if podInfo.Name == meta.Name && podInfo.Namespace == meta.Namespace {
 				// this is an update of an existing pod, we just update the labels
-				podInfo.Labels = meta.Labels
+				podInfo.Labels = stringifyPodLabels(meta.Labels)
 				if eventType == informer.EventType_DELETED {
 					podInfo.DeletionTimestamp = now
 				}
@@ -307,7 +307,7 @@ outerLoop:
 		o.podsByIP[addr] = append(o.podsByIP[addr], &PodInfo{
 			Name:              meta.Name,
 			Namespace:         meta.Namespace,
-			Labels:            meta.Labels,
+			Labels:            stringifyPodLabels(meta.Labels),
 			CreationTimestamp: creationTs,
 			DeletionTimestamp: deletionTs,
 		})

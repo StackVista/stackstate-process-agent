@@ -33,14 +33,14 @@ func TestPodCorrelation(t *testing.T) {
 			util.AddressFromString("10.244.0.2"): {&kube.PodInfo{
 				Namespace:         "default",
 				Name:              "postgres-client",
-				Labels:            map[string]string{"app": "client"},
+				Labels:            "app=client",
 				CreationTimestamp: 40,
 				DeletionTimestamp: 0,
 			}},
 			util.AddressFromString("10.244.0.3"): {&kube.PodInfo{
 				Namespace:         "default",
 				Name:              "postgres-server",
-				Labels:            map[string]string{"app": "server"},
+				Labels:            "app=server",
 				CreationTimestamp: 41,
 				DeletionTimestamp: 0,
 			}},
@@ -144,4 +144,5 @@ func TestPodCorrelation(t *testing.T) {
 // TODO!: Add tests for stored connections
 // TODO!: Add tests with protocol metrics
 // TODO!: Add tests with partial correlation
-// TODO!: Add test with clusterIP translation
+// TODO!: Add tests with clusterIP translation
+// TODO!: Add tests with network namespace

@@ -162,10 +162,10 @@ require (
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.31.4 // indirect
-	k8s.io/apimachinery v0.31.4 // indirect
+	k8s.io/api v0.31.4
+	k8s.io/apimachinery v0.31.4
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.13.0 // indirect
-	k8s.io/client-go v0.31.3 // indirect
+	k8s.io/client-go v0.31.3
 	k8s.io/kube-openapi v0.0.0-20240620174524-b456828f718b // indirect
 	k8s.io/utils v0.0.0-20240821151609-f90d01438635
 	sigs.k8s.io/controller-runtime v0.19.0 // indirect
@@ -181,6 +181,12 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/log v0.62.2
 	github.com/shirou/gopsutil/v4 v4.24.11
 	go.opentelemetry.io/obi v0.0.0-20250723125336-35639ce473a0
+	go.opentelemetry.io/otel v1.37.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.34.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.37.0
+	go.opentelemetry.io/otel/metric v1.37.0
+	go.opentelemetry.io/otel/sdk v1.37.0
+	go.opentelemetry.io/otel/sdk/metric v1.37.0
 	k8s.io/kubelet v0.31.2
 )
 
@@ -497,11 +503,8 @@ require (
 	go.mongodb.org/mongo-driver v1.15.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
-	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.34.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.34.0 // indirect
-	go.opentelemetry.io/otel/metric v1.37.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect

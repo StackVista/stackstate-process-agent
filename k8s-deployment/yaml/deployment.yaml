@@ -1,5 +1,5 @@
 ##############################
-# Service & ClusterRole
+# ServiceAccount & ClusterRole
 ##############################
 ---
 apiVersion: v1
@@ -25,9 +25,11 @@ rules:
   - nodes/proxy
   - nodes/spec
   - endpoints
+  - pods
   verbs:
   - get
   - list
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -75,7 +77,12 @@ spec:
         image: "quay.io/stackstate/stackstate-k8s-process-agent:master"
         imagePullPolicy: IfNotPresent
         ports:
-          - containerPort: 6063 #??
+          - name: debug
+            containerPort: 6062
+            protocol: TCP
+          - name: metrics
+            containerPort: 6063
+            protocol: TCP
         command:
           - "/suse/process-agent"
         args:
@@ -114,7 +121,7 @@ spec:
         securityContext:
           privileged: true
       dnsPolicy: ClusterFirstWithHostNet
-      hostNetwork: true
+      hostNetwork: false
       hostPID: true
       serviceAccountName: process-agent
       nodeSelector:
@@ -159,6 +166,22 @@ spec:
       - hostPath:
           path: /suse
         name: suse-folder
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: process-agent-service
+spec:
+  type: NodePort
+  selector:
+    app: process-agent
+  ports:
+  - name: prometheus-metrics
+    port: 6063
+    protocol: TCP
+  - name: debug-metrics
+    port: 6062
+    protocol: TCP
 ---
 ##############################
 # Loader agent to copy files on each node
@@ -235,5 +258,215 @@ spec:
     app: test-server
   ports:
   - protocol: TCP
-    port: 7077
-    targetPort: 7077
+    port: 7077 # ClusterIP Port
+    targetPort: 7077 # Container Port
+---
+##############################
+# Otel collector
+##############################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  labels:
+    app: opentelemetry
+    component: collector
+data:
+  # logging verbosity 'basic', 'normal' o 'detailed'
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch:
+    exporters:
+      debug:
+        verbosity: normal
+      prometheus:
+        endpoint: 0.0.0.0:9464
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug, prometheus]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector-deployment
+  labels:
+    app: opentelemetry
+    component: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opentelemetry
+      component: collector
+  template:
+    metadata:
+      labels:
+        app: opentelemetry
+        component: collector
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:latest
+          args:
+            - "--config=/etc/config.yaml"
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+            - name: prom-metrics
+              containerPort: 9464
+              protocol: TCP
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config.yaml
+              subPath: config.yaml
+      volumes:
+        - name: config-volume
+          configMap:
+            name: otel-collector-config
+            items:
+            - key: config.yaml
+              path: config.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector-service
+  labels:
+    app: opentelemetry
+    component: collector
+spec:
+  selector:
+    app: opentelemetry
+    component: collector
+  ports:
+    - name: otlp-grpc
+      protocol: TCP
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      protocol: TCP
+      port: 4318
+      targetPort: 4318
+    - name: prom-metrics
+      protocol: TCP
+      port: 9464
+      targetPort: 9464
+  type: ClusterIP
+---
+##############################
+# Prometheus
+##############################
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 10s
+    scrape_configs:
+      - job_name: 'otel-collector'
+        static_configs:
+          - targets: ['otel-collector-service.default.svc.cluster.local:9464']
+      - job_name: 'process-agent'
+        static_configs:
+          - targets: ['process-agent-service.default.svc.cluster.local:6063']
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus
+    spec:
+      serviceAccountName: prometheus
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v2.53.0
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+        ports:
+        - name: web
+          containerPort: 9090
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: prometheus
+  ports:
+  - name: web
+    port: 9090
+    targetPort: web

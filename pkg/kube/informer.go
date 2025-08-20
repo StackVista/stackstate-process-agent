@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"time"
 
+	log "github.com/cihub/seelog"
+
 	"go.opentelemetry.io/obi/pkg/kubecache/meta"
 )
 
@@ -75,7 +77,9 @@ func GetInformer(cfg InformerConfig) (meta.Notifier, error) {
 	// this is the logger OBI uses and we cannot change it, so we just use the same verbosity of our logger.
 	setSlogLoggerLevel(cfg.LogLevel)
 	if cfg.MetaCacheAddr != "" {
-		return initRemoteInformerCacheClient(context.Background(), cfg.MetaCacheAddr, 0)
+		log.Infof("Using remote K8s cache service at '%s'", cfg.MetaCacheAddr)
+		return initRemoteInformerCacheClient(context.Background(), cfg.MetaCacheAddr, cfg.SyncTimeout)
 	}
+	log.Info("Using local K8s informers")
 	return initLocalInformers(context.Background(), cfg)
 }

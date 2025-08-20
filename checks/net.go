@@ -59,6 +59,8 @@ type ConnectionsCheck struct {
 
 	// Use this as the network relation cache to calculate rate metrics and drop short-lived network relations
 	cache *NetworkRelationCache
+
+	podCorrelation *podCorrelationInfo
 }
 
 // Name returns the name of the ConnectionsCheck.
@@ -146,6 +148,21 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 		protocolMap[k] = config.PostgresProtocolName
 	}
 
+	log.Debugf("Protocol map: %v", protocolMap)
+	log.Debugf("collected %d connection data", len(connectionStats))
+	for key, metrics := range connectionStats {
+		log.Debugf("connection data for %s", key)
+		for _, metric := range metrics {
+			log.Debugf("\t%v", metric)
+		}
+	}
+	// Here we have all we need to export OTEL metrics
+	// We cannot filter short-lived connections because we need them for the security use case.
+	if c.podCorrelation != nil {
+		c.podCorrelation.processConnections(conns.Conns, connectionStats)
+		// In the future we could return here and disable all the rest of the logic, also the process Check
+	}
+
 	httpObservations := aggregateHTTPTraceObservations(conns.HTTPObservations)
 
 	dnsMap := map[string][]dns.Hostname{}
@@ -158,15 +175,6 @@ func (c *ConnectionsCheck) Run(cfg *config.AgentConfig, groupID int32, currentTi
 	// Only for debugging purpose
 	if !cfg.LocalRun {
 		containerToPod = c.podsCache.GetContainerToPodMap(context.TODO())
-	}
-
-	log.Debugf("Protocol map: %v", protocolMap)
-	log.Debugf("collected %d connection data", len(connectionStats))
-	for key, metrics := range connectionStats {
-		log.Debugf("connection data for %s", key)
-		for _, metric := range metrics {
-			log.Debugf("\t%v", metric)
-		}
 	}
 
 	formattedConnections, connsPods := c.formatConnections(cfg, conns.Conns, connectionStats, httpObservations, containerToPod, protocolMap)

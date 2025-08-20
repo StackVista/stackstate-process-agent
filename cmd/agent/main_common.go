@@ -44,6 +44,11 @@ var (
 	GoVersion string
 )
 
+const (
+	// we want to listen on all the interfaces of the pod not just localhost, otherwise we cannot expose the prometheus endpoint through a k8s service.
+	bindAddress = "0.0.0.0"
+)
+
 // versionString returns the version information filled in at build time
 func versionString() string {
 	var buf bytes.Buffer
@@ -144,8 +149,7 @@ func runAgent(exit chan bool) {
 
 	if opts.info {
 		// using the debug port to get info to work
-		url := "http://localhost:6062/debug/vars"
-		if err := Info(os.Stdout, cfg, url); err != nil {
+		if err := Info(os.Stdout, cfg, fmt.Sprintf("http://%s:6062/debug/vars", bindAddress)); err != nil {
 			os.Exit(1)
 		}
 		return
@@ -157,7 +161,7 @@ func runAgent(exit chan bool) {
 
 	// Run a profile server.
 	go func() {
-		http.ListenAndServe("localhost:6062", nil)
+		http.ListenAndServe(bindAddress+":6062", nil)
 	}()
 
 	// Run throttle detector
@@ -168,8 +172,8 @@ func runAgent(exit chan bool) {
 	go func() {
 		promServerMux := http.NewServeMux()
 		promServerMux.Handle("/metrics", promhttp.Handler())
-		log.Infof("Starting metrics server at http://localhost:6063/metrics")
-		http.ListenAndServe("localhost:6063", promServerMux)
+		log.Infof("Starting metrics server at http://%s:6063/metrics", bindAddress)
+		http.ListenAndServe(bindAddress+":6063", promServerMux)
 	}()
 
 	cl, err := NewCollector(cfg, client, batcher, manager)

@@ -22,6 +22,9 @@ const (
 	defaultResourceServiceVersion = "0.1.0"
 	defaultInterval               = 30 * time.Second
 	meterName                     = "network"
+
+	SentMetricName     = "agent.network.sent"
+	ReceivedMetricName = "agent.network.received"
 )
 
 type MetricsExporter struct {
@@ -106,8 +109,11 @@ func NewMetricsExporter(cfg config.ExporterConfig) (*MetricsExporter, error) {
 
 	meter := meterProvider.Meter(meterName)
 
+	////////////////////////
+	// Connection metrics
+	////////////////////////
 	sent, err := meter.Int64Counter(
-		"agent.network.sent",
+		SentMetricName,
 		instrument.WithDescription("Total number of bytes sent"),
 		instrument.WithUnit("By"),
 	)
@@ -116,7 +122,7 @@ func NewMetricsExporter(cfg config.ExporterConfig) (*MetricsExporter, error) {
 	}
 
 	received, err := meter.Int64Counter(
-		"agent.network.received",
+		ReceivedMetricName,
 		instrument.WithDescription("Total number of bytes received"),
 		instrument.WithUnit("By"),
 	)

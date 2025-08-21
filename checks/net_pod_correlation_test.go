@@ -5,6 +5,7 @@ package checks
 import (
 	"context"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -168,9 +169,11 @@ func TestPodCorrelation(t *testing.T) {
 		postgresServerLabels  = "app=server"
 		postgresServerPort    = uint16(5432)
 		postgresNamespace     = "default"
+		postgresServerNs      = uint32(4026534025)
 
 		// pod in hostNetwork will have this IP
 		hostIP = util.AddressFromString("192.168.1.7")
+		hostNs = uint32(1)
 	)
 
 	defaultPostgresIncomingConnection := network.ConnectionStats{
@@ -178,9 +181,10 @@ func TestPodCorrelation(t *testing.T) {
 			Type:      network.TCP,
 			Direction: network.INCOMING,
 			// Incoming connection so fields are inverted
-			Dest:   postgresClientIP,
 			Source: postgresServerIP,
 			SPort:  postgresServerPort,
+			Dest:   postgresClientIP,
+			NetNS:  postgresServerNs,
 		},
 		Duration: 10 * time.Second,
 		Last: network.StatCounters{
@@ -406,14 +410,17 @@ func TestPodCorrelation(t *testing.T) {
 			///////////////////////////
 			// Create a pod correlation info struct with a manual exporter
 			///////////////////////////
-			pi, err := newPodCorrelationInfo(&config.PodCorrelationConfig{
-				Enabled:                  true,
-				ExportProtocolMetrics:    tt.exportProtocolMetrics,
-				ExportPartialCorrelation: tt.exportPartialCorrelation,
-				Exporter: config.ExporterConfig{
-					Type: config.ExporterTypeManual,
+			pi, err := newPodCorrelationInfo(
+				&config.PodCorrelationConfig{
+					Enabled:                  true,
+					ExportProtocolMetrics:    tt.exportProtocolMetrics,
+					ExportPartialCorrelation: tt.exportPartialCorrelation,
+					Exporter: config.ExporterConfig{
+						Type: config.ExporterTypeManual,
+					},
 				},
-			}, "DEBUG")
+				"DEBUG",
+				hostNs)
 			require.NoError(t, err)
 			// Overwrite the observer in the pod correlation struct
 			pi.observer = obs
@@ -428,4 +435,146 @@ func TestPodCorrelation(t *testing.T) {
 
 // TODO!: Add tests with protocol metrics
 // TODO!: Add tests with clusterIP translation
-// TODO!: Add tests with network namespace
+
+// this test is used to understand the behavior of the sketch ForEach function
+func TestSketchForEach(t *testing.T) {
+	sketch := emptySketch()
+	sketch.Add(1)
+	sketch.Add(1)
+	sketch.Add(2)
+	sketch.Add(2)
+	sketch.Add(3)
+	sketch.Add(1)
+
+	seen := make(map[int64]int64)
+	sketch.ForEach(func(value, count float64) (stop bool) {
+		seen[int64(math.Round(value))] += int64(count)
+		// False because we want to iterate on all samples.
+		return false
+	})
+	require.Equal(t, map[int64]int64{
+		1: 3,
+		2: 2,
+		3: 1,
+	}, seen)
+}
+
+func TestGetMetricAttributes(t *testing.T) {
+	clientIP := util.AddressFromString("10.0.0.10")
+	serverIP := util.AddressFromString("10.0.0.20")
+	serverPort := uint16(5432)
+
+	clientPod := &kube.PodInfo{
+		Namespace: "default-client",
+		Name:      "client-pod",
+		Labels:    "app=client",
+	}
+	serverPod := &kube.PodInfo{
+		Namespace: "default-server",
+		Name:      "server-pod",
+		Labels:    "app=server",
+	}
+
+	outgoing := network.ConnectionStats{
+		ConnectionTuple: network.ConnectionTuple{
+			Source:    clientIP,
+			Dest:      serverIP,
+			DPort:     serverPort,
+			Direction: network.OUTGOING,
+		},
+	}
+	incoming := network.ConnectionStats{
+		ConnectionTuple: network.ConnectionTuple{
+			Source:    serverIP,
+			Dest:      clientIP,
+			SPort:     serverPort,
+			Direction: network.INCOMING,
+		},
+	}
+
+	allAttributes := []attribute.KeyValue{
+		attribute.String(srcIPKey, clientIP.String()),
+		attribute.String(dstIPKey, serverIP.String()),
+		attribute.String(dstPortKey, fmt.Sprintf("%d", serverPort)),
+		attribute.String(srcPodKey, clientPod.Name),
+		attribute.String(srcNSKey, clientPod.Namespace),
+		attribute.String(srcLabelsKey, clientPod.Labels),
+		attribute.String(dstPodKey, serverPod.Name),
+		attribute.String(dstNSKey, serverPod.Namespace),
+		attribute.String(dstLabelsKey, serverPod.Labels),
+	}
+	clientAttr := []attribute.KeyValue{
+		attribute.String(srcIPKey, clientIP.String()),
+		attribute.String(dstIPKey, serverIP.String()),
+		attribute.String(dstPortKey, fmt.Sprintf("%d", serverPort)),
+		attribute.String(srcPodKey, clientPod.Name),
+		attribute.String(srcNSKey, clientPod.Namespace),
+		attribute.String(srcLabelsKey, clientPod.Labels),
+	}
+	serverAttr := []attribute.KeyValue{
+		attribute.String(srcIPKey, clientIP.String()),
+		attribute.String(dstIPKey, serverIP.String()),
+		attribute.String(dstPortKey, fmt.Sprintf("%d", serverPort)),
+		attribute.String(dstPodKey, serverPod.Name),
+		attribute.String(dstNSKey, serverPod.Namespace),
+		attribute.String(dstLabelsKey, serverPod.Labels),
+	}
+
+	tests := []struct {
+		name   string
+		conn   network.ConnectionStats
+		want   []attribute.KeyValue
+		srcPod *kube.PodInfo
+		dstPod *kube.PodInfo
+	}{
+		{
+			name:   "outgoing_both_pods",
+			conn:   outgoing,
+			srcPod: clientPod,
+			dstPod: serverPod,
+			want:   allAttributes,
+		},
+		{
+			name:   "outgoing_missing_dst_pod_only_client_attrs",
+			conn:   outgoing,
+			srcPod: clientPod,
+			dstPod: nil,
+			want:   clientAttr,
+		},
+		{
+			name:   "outgoing_missing_src_pod_only_server_attrs",
+			conn:   outgoing,
+			srcPod: nil,
+			dstPod: serverPod,
+			want:   serverAttr,
+		},
+		{
+			name:   "incoming_both_pods",
+			conn:   incoming,
+			srcPod: serverPod,
+			dstPod: clientPod,
+			want:   allAttributes,
+		},
+		{
+			name:   "incoming_missing_client_only_server_dst_attrs",
+			conn:   incoming,
+			srcPod: nil,
+			dstPod: clientPod,
+			want:   clientAttr,
+		},
+		{
+			name:   "incoming_missing_server_only_client_src_attrs",
+			conn:   incoming,
+			srcPod: serverPod,
+			dstPod: nil,
+			want:   serverAttr,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getMetricAttributes(&tt.conn, tt.srcPod, tt.dstPod)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}

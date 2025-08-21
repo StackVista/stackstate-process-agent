@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/network"
+	"github.com/DataDog/sketches-go/ddsketch"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-process-agent/pkg/kube"
@@ -44,14 +45,16 @@ type podCorrelationInfo struct {
 	exportProtocolMetrics    bool
 	exportPartialCorrelation bool
 	storedConnections        []*storedConnection
+	rootNSIno                uint32
 }
 
-func newPodCorrelationInfo(cfg *config.PodCorrelationConfig, logLevel string) (*podCorrelationInfo, error) {
+func newPodCorrelationInfo(cfg *config.PodCorrelationConfig, logLevel string, rootNSIno uint32) (*podCorrelationInfo, error) {
 
 	podCorrelationInfo := &podCorrelationInfo{
 		exportProtocolMetrics:    cfg.ExportProtocolMetrics,
 		exportPartialCorrelation: cfg.ExportPartialCorrelation,
 		storedConnections:        make([]*storedConnection, 0),
+		rootNSIno:                rootNSIno,
 	}
 
 	// if we are in tests we don't want to start the informer
@@ -94,99 +97,134 @@ func (pi *podCorrelationInfo) startKubernetesInformer(cfg *config.PodCorrelation
 }
 
 func (pi *podCorrelationInfo) generateConnectionMetrics(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo) {
-	// Today here we always receive INCOMING connections.
-	// the srcIP, srcPort, srcPodInfo are all relative to the server.
-	// we want to obtain a metric client -> server so we need to invert the src/dst
+	attrs := attribute.NewSet(getMetricAttributes(conn, srcPodInfo, dstPodInfo)...)
 
-	// in case of partial correlation `srcPodInfo` and `dstPodInfo` can be nil so we need to handle these cases.
-	// we always populate only the information we can recover from the tuple.
-	kvs := []attribute.KeyValue{
-		attribute.String(srcIPKey, conn.ConnectionTuple.Dest.String()),
-		attribute.String(dstIPKey, conn.ConnectionTuple.Source.String()),
-		attribute.String(dstPortKey, fmt.Sprintf("%d", conn.ConnectionTuple.SPort)),
+	// OUTGOING case
+	receivedBytes := conn.Last.RecvBytes
+	sentBytes := conn.Last.SentBytes
+	if conn.Direction == network.INCOMING {
+		// We want to invert the sent/received bytes to obtain the effect client -> server
+		receivedBytes, sentBytes = sentBytes, receivedBytes
 	}
-	if dstPodInfo != nil {
-		kvs = append(kvs,
-			attribute.String(srcPodKey, dstPodInfo.Name),
-			attribute.String(srcNSKey, dstPodInfo.Namespace),
-			attribute.String(srcLabelsKey, dstPodInfo.Labels),
+
+	pi.metrics.BytesRecv.Add(context.Background(), int64(receivedBytes), metric.WithAttributeSet(attrs))
+	pi.metrics.BytesSent.Add(context.Background(), int64(sentBytes), metric.WithAttributeSet(attrs))
+}
+
+func getMetricAttributes(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo) []attribute.KeyValue {
+	// OUTGOING case
+	sIP := conn.ConnectionTuple.Source.String()
+	dIP := conn.ConnectionTuple.Dest.String()
+	dPort := fmt.Sprintf("%d", conn.ConnectionTuple.DPort)
+	sPod := srcPodInfo
+	dPod := dstPodInfo
+
+	if conn.Direction == network.INCOMING {
+		sIP = conn.ConnectionTuple.Dest.String()
+		dIP = conn.ConnectionTuple.Source.String()
+		dPort = fmt.Sprintf("%d", conn.ConnectionTuple.SPort)
+		sPod = dstPodInfo
+		dPod = srcPodInfo
+	}
+
+	attributes := []attribute.KeyValue{
+		attribute.String(srcIPKey, sIP),
+		attribute.String(dstIPKey, dIP),
+		attribute.String(dstPortKey, dPort),
+	}
+	if sPod != nil {
+		attributes = append(attributes,
+			attribute.String(srcPodKey, sPod.Name),
+			attribute.String(srcNSKey, sPod.Namespace),
+			attribute.String(srcLabelsKey, sPod.Labels),
 		)
 	}
-	if srcPodInfo != nil {
-		kvs = append(kvs,
-			attribute.String(dstPodKey, srcPodInfo.Name),
-			attribute.String(dstNSKey, srcPodInfo.Namespace),
-			attribute.String(dstLabelsKey, srcPodInfo.Labels),
+	if dPod != nil {
+		attributes = append(attributes,
+			attribute.String(dstPodKey, dPod.Name),
+			attribute.String(dstNSKey, dPod.Namespace),
+			attribute.String(dstLabelsKey, dPod.Labels),
 		)
 	}
-
-	attrs := attribute.NewSet(kvs...)
-
-	// We want to invert the sent/received bytes to obtain the effect client -> server
-	pi.metrics.BytesRecv.Add(context.Background(), int64(conn.Last.SentBytes), metric.WithAttributeSet(attrs))
-	pi.metrics.BytesSent.Add(context.Background(), int64(conn.Last.RecvBytes), metric.WithAttributeSet(attrs))
+	return attributes
 }
 
 func (pi *podCorrelationInfo) generateProtocolMetrics(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo, metrics []*model.ConnectionMetric) {
-	// TODO!: Generate metrics for protocols
+	attr := getMetricAttributes(conn, srcPodInfo, dstPodInfo)
+	for _, m := range metrics {
+		// todo!: for now we only support postgres metrics.
+		if m.Name != string(postgresResponseTime) {
+			continue
+		}
+
+		postgresSketch, err := ddsketch.FromProto(m.Value.GetHistogram())
+		if err != nil || postgresSketch == nil {
+			log.Warnf("Failed to parse histogram for metric %s: %v", m.Name, err)
+			continue
+		}
+
+		// Build merged attributes: base connection attributes + metric-specific tags.
+		merged := make([]attribute.KeyValue, 0, len(attr)+len(m.Tags))
+		merged = append(merged, attr...)
+		for k, v := range m.Tags {
+			merged = append(merged, attribute.String(k, v))
+		}
+
+		postgresSketch.ForEach(func(value, count float64) (stop bool) {
+			for i := 0; i < int(count); i++ {
+				pi.metrics.PostgresServerLatency.Record(context.Background(), value, metric.WithAttributes(merged...))
+			}
+			// False because we want to iterate on all samples.
+			return false
+		})
+	}
 }
 
 func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, metrics []*model.ConnectionMetric) {
+	// 1. Pod -> Pod (INCOMING and OUTGOING)
+	// 2. Pod -> Pod HostNetwork (OUTGOING)
+	// 3. Pod HostNetwork -> Pod (INCOMING)
+	// 5. Pod -> ExternalIP (OUTGOING)
+	// 6. ExternalIP -> Pod (INCOMING)
 	srcPodInfo, dstPodInfo := pi.observer.ResolvePodsByIPs(conn.ConnectionTuple.Source, conn.ConnectionTuple.Dest, conn.Duration)
 
-	// this is probably not a pod <-> pod communication, we can return
+	if conn.Direction == network.OUTGOING {
+		// We try the resolution
+		if dstPodInfo == nil && conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
+			dstPodInfo = pi.observer.ResolvePodByIP(conn.IPTranslation.ReplSrcIP, conn.Duration)
+		}
+
+		if dstPodInfo != nil {
+			// It means we are in this case
+			// Pod -> Pod (OUTGOING)
+			// We will send connection metrics in the INCOMING direction so we just want to send client protocol metrics if enabled.
+			if pi.exportProtocolMetrics {
+				pi.generateProtocolMetrics(conn, srcPodInfo, dstPodInfo, metrics)
+			}
+			return
+		}
+	}
+
+	// we can do nothing
 	if srcPodInfo == nil && dstPodInfo == nil {
 		return
 	}
 
-	// if we don't want to export protocol metrics the incoming connections are enough.
-	// Here we should already have the resolved IPs (ClusterIP->PodIP)
-	// At least 3 cases:
-	// 1. pod <-> pod (always exported)
-	// 2. pod -> host (exported if partial correlation is enabled). There are no clusterIp in the middle so no issues in the resolution.
-	// 3. host -> pod (exported if partial correlation is enabled). The host could use a clusterIP to reach the pod but this is resolved on the destination.
-	if conn.Direction == network.INCOMING {
-		// if one of the 2 is nil we need to check if we want to export partial correlation
-		if (dstPodInfo == nil || srcPodInfo == nil) && !pi.exportPartialCorrelation {
-			return
-		}
-		pi.generateConnectionMetrics(conn, srcPodInfo, dstPodInfo)
-	}
-
-	if !pi.exportProtocolMetrics {
+	// if one of the 2 is nil we need to check if we want to export partial correlation
+	if (dstPodInfo == nil || srcPodInfo == nil) && !pi.exportPartialCorrelation {
 		return
 	}
 
-	// if the connection is incoming we already have the srcPod/dstPod
-	// we can directly call the generateProtocolMetrics
-
-	if conn.Direction == network.INCOMING {
+	// For all these cases we want connection and protocol metrics
+	// 1. Pod -> Pod (INCOMING)
+	// 2. Pod -> Pod HostNetwork (OUTGOING)
+	// 3. Pod HostNetwork -> Pod (INCOMING)
+	// 5. Pod -> ExternalIP (OUTGOING)
+	// 6. ExternalIP -> Pod (INCOMING)
+	pi.generateConnectionMetrics(conn, srcPodInfo, dstPodInfo)
+	if pi.exportProtocolMetrics {
 		pi.generateProtocolMetrics(conn, srcPodInfo, dstPodInfo, metrics)
-		return
 	}
-
-	if conn.Direction != network.OUTGOING {
-		log.Warnf("Skipping connection %v with direction %s", conn, conn.Direction)
-		return
-	}
-
-	// We are in the outgoing case
-	if srcPodInfo == nil {
-		// this is not a communication a pod <-> pod communication, the source should be always be a pod IP
-		return
-	}
-
-	if dstPodInfo == nil {
-		// it could be the destination is a ClusterIP, so we try the resolution.
-		if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
-			dstPodInfo = pi.observer.ResolvePodByIP(conn.IPTranslation.ReplSrcIP, conn.Duration)
-		}
-		// if we cannot determine the pod we cannot say much about the connection...
-		if dstPodInfo == nil && !pi.exportPartialCorrelation {
-			return
-		}
-	}
-	pi.generateProtocolMetrics(conn, srcPodInfo, dstPodInfo, metrics)
 }
 
 func (pi *podCorrelationInfo) processConnections(conns []network.ConnectionStats, connectionMetrics map[connKey][]*model.ConnectionMetric) {
@@ -203,11 +241,52 @@ func (pi *podCorrelationInfo) processConnections(conns []network.ConnectionStats
 			continue
 		}
 
+		// Possible cases
+		// 1. Pod -> Pod
+		// 2. Pod -> Pod HostNetwork == Pod -> Host
+		// 3. Pod HostNetwork -> Pod == Host -> Pod
+		// 4. Pod HostNetwork -> Pod HostNetwork == Host -> Host
+		// 5. Pod -> ExternalIP
+		// 6. ExternalIP -> Pod
+		// ...Service meshes not considered for now.
+		//
+		// Let's take the simple case of a pod connecting to another pod P1 -> P2 (both are in their own netns)
+		// For this TCP connection we will receive 2 different `conn` here.
+		// OUTGOING: P1(SRC) -> P2(DST) (netns of the client because we catch the connect ebpf side)
+		// INCOMING: P2(SRC) <- P1(DST) (netns of the server because we catch the accept ebpf side)
+		//
+		// For connection metrics is enough to catch one of the 2 sides.
+		// For protocol metrics we probably want to catch them both to have metrics on the client side and metrics on the server side.
+		//
+		// As a first optimization we decide to filter all connections (OUTGOING/INCOMING) that belongs to the root network namespace.
+		// This will allow us to catch only connections when at least one pod (not in hostNetwork) is involved.
+		//
+		// 1. Pod -> Pod (we keep both INCOMING and OUTGOING)
+		// 2. Pod -> Pod HostNetwork (we keep only the OUTGOING, the incoming will be in the root netns)
+		// 3. Pod HostNetwork -> Pod (we keep only the INCOMING, the outgoing will be in the root netns)
+		// 4. Pod HostNetwork -> Pod HostNetwork (we discard both, this should be fine since in any case we cannot resolve the pod info for pod in hostNetwork)
+		// 5. Pod -> ExternalIP (we will receive only OUTGOING and we keep it)
+		// 6. ExternalIP -> Pod (we will receive only INCOMING and we keep it)
+		if conn.ConnectionTuple.NetNS == pi.rootNSIno {
+			continue
+		}
+
+		// We should always have the right direction
+		if conn.Direction != network.OUTGOING && conn.Direction != network.INCOMING {
+			log.Warnf("Skipping connection %v with direction %s", conn, conn.Direction)
+			return
+		}
+
 		protocolMetrics := make([]*model.ConnectionMetric, 0)
 
+		log.Debugf("-- Trying to match metrics for connection %v", conn.ConnectionTuple)
 		// Try to recover all metrics associated with this connection.
+		// We need this because the tuple in the metrics is normalized (client->server) while the tuple in the active connection is not
 		for _, co := range getConnectionKeys(conn) {
-			protocolMetrics = append(protocolMetrics, connectionMetrics[co]...)
+			if len(connectionMetrics[co]) > 0 {
+				protocolMetrics = append(protocolMetrics, connectionMetrics[co]...)
+				log.Debugf("Found match for key %v", co)
+			}
 		}
 
 		// If the connection is too young we store it with its metrics and we will try to correlate it later

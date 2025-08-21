@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
+	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
@@ -34,7 +35,17 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, _ *model.SystemInfo) er
 	}
 
 	if cfg.NetworkTracer.PodCorrelation.Enabled {
-		c.podCorrelation, err = newPodCorrelationInfo(&cfg.NetworkTracer.PodCorrelation, cfg.LogLevel)
+		rootHandle, err := kernel.GetRootNetNamespace(kernel.ProcFSRoot())
+		if err != nil {
+			return fmt.Errorf("Failed to get root net namespace: %v", err)
+		}
+
+		ino, err := kernel.GetInoForNs(rootHandle)
+		if err != nil {
+			return fmt.Errorf("Failed to get inode for root net namespace: %v", err)
+		}
+
+		c.podCorrelation, err = newPodCorrelationInfo(&cfg.NetworkTracer.PodCorrelation, cfg.LogLevel, ino)
 		if err != nil {
 			return err
 		}

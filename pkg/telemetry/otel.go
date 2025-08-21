@@ -23,15 +23,19 @@ const (
 	defaultInterval               = 30 * time.Second
 	meterName                     = "network"
 
-	SentMetricName     = "agent.network.sent"
-	ReceivedMetricName = "agent.network.received"
+	SentMetricName            = "agent.network.sent"
+	ReceivedMetricName        = "agent.network.received"
+	PostgresClientLatencyName = "agent.network.postgres.client.response.time"
+	PostgresServerLatencyName = "agent.network.postgres.server.response.time"
 )
 
 type MetricsExporter struct {
-	provider  *metric.MeterProvider
-	Reader    metric.Reader
-	BytesSent instrument.Int64Counter
-	BytesRecv instrument.Int64Counter
+	provider              *metric.MeterProvider
+	Reader                metric.Reader
+	BytesSent             instrument.Int64Counter
+	BytesRecv             instrument.Int64Counter
+	PostgresClientLatency instrument.Float64Histogram
+	PostgresServerLatency instrument.Float64Histogram
 }
 
 func newResource() (*resource.Resource, error) {
@@ -130,10 +134,34 @@ func NewMetricsExporter(cfg config.ExporterConfig) (*MetricsExporter, error) {
 		return nil, err
 	}
 
+	////////////////////////
+	// Protocol metrics
+	////////////////////////
+	postgresClient, err := meter.Float64Histogram(
+		PostgresClientLatencyName,
+		instrument.WithDescription("Total response time for Postgres client"),
+		instrument.WithUnit("s"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	postgresServer, err := meter.Float64Histogram(
+		PostgresServerLatencyName,
+		instrument.WithDescription("Total response time for Postgres server"),
+		// TODO!: check it is in seconds
+		instrument.WithUnit("s"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &MetricsExporter{
-		Reader:    reader,
-		provider:  meterProvider,
-		BytesSent: sent,
-		BytesRecv: received,
+		Reader:                reader,
+		provider:              meterProvider,
+		BytesSent:             sent,
+		BytesRecv:             received,
+		PostgresClientLatency: postgresClient,
+		PostgresServerLatency: postgresServer,
 	}, nil
 }

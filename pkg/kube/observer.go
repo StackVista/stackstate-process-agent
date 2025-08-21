@@ -95,6 +95,7 @@ func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get boot time: %w", err)
 	}
+	log.Infof("Host boot time: %v", time.Unix(int64(bt), 0))
 
 	obs := &Observer{
 		podsByIP:                make(map[util.Address][]*PodInfo),
@@ -314,6 +315,7 @@ outerLoop:
 	}
 }
 
+// ConnectionNeedsRetry returns true if the connection needs to be retried.
 func (o *Observer) ConnectionNeedsRetry(nsFromBoot time.Duration) bool {
 	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
 	if connCreationTime > o.nowFunc().Unix()-o.maxControlPlaneLatency {
@@ -373,7 +375,7 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 		// 1.connection before first pod: c   C-M-----------------D
 		// 2.connection between 2 pods: C-M-----------------D c C-M------------------D
 		// 3.connection after last pod: C-M-----------------D c
-		log.Infof("connection (IP %s) doesn't fall in any pod range. %v", ip, podSlice)
+		log.Infof("connection (IP %s, creation ts: %v) doesn't fall in any pod range. %v", ip, time.Unix(connCreationTime, 0), podSlice)
 		o.resolutionMisses.Inc()
 		return nil
 	}
@@ -407,7 +409,7 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 		} else {
 			// Conntime is within the pod create/delete. We can do an early exit because we know pod
 			// times are disjoint
-			log.Infof("connection (IP %s) after disambiguation falls into pod '%s'. Available pods: %v", ip, matchingPod, podSlice)
+			log.Infof("connection (IP %s, creation ts: %v) after disambiguation falls into pod '%s'. Available pods: %v", ip, time.Unix(connCreationTime, 0), matchingPod, podSlice)
 			return matchingPod
 		}
 
@@ -416,7 +418,7 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 			closestPodDistance = podTimeDistance
 		}
 	}
-	log.Infof("connection (IP %s) after disambiguation doesn't fall in any pod. Pick the closest one '%s'. Available pods: %v", ip, closestMatchingPod, podSlice)
+	log.Infof("connection (IP %s, creation ts: %v) after disambiguation doesn't fall in any pod. Pick the closest one '%s'. Available pods: %v", ip, time.Unix(connCreationTime, 0), closestMatchingPod, podSlice)
 	return closestMatchingPod
 }
 

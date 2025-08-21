@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/network"
+	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/sketches-go/ddsketch"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
@@ -49,7 +50,6 @@ type podCorrelationInfo struct {
 }
 
 func newPodCorrelationInfo(cfg *config.PodCorrelationConfig, logLevel string, rootNSIno uint32) (*podCorrelationInfo, error) {
-
 	podCorrelationInfo := &podCorrelationInfo{
 		exportProtocolMetrics:    cfg.ExportProtocolMetrics,
 		exportPartialCorrelation: cfg.ExportPartialCorrelation,
@@ -151,6 +151,13 @@ func getMetricAttributes(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *
 
 func (pi *podCorrelationInfo) generateProtocolMetrics(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo, metrics []*model.ConnectionMetric) {
 	attr := getMetricAttributes(conn, srcPodInfo, dstPodInfo)
+
+	// if the connection associated with the metrics is OUTGOING we have client latency
+	latency := pi.metrics.PostgresClientLatency
+	if conn.Direction == network.INCOMING {
+		latency = pi.metrics.PostgresServerLatency
+	}
+
 	for _, m := range metrics {
 		// todo!: for now we only support postgres metrics.
 		if m.Name != string(postgresResponseTime) {
@@ -172,7 +179,8 @@ func (pi *podCorrelationInfo) generateProtocolMetrics(conn *network.ConnectionSt
 
 		postgresSketch.ForEach(func(value, count float64) (stop bool) {
 			for i := 0; i < int(count); i++ {
-				pi.metrics.PostgresServerLatency.Record(context.Background(), value, metric.WithAttributes(merged...))
+				// `value` is in seconds
+				latency.Record(context.Background(), value, metric.WithAttributes(merged...))
 			}
 			// False because we want to iterate on all samples.
 			return false
@@ -192,6 +200,9 @@ func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, m
 		// We try the resolution
 		if dstPodInfo == nil && conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
 			dstPodInfo = pi.observer.ResolvePodByIP(conn.IPTranslation.ReplSrcIP, conn.Duration)
+			// we need to replace also the destination IP and port from ClusterIP to Pod
+			conn.ConnectionTuple.Dest = conn.IPTranslation.ReplSrcIP
+			conn.ConnectionTuple.DPort = conn.IPTranslation.ReplSrcPort
 		}
 
 		if dstPodInfo != nil {
@@ -279,14 +290,14 @@ func (pi *podCorrelationInfo) processConnections(conns []network.ConnectionStats
 
 		protocolMetrics := make([]*model.ConnectionMetric, 0)
 
-		log.Debugf("-- Trying to match metrics for connection %v", conn.ConnectionTuple)
-		// Try to recover all metrics associated with this connection.
-		// We need this because the tuple in the metrics is normalized (client->server) while the tuple in the active connection is not
-		for _, co := range getConnectionKeys(conn) {
-			if len(connectionMetrics[co]) > 0 {
-				protocolMetrics = append(protocolMetrics, connectionMetrics[co]...)
-				log.Debugf("Found match for key %v", co)
-			}
+		// Example:
+		// conn.ConnectionTuple -> INCOMING src: 10.42.0.9:5432, dst: 10.42.0.10:48616 (server netns: 4026533741)
+		// metric.key -> src: 10.42.0.10:48616, dst: 10.42.0.9:5432 (server netns: 4026533741) -> the tuple in metrics is always normalized (client->server)
+		// so we need to normalize the connection tuple
+		normalizedKey := getNormalizedConnKey(&conn)
+		if len(connectionMetrics[normalizedKey]) > 0 {
+			protocolMetrics = append(protocolMetrics, connectionMetrics[normalizedKey]...)
+			log.Debugf("Found match for between metric and connection with key: %v", normalizedKey)
 		}
 
 		// If the connection is too young we store it with its metrics and we will try to correlate it later
@@ -299,5 +310,32 @@ func (pi *podCorrelationInfo) processConnections(conns []network.ConnectionStats
 		}
 
 		pi.exportOTELMetrics(&conn, protocolMetrics)
+	}
+}
+
+func getNormalizedConnKey(conn *network.ConnectionStats) connKey {
+	// If outgoing we have to do nothing
+	saddr := conn.Source
+	sport := conn.SPort
+	daddr := conn.Dest
+	dport := conn.DPort
+
+	if conn.Direction == network.INCOMING {
+		saddr = conn.Dest
+		sport = conn.DPort
+		daddr = conn.Source
+		dport = conn.SPort
+	}
+
+	saddrl, saddrh := util.ToLowHigh(saddr)
+	daddrl, daddrh := util.ToLowHigh(daddr)
+	return connKey{
+		SrcIPHigh: saddrh,
+		SrcIPLow:  saddrl,
+		SrcPort:   sport,
+		DstIPHigh: daddrh,
+		DstIPLow:  daddrl,
+		DstPort:   dport,
+		NetNs:     conn.NetNS,
 	}
 }

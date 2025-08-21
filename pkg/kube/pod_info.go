@@ -3,10 +3,15 @@ package kube
 import (
 	"fmt"
 	"sort"
+	"time"
 )
 
 func (p *PodInfo) String() string {
-	return fmt.Sprintf("%s/%s", p.Namespace, p.Name)
+	deletionTs := time.Unix(p.DeletionTimestamp, 0).String()
+	if p.DeletionTimestamp == 0 {
+		deletionTs = "ALIVE" // zero value for deletion timestamp
+	}
+	return fmt.Sprintf("%s/%s [%v -> %v]", p.Namespace, p.Name, time.Unix(p.CreationTimestamp, 0), deletionTs)
 }
 
 func stringifyPodLabels(labels map[string]string) string {

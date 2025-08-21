@@ -23,12 +23,17 @@ const (
 	defaultInterval               = 30 * time.Second
 	meterName                     = "network"
 
-	SentMetricName            = "agent.network.sent"
-	ReceivedMetricName        = "agent.network.received"
+	// SentMetricName is the name of the metric for sent bytes.
+	SentMetricName = "agent.network.sent"
+	// ReceivedMetricName is the name of the metric for received bytes.
+	ReceivedMetricName = "agent.network.received"
+	// PostgresClientLatencyName is the name of the metric for Postgres client latency.
 	PostgresClientLatencyName = "agent.network.postgres.client.response.time"
+	// PostgresServerLatencyName is the name of the metric for Postgres server latency.
 	PostgresServerLatencyName = "agent.network.postgres.server.response.time"
 )
 
+// MetricsExporter is responsible for exporting metrics.
 type MetricsExporter struct {
 	provider              *metric.MeterProvider
 	Reader                metric.Reader
@@ -149,7 +154,6 @@ func NewMetricsExporter(cfg config.ExporterConfig) (*MetricsExporter, error) {
 	postgresServer, err := meter.Float64Histogram(
 		PostgresServerLatencyName,
 		instrument.WithDescription("Total response time for Postgres server"),
-		// TODO!: check it is in seconds
 		instrument.WithUnit("s"),
 	)
 	if err != nil {

@@ -231,12 +231,6 @@ func (l *Collector) run(exit chan bool) {
 	<-exit
 }
 
-// func (l *Collector) Stop() {
-// 	for _, c := range l.enabledChecks {
-// 		c.Stop()
-// 	}
-// }
-
 func (l *Collector) postMessage(checkPath string, m model.MessageBody, timestamp time.Time) {
 	msgType, err := model.DetectMessageType(m)
 	if err != nil {

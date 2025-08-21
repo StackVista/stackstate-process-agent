@@ -45,7 +45,7 @@ const (
 	ExporterTypeOTLP
 )
 
-// Config contains the configuration for the telemetry exporter.
+// ExporterConfig contains the configuration for the telemetry exporter.
 type ExporterConfig struct {
 	// Type specifies which exporter to use.
 	Type ExporterType

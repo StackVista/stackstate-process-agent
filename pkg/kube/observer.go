@@ -1,8 +1,10 @@
 package kube
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
 	"sync"
 	"time"
 
@@ -85,6 +87,29 @@ func WithDeletePodsAfter(deleteAfter time.Duration) ObserverOption {
 func WithMaxControlPlaneLatency(maxLatency time.Duration) ObserverOption {
 	return func(o *Observer) {
 		o.maxControlPlaneLatency = int64(maxLatency.Seconds())
+	}
+}
+
+func WithPodDebugEndpoint() ObserverOption {
+	return func(o *Observer) {
+		http.HandleFunc("/pods", func(w http.ResponseWriter, r *http.Request) {
+			o.access.RLock()
+			defer o.access.RUnlock()
+
+			// Build a serializable map[string][]*PodInfo where the key is the IP string.
+			out := make(map[string][]*PodInfo, len(o.podsByIP))
+			for addr, pods := range o.podsByIP {
+				out[addr.String()] = pods
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			enc := json.NewEncoder(w)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(out); err != nil {
+				http.Error(w, fmt.Sprintf("failed to encode pods json: %v", err), http.StatusInternalServerError)
+				return
+			}
+		})
 	}
 }
 

@@ -88,7 +88,7 @@ func (pi *podCorrelationInfo) startKubernetesInformer(cfg *config.PodCorrelation
 		return fmt.Errorf("failed to create kubernetes informer: %w", err)
 	}
 	// if needed we can configure the refresh interval for the deleted pods cache
-	pi.observer, err = kube.NewObserver(prometheus.DefaultRegisterer)
+	pi.observer, err = kube.NewObserver(prometheus.DefaultRegisterer, kube.WithPodDebugEndpoint())
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes observer: %w", err)
 	}

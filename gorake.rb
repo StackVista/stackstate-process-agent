@@ -123,7 +123,7 @@ def go_vet(path, opts={})
 end
 
 def go_test(path, opts = {})
-  cmd = "go test #{get_tag_set(opts)} #{get_ldflags(opts)}"
+  cmd = "go test -tags 'test' #{get_tag_set(opts)} #{get_ldflags(opts)}"
   filter = ''
   if opts[:coverage_file]
     cmd += " -coverprofile=#{opts[:coverage_file]} -coverpkg=./..."

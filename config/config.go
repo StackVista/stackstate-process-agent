@@ -31,6 +31,48 @@ var (
 	}
 )
 
+// ExporterType define the type of exporter to use.
+type ExporterType int
+
+const (
+	// ExporterTypeInvalid is an invalid exporter type.
+	ExporterTypeInvalid ExporterType = iota
+	// ExporterTypeManual is for tests, using a ManualReader.
+	ExporterTypeManual
+	// ExporterTypeStdout prints the metrics to standard output.
+	ExporterTypeStdout
+	// ExporterTypeOTLP sends the metrics to an OpenTelemetry collector.
+	ExporterTypeOTLP
+)
+
+// ExporterConfig contains the configuration for the telemetry exporter.
+type ExporterConfig struct {
+	// Type specifies which exporter to use.
+	Type ExporterType
+	// Endpoint is the address of the exporter (e.g. "localhost:4317").
+	// Used only if Type is OTLP.
+	Endpoint string
+	// Interval is the frequency at which metrics are exported.
+	// Not used with TypeManual.
+	Interval time.Duration
+}
+
+// PodCorrelationConfig contains the configuration for pod correlation
+type PodCorrelationConfig struct {
+	// If true, the agent will send pod correlated connections
+	Enabled bool
+	// Address of the remote kube cache service, if any. (address:port)
+	RemoteKubeCacheAddr string
+	// Path to the kubeconfig file, used for local informers (debugging purposes)
+	KubeConfigPath string
+	// If true, the agent will export protocol metrics
+	ExportProtocolMetrics bool
+	// If true, we export connections/metrics if we have at least one pod between the source and destination.
+	ExportPartialCorrelation bool
+	// The exporter to use for pod correlation
+	Exporter ExporterConfig
+}
+
 // NetworkTracerConfig contains some[1] of the network tracer configuration options
 type NetworkTracerConfig struct {
 	// Enables protocol inspection from eBPF code
@@ -49,6 +91,8 @@ type NetworkTracerConfig struct {
 	MaxHTTPObservationsBuffered int
 	// Protocols to disable, mostly for debugging
 	DisabledProtocols []string
+	// Pod correlation configuration
+	PodCorrelation PodCorrelationConfig
 }
 
 // APIEndpoint is a single endpoint where process data will be submitted.
@@ -235,6 +279,18 @@ func NewDefaultAgentConfig() *AgentConfig {
 			MaxHTTPStatsBuffered:        100000,
 			MaxHTTPObservationsBuffered: 100000,
 			DisabledProtocols:           []string{},
+			PodCorrelation: PodCorrelationConfig{
+				Enabled:                  false,
+				RemoteKubeCacheAddr:      "",
+				KubeConfigPath:           "",
+				ExportProtocolMetrics:    false,
+				ExportPartialCorrelation: false,
+				Exporter: ExporterConfig{
+					Type:     ExporterTypeInvalid,
+					Endpoint: "",
+					Interval: 0,
+				},
+			},
 		},
 
 		// Check config

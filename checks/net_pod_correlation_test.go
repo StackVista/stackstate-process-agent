@@ -219,16 +219,16 @@ func TestPodCorrelation(t *testing.T) {
 				sortOTELMetricsByName(metrics)
 
 				attributeSet := attribute.NewSet(
-					attribute.String(srcIPKey, postgresClientIP.String()),
-					attribute.String(srcPodKey, postgresClientPodName),
-					attribute.String(srcNSKey, postgresNamespace),
-					attribute.String(srcLabelsKey, postgresClientLabels),
+					attribute.String(SrcIPKey, postgresClientIP.String()),
+					attribute.String(SrcPodKey, postgresClientPodName),
+					attribute.String(SrcNSKey, postgresNamespace),
+					attribute.String(SrcLabelsKey, postgresClientLabels),
 
-					attribute.String(dstIPKey, postgresServerIP.String()),
-					attribute.String(dstPodKey, postgresServerPodName),
-					attribute.String(dstNSKey, postgresNamespace),
-					attribute.String(dstLabelsKey, postgresServerLabels),
-					attribute.String(dstPortKey, fmt.Sprintf("%d", postgresServerPort)),
+					attribute.String(DstIPKey, postgresServerIP.String()),
+					attribute.String(DstPodKey, postgresServerPodName),
+					attribute.String(DstNSKey, postgresNamespace),
+					attribute.String(DstLabelsKey, postgresServerLabels),
+					attribute.String(DstPortKey, fmt.Sprintf("%d", postgresServerPort)),
 				)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
@@ -319,13 +319,13 @@ func TestPodCorrelation(t *testing.T) {
 
 				attributeSet := attribute.NewSet(
 					// we miss all the pod attributes on the client
-					attribute.String(srcIPKey, hostIP.String()),
-					attribute.String(dstIPKey, postgresServerIP.String()),
-					attribute.String(dstPortKey, fmt.Sprintf("%d", postgresServerPort)),
+					attribute.String(SrcIPKey, hostIP.String()),
+					attribute.String(DstIPKey, postgresServerIP.String()),
+					attribute.String(DstPortKey, fmt.Sprintf("%d", postgresServerPort)),
 
-					attribute.String(dstPodKey, postgresServerPodName),
-					attribute.String(dstNSKey, postgresNamespace),
-					attribute.String(dstLabelsKey, postgresServerLabels),
+					attribute.String(DstPodKey, postgresServerPodName),
+					attribute.String(DstNSKey, postgresNamespace),
+					attribute.String(DstLabelsKey, postgresServerLabels),
 				)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
@@ -357,13 +357,13 @@ func TestPodCorrelation(t *testing.T) {
 
 				attributeSet := attribute.NewSet(
 					// we miss all the pod attributes on the server
-					attribute.String(srcIPKey, postgresClientIP.String()),
-					attribute.String(dstIPKey, hostIP.String()),
-					attribute.String(dstPortKey, fmt.Sprintf("%d", postgresServerPort)),
+					attribute.String(SrcIPKey, postgresClientIP.String()),
+					attribute.String(DstIPKey, hostIP.String()),
+					attribute.String(DstPortKey, fmt.Sprintf("%d", postgresServerPort)),
 
-					attribute.String(srcPodKey, postgresClientPodName),
-					attribute.String(srcNSKey, postgresNamespace),
-					attribute.String(srcLabelsKey, postgresClientLabels),
+					attribute.String(SrcPodKey, postgresClientPodName),
+					attribute.String(SrcNSKey, postgresNamespace),
+					attribute.String(SrcLabelsKey, postgresClientLabels),
 				)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
@@ -433,9 +433,6 @@ func TestPodCorrelation(t *testing.T) {
 	}
 }
 
-// TODO!: Add tests with protocol metrics
-// TODO!: Add tests with clusterIP translation
-
 // this test is used to understand the behavior of the sketch ForEach function
 func TestSketchForEach(t *testing.T) {
 	sketch := emptySketch()
@@ -493,31 +490,31 @@ func TestGetMetricAttributes(t *testing.T) {
 	}
 
 	allAttributes := []attribute.KeyValue{
-		attribute.String(srcIPKey, clientIP.String()),
-		attribute.String(dstIPKey, serverIP.String()),
-		attribute.String(dstPortKey, fmt.Sprintf("%d", serverPort)),
-		attribute.String(srcPodKey, clientPod.Name),
-		attribute.String(srcNSKey, clientPod.Namespace),
-		attribute.String(srcLabelsKey, clientPod.Labels),
-		attribute.String(dstPodKey, serverPod.Name),
-		attribute.String(dstNSKey, serverPod.Namespace),
-		attribute.String(dstLabelsKey, serverPod.Labels),
+		attribute.String(SrcIPKey, clientIP.String()),
+		attribute.String(DstIPKey, serverIP.String()),
+		attribute.String(DstPortKey, fmt.Sprintf("%d", serverPort)),
+		attribute.String(SrcPodKey, clientPod.Name),
+		attribute.String(SrcNSKey, clientPod.Namespace),
+		attribute.String(SrcLabelsKey, clientPod.Labels),
+		attribute.String(DstPodKey, serverPod.Name),
+		attribute.String(DstNSKey, serverPod.Namespace),
+		attribute.String(DstLabelsKey, serverPod.Labels),
 	}
 	clientAttr := []attribute.KeyValue{
-		attribute.String(srcIPKey, clientIP.String()),
-		attribute.String(dstIPKey, serverIP.String()),
-		attribute.String(dstPortKey, fmt.Sprintf("%d", serverPort)),
-		attribute.String(srcPodKey, clientPod.Name),
-		attribute.String(srcNSKey, clientPod.Namespace),
-		attribute.String(srcLabelsKey, clientPod.Labels),
+		attribute.String(SrcIPKey, clientIP.String()),
+		attribute.String(DstIPKey, serverIP.String()),
+		attribute.String(DstPortKey, fmt.Sprintf("%d", serverPort)),
+		attribute.String(SrcPodKey, clientPod.Name),
+		attribute.String(SrcNSKey, clientPod.Namespace),
+		attribute.String(SrcLabelsKey, clientPod.Labels),
 	}
 	serverAttr := []attribute.KeyValue{
-		attribute.String(srcIPKey, clientIP.String()),
-		attribute.String(dstIPKey, serverIP.String()),
-		attribute.String(dstPortKey, fmt.Sprintf("%d", serverPort)),
-		attribute.String(dstPodKey, serverPod.Name),
-		attribute.String(dstNSKey, serverPod.Namespace),
-		attribute.String(dstLabelsKey, serverPod.Labels),
+		attribute.String(SrcIPKey, clientIP.String()),
+		attribute.String(DstIPKey, serverIP.String()),
+		attribute.String(DstPortKey, fmt.Sprintf("%d", serverPort)),
+		attribute.String(DstPodKey, serverPod.Name),
+		attribute.String(DstNSKey, serverPod.Namespace),
+		attribute.String(DstLabelsKey, serverPod.Labels),
 	}
 
 	tests := []struct {

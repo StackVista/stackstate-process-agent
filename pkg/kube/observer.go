@@ -90,6 +90,7 @@ func WithMaxControlPlaneLatency(maxLatency time.Duration) ObserverOption {
 	}
 }
 
+// WithPodDebugEndpoint adds an HTTP endpoint to expose the current pods in the cache.
 func WithPodDebugEndpoint() ObserverOption {
 	return func(o *Observer) {
 		http.HandleFunc("/pods", func(w http.ResponseWriter, r *http.Request) {

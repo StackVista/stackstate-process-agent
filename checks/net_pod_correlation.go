@@ -20,18 +20,30 @@ import (
 )
 
 const (
+	// We export them so that we can reuse these fields in e2e tests
 	// SRC FIELDS
-	srcIPKey     = "src.ip"
-	srcPodKey    = "src.pod"
-	srcNSKey     = "src.namespace"
-	srcLabelsKey = "src.labels"
+
+	// SrcIPKey is the IP address of the source pod
+	SrcIPKey = "src.ip"
+	// SrcPodKey is the name of the source pod
+	SrcPodKey = "src.pod"
+	// SrcNSKey is the namespace of the source pod
+	SrcNSKey = "src.namespace"
+	// SrcLabelsKey is the labels of the source pod
+	SrcLabelsKey = "src.labels"
 
 	// DST FIELDS
-	dstIPKey     = "dst.ip"
-	dstPodKey    = "dst.pod"
-	dstNSKey     = "dst.namespace"
-	dstLabelsKey = "dst.labels"
-	dstPortKey   = "dst.port"
+
+	// DstIPKey is the IP address of the destination pod
+	DstIPKey = "dst.ip"
+	// DstPodKey is the name of the destination pod
+	DstPodKey = "dst.pod"
+	// DstNSKey is the namespace of the destination pod
+	DstNSKey = "dst.namespace"
+	// DstLabelsKey is the labels of the destination pod
+	DstLabelsKey = "dst.labels"
+	// DstPortKey is the port of the destination pod
+	DstPortKey = "dst.port"
 )
 
 type storedConnection struct {
@@ -128,22 +140,22 @@ func getMetricAttributes(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *
 	}
 
 	attributes := []attribute.KeyValue{
-		attribute.String(srcIPKey, sIP),
-		attribute.String(dstIPKey, dIP),
-		attribute.String(dstPortKey, dPort),
+		attribute.String(SrcIPKey, sIP),
+		attribute.String(DstIPKey, dIP),
+		attribute.String(DstPortKey, dPort),
 	}
 	if sPod != nil {
 		attributes = append(attributes,
-			attribute.String(srcPodKey, sPod.Name),
-			attribute.String(srcNSKey, sPod.Namespace),
-			attribute.String(srcLabelsKey, sPod.Labels),
+			attribute.String(SrcPodKey, sPod.Name),
+			attribute.String(SrcNSKey, sPod.Namespace),
+			attribute.String(SrcLabelsKey, sPod.Labels),
 		)
 	}
 	if dPod != nil {
 		attributes = append(attributes,
-			attribute.String(dstPodKey, dPod.Name),
-			attribute.String(dstNSKey, dPod.Namespace),
-			attribute.String(dstLabelsKey, dPod.Labels),
+			attribute.String(DstPodKey, dPod.Name),
+			attribute.String(DstNSKey, dPod.Namespace),
+			attribute.String(DstLabelsKey, dPod.Labels),
 		)
 	}
 	return attributes

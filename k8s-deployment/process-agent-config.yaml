@@ -25,7 +25,7 @@ network_tracer_config:
     export_partial_correlation: false
     exporter:
       type: otlp
-      interval: 30
+      interval: 10
       endpoint: "otel-collector-service:4317"
 transaction_manager:
   timeout_duration_seconds: 5

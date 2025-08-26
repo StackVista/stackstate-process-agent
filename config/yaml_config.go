@@ -20,10 +20,8 @@ type YamlAgentConfig struct {
 	SkipKubeletTLSVerify bool   `yaml:"skip_kubelet_tls_verify"`
 	SkipSSLValidation    bool   `yaml:"skip_ssl_validation"`
 	// Used for local debugging (default: false)
-	LocalRun bool `yaml:"local_run"`
-	// Whether the process-agent should output logs to console
-	LogToConsole bool   `yaml:"log_to_console"`
-	LogLevel     string `yaml:"log_level"`
+	LocalRun bool   `yaml:"local_run"`
+	LogLevel string `yaml:"log_level"`
 	// Incremental publishing: send only changes to server, instead of snapshots
 	IncrementalPublishingEnabled string `yaml:"incremental_publishing_enabled"`
 	// Periodically resend all data to allow downstream to recover from any lost data
@@ -203,19 +201,11 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	// Debug purpose only
 	agentConf.LocalRun = yc.LocalRun
 
-	if yc.LogToConsole {
-		agentConf.LogToConsole = true
-	}
 	if yc.Process.LogFile != "" {
 		agentConf.LogFile = yc.Process.LogFile
 	}
 	if yc.LogLevel != "" {
 		agentConf.LogLevel = yc.LogLevel
-	}
-
-	// (Re)configure the logging from our configuration
-	if err := NewLoggerLevel(agentConf.LogLevel, agentConf.LogFile, agentConf.LogToConsole); err != nil {
-		return nil, err
 	}
 
 	if yc.StsURL != "" {

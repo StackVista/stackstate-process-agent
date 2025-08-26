@@ -66,7 +66,6 @@ type AgentConfig struct {
 	SkipKubeletTLSVerify     bool
 	LogFile                  string
 	LogLevel                 string
-	LogToConsole             bool
 	QueueSize                int
 	Blacklist                []*regexp.Regexp
 	Scrubber                 *DataScrubber
@@ -187,7 +186,6 @@ func NewDefaultAgentConfig() *AgentConfig {
 		SkipKubeletTLSVerify:     false,
 		LogFile:                  defaultLogFilePath,
 		LogLevel:                 "info",
-		LogToConsole:             false,
 		QueueSize:                20,
 		MaxProcFDs:               200,
 		MaxPerMessage:            maxMessageBatch,
@@ -319,7 +317,8 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 	}
 
 	// (Re)configure the logging from our configuration
-	if err := NewLoggerLevel(cfg.LogLevel, cfg.LogFile, cfg.LogToConsole); err != nil {
+	// We always log to stdout
+	if err := NewLoggerLevel(cfg.LogLevel, cfg.LogFile, true); err != nil {
 		return nil, err
 	}
 
@@ -372,17 +371,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if v := os.Getenv("STS_LOG_LEVEL"); v != "" {
 		c.LogLevel = v
-	}
-
-	// Logging to console
-	if enabled, err := isAffirmative(os.Getenv("STS_LOGS_STDOUT")); err == nil {
-		c.LogToConsole = enabled
-	}
-	if enabled, err := isAffirmative(os.Getenv("LOG_TO_CONSOLE")); err == nil {
-		c.LogToConsole = enabled
-	}
-	if enabled, err := isAffirmative(os.Getenv("STS_LOG_TO_CONSOLE")); err == nil {
-		c.LogToConsole = enabled
 	}
 
 	if proxyURL := os.Getenv("HTTPS_PROXY"); proxyURL != "" {

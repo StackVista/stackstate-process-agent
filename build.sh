@@ -19,8 +19,6 @@ docker run \\
     --privileged \\
     -e STS_API_KEY=none \\
     -e STS_PROCESS_AGENT_URL=none \\
-    -e STS_CLUSTER_AGENT_ENABLED=true \\
-    -e STS_LOG_TO_CONSOLE=true \\
     -v /sys/kernel/debug:/sys/kernel/debug \\
     -e HOST_ETC=/host/etc \\
     -e HOST_SYS=/host/sys \\

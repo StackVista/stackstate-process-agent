@@ -103,7 +103,6 @@ services:
       HOST_PROC: "/host/proc"
       HOST_SYS: "/host/sys"
       STS_LOG_LEVEL: "debug"
-      STS_LOG_TO_CONSOLE: "true"
 #    healthcheck:
 #      test: curl --fail -s http://localhost:5000/ || exit 1
 #      interval: 1m30s

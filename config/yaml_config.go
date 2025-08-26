@@ -36,11 +36,8 @@ type YamlAgentConfig struct {
 		// behavior between real-time you may set the Container/ProcessRT intervals to 10.
 		// Defaults to 10s for normal checks and 2s for others.
 		Intervals struct {
-			Container         int `yaml:"container"`
-			ContainerRealTime int `yaml:"container_realtime"`
-			Process           int `yaml:"process"`
-			ProcessRealTime   int `yaml:"process_realtime"`
-			Connections       int `yaml:"connections"`
+			Process     int `yaml:"process"`
+			Connections int `yaml:"connections"`
 		} `yaml:"intervals"`
 		// The expiration time in, in minutes, that is used to evict items from the network relation cache
 		NetworkRelationCacheDurationMin int `yaml:"network_relation_cache_duration_min"`
@@ -239,21 +236,9 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		log.Infof("Overriding incremental publishing interval with %ds", yc.IncrementalPublishingRefreshInterval)
 		agentConf.IncrementalPublishingRefreshInterval = time.Duration(yc.IncrementalPublishingRefreshInterval) * time.Second
 	}
-	if yc.Process.Intervals.Container != 0 {
-		log.Infof("Overriding container check interval to %ds", yc.Process.Intervals.Container)
-		agentConf.CheckIntervals["container"] = time.Duration(yc.Process.Intervals.Container) * time.Second
-	}
-	if yc.Process.Intervals.ContainerRealTime != 0 {
-		log.Infof("Overriding real-time container check interval to %ds", yc.Process.Intervals.ContainerRealTime)
-		agentConf.CheckIntervals["rtcontainer"] = time.Duration(yc.Process.Intervals.ContainerRealTime) * time.Second
-	}
 	if yc.Process.Intervals.Process != 0 {
 		log.Infof("Overriding process check interval to %ds", yc.Process.Intervals.Process)
 		agentConf.CheckIntervals["process"] = time.Duration(yc.Process.Intervals.Process) * time.Second
-	}
-	if yc.Process.Intervals.ProcessRealTime != 0 {
-		log.Infof("Overriding real-time process check interval to %ds", yc.Process.Intervals.ProcessRealTime)
-		agentConf.CheckIntervals["rtprocess"] = time.Duration(yc.Process.Intervals.Process) * time.Second
 	}
 	if yc.Process.Intervals.Connections != 0 {
 		log.Infof("Overriding connections check interval to %ds", yc.Process.Intervals.Connections)

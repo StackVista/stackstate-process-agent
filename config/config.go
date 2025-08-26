@@ -608,10 +608,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	}
 
 	// STS
-	if v, err := strconv.Atoi(os.Getenv("STS_CONTAINER_CHECK_INTERVAL")); err == nil {
-		c.CheckIntervals["container"] = time.Duration(v) * time.Second
-	}
-
 	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_CHECK_INTERVAL")); err == nil {
 		c.CheckIntervals["process"] = time.Duration(v) * time.Second
 	}

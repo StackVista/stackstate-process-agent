@@ -359,7 +359,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal(true, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(1*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
 	assert.Equal(processChecks, agentConfig.EnabledChecks)
-	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(false, agentConfig.Scrubber.Enabled)
 
@@ -519,7 +518,6 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(10000, agentConfig.NetworkTracerMaxConnections)
 	assert.Equal(append(processChecks, "connections"), agentConfig.EnabledChecks)
@@ -931,20 +929,17 @@ func TestCheckIntervalCodeDefaults_FromYaml(t *testing.T) {
 	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
-	assert.Equal(t, time.Duration(10)*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(t, time.Duration(10)*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(t, time.Duration(10)*time.Second, agentConfig.CheckIntervals["connections"])
 }
 
 func TestCheckIntervalCodeDefaults_FromEnv(t *testing.T) {
-	os.Setenv("STS_CONTAINER_CHECK_INTERVAL", "15")
 	os.Setenv("STS_PROCESS_CHECK_INTERVAL", "15")
 	os.Setenv("STS_CONNECTION_CHECK_INTERVAL", "15")
 
 	agentConfig, err := NewAgentConfig(nil)
 	assert.NoError(t, err)
 
-	assert.Equal(t, time.Duration(15)*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(t, time.Duration(15)*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(t, time.Duration(15)*time.Second, agentConfig.CheckIntervals["connections"])
 }
@@ -959,7 +954,6 @@ func TestCheckIntervalCodeDefaults_FromEnvOverridesYaml(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(t, err)
 
-	os.Setenv("STS_CONTAINER_CHECK_INTERVAL", "20")
 	os.Setenv("STS_PROCESS_CHECK_INTERVAL", "20")
 	os.Setenv("STS_CONNECTION_CHECK_INTERVAL", "20")
 

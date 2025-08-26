@@ -676,7 +676,6 @@ func TestEnvSiteConfig(t *testing.T) {
 			"burrito.com",
 		},
 	} {
-		// Fake the os.Setenv("STS_SITE", tc.site)
 		os.Setenv("STS_PROCESS_AGENT_URL", tc.stsURL)
 
 		agentConfig, err := NewAgentConfig(&YamlAgentConfig{})

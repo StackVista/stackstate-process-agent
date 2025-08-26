@@ -424,9 +424,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 			log.Infof("overriding API endpoint from env")
 			c.APIEndpoints[0].Endpoint = u
 		}
-		if site := os.Getenv("STS_SITE"); site != "" {
-			log.Infof("Using 'process_dd_url' (%s) and ignoring 'site' (%s)", v, site)
-		}
 		log.Infof("Overriding process api endpoint with environment variable `STS_PROCESS_AGENT_URL`: %s", u)
 	}
 

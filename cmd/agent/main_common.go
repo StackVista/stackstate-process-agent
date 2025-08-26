@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
@@ -18,7 +17,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/pidfile"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	containers "github.com/DataDog/datadog-agent/pkg/process/util/containers"
-	"github.com/StackVista/stackstate-process-agent/checks"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/pkg/debug"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/httpclient"
@@ -34,7 +32,6 @@ var opts struct {
 	pidfilePath string
 	debug       bool
 	version     bool
-	check       string
 	info        bool
 }
 
@@ -85,7 +82,7 @@ func runAgent(exit chan bool) {
 		os.Exit(0)
 	}
 
-	if opts.check == "" && !opts.info && opts.pidfilePath != "" {
+	if !opts.info && opts.pidfilePath != "" {
 		err := pidfile.WritePID(opts.pidfilePath)
 		if err != nil {
 			log.Errorf("Error while writing PID file, exiting: %v", err)
@@ -144,7 +141,7 @@ func runAgent(exit chan bool) {
 		cfg.HostName, cfg.BatcherMaxBufferSize, fwd, manager, cfg.BatcherLogPayloads)
 
 	// Exit if agent is not enabled and we're not debugging a check.
-	if !cfg.Enabled && opts.check == "" {
+	if !cfg.Enabled {
 		if yamlConf != nil {
 			log.Infof(agent6DisabledMessage)
 		}
@@ -166,15 +163,6 @@ func runAgent(exit chan bool) {
 	updateDockerSocket(dockerSock)
 
 	log.Debug("Running process-agent with DEBUG logging enabled")
-	if opts.check != "" {
-		err := debugCheckResults(cfg, opts.check)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		os.Exit(0)
-	}
 
 	if opts.info {
 		// using the debug port to get info to work
@@ -244,67 +232,4 @@ func makeClientHost(cfg *config.AgentConfig) *httpclient.ClientHost {
 	}
 
 	return host
-}
-
-func debugCheckResults(cfg *config.AgentConfig, check string) error {
-	sysInfo, err := checks.CollectSystemInfo()
-	if err != nil {
-		return err
-	}
-
-	if check == checks.Connections.Name() {
-		// Connections check requires process-check to have occurred first (for process creation ts)
-		checks.Process.Init(cfg, sysInfo)
-		checks.Process.Run(cfg, 0, time.Now())
-	}
-
-	names := make([]string, 0, len(checks.All))
-	for _, ch := range checks.All {
-		if ch.Name() == check {
-			err = ch.Init(cfg, sysInfo)
-			if err != nil {
-				return fmt.Errorf("error initializing check %s: %w", ch.Name(), err)
-			}
-			return printResults(cfg, ch)
-		}
-		names = append(names, ch.Name())
-	}
-	return fmt.Errorf("invalid check '%s', choose from: %v", check, names)
-}
-
-func printResults(cfg *config.AgentConfig, ch checks.Check) error {
-	// Run the check once to prime the cache.
-	if _, err := ch.Run(cfg, 0, time.Now()); err != nil {
-		return fmt.Errorf("collection error: %s", err)
-	}
-
-	if ch.Name() == checks.Connections.Name() {
-		fmt.Printf("Waiting 5 seconds to allow for active connections to transmit data\n")
-		time.Sleep(5 * time.Second)
-	}
-
-	fmt.Printf("-----------------------------\n\n")
-	fmt.Printf("\nResults for check %v\n", ch)
-	fmt.Printf("-----------------------------\n\n")
-
-	result, err := ch.Run(cfg, 1, time.Now())
-	if err != nil {
-		return fmt.Errorf("collection error: %s", err)
-	}
-
-	for _, m := range result.CollectorMessages {
-		b, err := json.MarshalIndent(m, "", "  ")
-		if err != nil {
-			return fmt.Errorf("marshal error: %s", err)
-		}
-		fmt.Println(string(b))
-	}
-	for _, m := range result.Metrics {
-		b, err := json.MarshalIndent(m, "", "  ")
-		if err != nil {
-			return fmt.Errorf("marshal error: %s", err)
-		}
-		fmt.Println(string(b))
-	}
-	return nil
 }

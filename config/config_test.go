@@ -733,131 +733,13 @@ func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
 	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
-func TestStackStateFallbackAgentConfigToEnvSTSUrl(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-}
-
-func TestStackStateFallbackAgentConfigEmptyUrlToEnvSTSUrl(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-}
-
-// case 5: STS_URL as env	PROCESS_AGENT_URL as env
 func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 	assert := assert.New(t)
 	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
 	os.Setenv("STS_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-}
-
-// case 7: STS_URL as env	PROCESS_AGENT_URL as yaml - STS URL wins, more specific
-func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-}
-
-// case 8: STS_URL as yaml, PROCESS_AGENT_URL as env - ENV wins
-func TestStackStatePreferPROCESS_AGENT_URLOverYamlsts_sts_url(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"sts_url: http://default-endpoint.test.stackstate.com",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",

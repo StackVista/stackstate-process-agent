@@ -370,10 +370,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.APIEndpoints[0].APIKey = vals[0]
 	}
 
-	// Support LOG_LEVEL and DD_LOG_LEVEL but prefer DD_LOG_LEVEL
-	if v := os.Getenv("LOG_LEVEL"); v != "" {
-		c.LogLevel = v
-	}
 	if v := os.Getenv("STS_LOG_LEVEL"); v != "" {
 		c.LogLevel = v
 	}

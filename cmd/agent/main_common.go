@@ -67,15 +67,6 @@ func versionString() string {
 	return buf.String()
 }
 
-const (
-	agent6DisabledMessage = `process-agent not enabled.
-Set env var STS_PROCESS_AGENT_ENABLED=true or add
-process_config:
-  enabled: "true"
-to your stackstate.yaml file.
-Exiting.`
-)
-
 func runAgent(exit chan bool) {
 	if opts.version {
 		fmt.Println(versionString())
@@ -139,19 +130,6 @@ func runAgent(exit chan bool) {
 	fwd := transactionforwarder.NewTransactionalForwarder(client, manager)
 	batcher := transactionbatcher.NewTransactionalBatcher(
 		cfg.HostName, cfg.BatcherMaxBufferSize, fwd, manager, cfg.BatcherLogPayloads)
-
-	// Exit if agent is not enabled and we're not debugging a check.
-	if !cfg.Enabled {
-		if yamlConf != nil {
-			log.Infof(agent6DisabledMessage)
-		}
-
-		// a sleep is necessary to ensure that supervisor registers this process as "STARTED"
-		// If the exit is "too quick", we enter a BACKOFF->FATAL loop even though this is an expected exit
-		// http://supervisord.org/subprocess.html#process-states
-		time.Sleep(5 * time.Second)
-		return
-	}
 
 	// update docker socket path in info
 	dockerSock, err := util.GetDockerSocketPath()

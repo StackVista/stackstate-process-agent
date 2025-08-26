@@ -60,7 +60,6 @@ type APIEndpoint struct {
 // AgentConfig is the global config for the process-agent. This information
 // is sourced from config files and the environment variables.
 type AgentConfig struct {
-	Enabled                  bool
 	HostName                 string
 	APIEndpoints             []APIEndpoint
 	SkipSSLValidation        bool
@@ -183,7 +182,6 @@ func NewDefaultAgentConfig() *AgentConfig {
 	}
 
 	ac := &AgentConfig{
-		Enabled:                  true, // We'll always run inside of a container.
 		APIEndpoints:             []APIEndpoint{{Endpoint: u}},
 		SkipSSLValidation:        false,
 		SkipKubeletTLSVerify:     false,
@@ -349,13 +347,6 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 // mergeEnvironmentVariables applies overrides from environment variables to the process agent configuration
 func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	var err error
-	if enabled, err := isAffirmative(os.Getenv("STS_PROCESS_AGENT_ENABLED")); enabled {
-		c.Enabled = true
-		c.EnabledChecks = processChecks
-	} else if !enabled && err == nil {
-		c.Enabled = false
-	}
-
 	if v := os.Getenv("STS_HOSTNAME"); v != "" {
 		log.Info("overriding hostname from env DD_HOSTNAME value")
 		c.HostName = v

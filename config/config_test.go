@@ -356,7 +356,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(true, agentConfig.Enabled)
 	assert.Equal(true, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(1*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
 	assert.Equal(processChecks, agentConfig.EnabledChecks)
@@ -389,7 +388,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
-	assert.Equal(true, agentConfig.Enabled)
 	assert.Equal(false, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(2*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
@@ -414,7 +412,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
-	assert.Equal(false, agentConfig.Enabled)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
@@ -446,7 +443,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("localhost", eps[1].Endpoint.Hostname())
 	assert.Equal("bar", eps[2].APIKey)
 	assert.Equal("localhost", eps[2].Endpoint.Hostname())
-	assert.Equal(false, agentConfig.Enabled)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
@@ -467,7 +463,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Len(agentConfig.APIEndpoints, 1)
 	assert.Equal("apikey_20", agentConfig.APIEndpoints[0].APIKey)
 	assert.Equal("stackstate.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
-	assert.Equal(true, agentConfig.Enabled)
 
 	ddy = YamlAgentConfig{}
 	site = "datacathq.eu"
@@ -486,7 +481,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Len(agentConfig.APIEndpoints, 1)
 	assert.Equal("apikey_20", agentConfig.APIEndpoints[0].APIKey)
 	assert.Equal("stackstate.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
-	assert.Equal(true, agentConfig.Enabled)
 
 }
 
@@ -525,7 +519,6 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(true, agentConfig.Enabled)
 	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(10000, agentConfig.NetworkTracerMaxConnections)

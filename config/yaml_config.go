@@ -30,11 +30,6 @@ type YamlAgentConfig struct {
 	IncrementalPublishingRefreshInterval int `yaml:"incremental_publishing_refresh_interval"`
 	// Process-specific configuration
 	Process struct {
-		// A string indicate the enabled state of the Agent.
-		// If "false" (the default) we will only collect containers.
-		// If "true" we will collect containers and processes.
-		// If "disabled" the agent will be disabled altogether and won't start.
-		Enabled string `yaml:"enabled"`
 		// The full path to the file where process-agent logs will be written.
 		LogFile string `yaml:"log_file"`
 		// The interval, in seconds, at which we will run each check. If you want consistent
@@ -210,16 +205,6 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 
 	// Debug purpose only
 	agentConf.LocalRun = yc.LocalRun
-
-	if enabled, err := isAffirmative(yc.Process.Enabled); enabled {
-		agentConf.Enabled = true
-		agentConf.EnabledChecks = processChecks
-	} else if strings.ToLower(yc.Process.Enabled) == "disabled" {
-		agentConf.Enabled = false
-	} else if !enabled && err == nil {
-		agentConf.Enabled = true
-		agentConf.EnabledChecks = processChecks // sts
-	}
 
 	if yc.LogToConsole {
 		agentConf.LogToConsole = true

@@ -2,7 +2,6 @@ log_level: debug
 
 skip_ssl_validation: true
 
-process_agent_enabled: true
 incremental_publishing_enabled: true
 process_config:
   enabled: 'true'

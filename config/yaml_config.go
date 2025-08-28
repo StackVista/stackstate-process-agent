@@ -89,10 +89,6 @@ type YamlAgentConfig struct {
 		// The maximum number of connections per message.
 		// Only change if the defaults are causing issues.
 		MaxConnectionsPerMessage int `yaml:"max_connections_per_message"`
-		// Overrides the path to the Agent bin used for getting the hostname. The default is usually fine.
-		DDAgentBin string `yaml:"sts_agent_bin"`
-		// Overrides of the environment we pass to fetch the hostname. The default is usually fine.
-		DDAgentEnv []string `yaml:"sts_agent_env"`
 		// Optional additional pairs of endpoint_url => []apiKeys to submit to other locations.
 		AdditionalEndpoints map[string][]string `yaml:"additional_endpoints"`
 		// Windows-specific configuration goes in this section.
@@ -108,10 +104,6 @@ type YamlAgentConfig struct {
 	Network struct {
 		// A string indicating the enabled state of the network tracer.
 		NetworkTracingEnabled string `yaml:"network_tracing_enabled"`
-		// A string indicating whether we use /proc to get the initial connections
-		NetworkInitialConnectionFromProc string `yaml:"initial_connections_from_proc"`
-		// The full path to the location of the unix socket where network traces will be accessed
-		UnixSocketPath string `yaml:"nettracer_socket"`
 		// The full path to the file where network-tracer logs will be written.
 		LogFile string `yaml:"log_file"`
 		// The maximum number of in flight connections the network tracer keeps track of
@@ -134,14 +126,6 @@ type YamlAgentConfig struct {
 		DisabledProtocols           []string `yaml:"disabled_protocols"`
 		MaxHTTPStatsBuffered        int      `yaml:"http_stats_buffer_size"`
 		MaxHTTPObservationsBuffered int      `yaml:"http_observations_buffer_size"`
-		HTTPMetrics                 struct {
-			// Specifies which algorithm to use to collapse measurements: collapsing_lowest_dense, collapsing_highest_dense, unbounded
-			SketchType string `yaml:"sketch_type"`
-			// A maximum number of bins of the ddSketch we use to store percentiles
-			MaxNumBins int `yaml:"max_num_bins"`
-			// Desired accuracy for computed percentiles. 0.01 means, for example, we can say that p99 is 100ms +- 1ms
-			Accuracy float64 `yaml:"accuracy"`
-		} `yaml:"http_metrics"`
 	} `yaml:"network_tracer_config"`
 	TransactionManager struct {
 		// ChannelBufferSize is the concurrent transactions before the tx manager begins backpressure

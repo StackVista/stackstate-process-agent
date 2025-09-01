@@ -335,7 +335,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -356,11 +355,9 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(true, agentConfig.Enabled)
 	assert.Equal(true, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(1*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
 	assert.Equal(processChecks, agentConfig.EnabledChecks)
-	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(false, agentConfig.Scrubber.Enabled)
 
@@ -368,7 +365,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"incremental_publishing_enabled: false",
 		"incremental_publishing_refresh_interval: 120",
 		"process_config:",
@@ -389,7 +385,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
-	assert.Equal(true, agentConfig.Enabled)
 	assert.Equal(false, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(2*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
@@ -399,7 +394,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'disabled'",
 		"  queue_size: 10",
@@ -414,7 +408,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
-	assert.Equal(false, agentConfig.Enabled)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
@@ -422,7 +415,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'disabled'",
 		"  additional_endpoints:",
@@ -446,7 +438,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("localhost", eps[1].Endpoint.Hostname())
 	assert.Equal("bar", eps[2].APIKey)
 	assert.Equal("localhost", eps[2].Endpoint.Hostname())
-	assert.Equal(false, agentConfig.Enabled)
 	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
@@ -455,7 +446,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"site: " + site,
 		"process_config:",
 		"  enabled: 'true'",
@@ -467,14 +457,12 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Len(agentConfig.APIEndpoints, 1)
 	assert.Equal("apikey_20", agentConfig.APIEndpoints[0].APIKey)
 	assert.Equal("stackstate.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
-	assert.Equal(true, agentConfig.Enabled)
 
 	ddy = YamlAgentConfig{}
 	site = "datacathq.eu"
 	err = yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"site: " + site,
 		"process_config:",
 		"  enabled: 'true'",
@@ -486,7 +474,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Len(agentConfig.APIEndpoints, 1)
 	assert.Equal("apikey_20", agentConfig.APIEndpoints[0].APIKey)
 	assert.Equal("stackstate.com", agentConfig.APIEndpoints[0].Endpoint.Hostname())
-	assert.Equal(true, agentConfig.Enabled)
 
 }
 
@@ -496,7 +483,6 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"sts_url: 'https://stackstate.com'",
 		"api_key: apikey_20",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -525,8 +511,6 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(true, agentConfig.Enabled)
-	assert.Equal(8*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(10000, agentConfig.NetworkTracerMaxConnections)
 	assert.Equal(append(processChecks, "connections"), agentConfig.EnabledChecks)
@@ -692,7 +676,6 @@ func TestEnvSiteConfig(t *testing.T) {
 			"burrito.com",
 		},
 	} {
-		// Fake the os.Setenv("STS_SITE", tc.site)
 		os.Setenv("STS_PROCESS_AGENT_URL", tc.stsURL)
 
 		agentConfig, err := NewAgentConfig(&YamlAgentConfig{})
@@ -729,7 +712,6 @@ func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
 		"sts_url: http://default-endpoint.test.stackstate.com",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -750,136 +732,13 @@ func TestStackStateFallbackAgentConfigToSTSUrl(t *testing.T) {
 	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
 }
 
-func TestStackStateFallbackAgentConfigToEnvSTSUrl(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"process_agent_enabled: true",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-}
-
-func TestStackStateFallbackAgentConfigEmptyUrlToEnvSTSUrl(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"process_agent_enabled: true",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-}
-
-// case 5: STS_URL as env	PROCESS_AGENT_URL as env
 func TestStackStatePreferAgentConfigToEnvPROCESS_AGENT_URL(t *testing.T) {
 	assert := assert.New(t)
 	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
 	os.Setenv("STS_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
 	var ddy YamlAgentConfig
 	err := yaml.Unmarshal([]byte(strings.Join([]string{
 		"api_key: apikey_30",
-		"process_agent_enabled: true",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("process-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-}
-
-// case 7: STS_URL as env	PROCESS_AGENT_URL as yaml - STS URL wins, more specific
-func TestStackStatePreferSTS_STS_URLOverYamlProcessAgentConfig(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_STS_URL", "http://default-endpoint.test.stackstate.com")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"process_agent_enabled: true",
-		"process_config:",
-		"  enabled: 'true'",
-		"  queue_size: 10",
-		"  intervals:",
-		"    container: 8",
-		"    process: 30",
-		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
-		"  initial_connections_from_proc: 'true'",
-	}, "\n")), &ddy)
-	assert.NoError(err)
-
-	agentConfig, err := NewAgentConfig(&ddy)
-	assert.NoError(err)
-
-	ep := agentConfig.APIEndpoints[0]
-	assert.Equal("apikey_30", ep.APIKey)
-	assert.Equal("default-endpoint.test.stackstate.com", ep.Endpoint.Hostname())
-}
-
-// case 8: STS_URL as yaml, PROCESS_AGENT_URL as env - ENV wins
-func TestStackStatePreferPROCESS_AGENT_URLOverYamlsts_sts_url(t *testing.T) {
-	assert := assert.New(t)
-	os.Unsetenv("STS_PROCESS_AGENT_URL")
-	os.Unsetenv("STS_STS_URL")
-	os.Setenv("STS_PROCESS_AGENT_URL", "http://process-endpoint.test.stackstate.com")
-	var ddy YamlAgentConfig
-	err := yaml.Unmarshal([]byte(strings.Join([]string{
-		"api_key: apikey_30",
-		"sts_url: http://default-endpoint.test.stackstate.com",
-		"process_agent_enabled: true",
 		"process_config:",
 		"  enabled: 'true'",
 		"  queue_size: 10",
@@ -938,20 +797,17 @@ func TestCheckIntervalCodeDefaults_FromYaml(t *testing.T) {
 	agentConfig, err := NewAgentConfig(&ddy)
 	assert.NoError(t, err)
 
-	assert.Equal(t, time.Duration(10)*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(t, time.Duration(10)*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(t, time.Duration(10)*time.Second, agentConfig.CheckIntervals["connections"])
 }
 
 func TestCheckIntervalCodeDefaults_FromEnv(t *testing.T) {
-	os.Setenv("STS_CONTAINER_CHECK_INTERVAL", "15")
 	os.Setenv("STS_PROCESS_CHECK_INTERVAL", "15")
 	os.Setenv("STS_CONNECTION_CHECK_INTERVAL", "15")
 
 	agentConfig, err := NewAgentConfig(nil)
 	assert.NoError(t, err)
 
-	assert.Equal(t, time.Duration(15)*time.Second, agentConfig.CheckIntervals["container"])
 	assert.Equal(t, time.Duration(15)*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(t, time.Duration(15)*time.Second, agentConfig.CheckIntervals["connections"])
 }
@@ -966,7 +822,6 @@ func TestCheckIntervalCodeDefaults_FromEnvOverridesYaml(t *testing.T) {
 	}, "\n")), &ddy)
 	assert.NoError(t, err)
 
-	os.Setenv("STS_CONTAINER_CHECK_INTERVAL", "20")
 	os.Setenv("STS_PROCESS_CHECK_INTERVAL", "20")
 	os.Setenv("STS_CONNECTION_CHECK_INTERVAL", "20")
 

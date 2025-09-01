@@ -20,32 +20,22 @@ type YamlAgentConfig struct {
 	SkipKubeletTLSVerify bool   `yaml:"skip_kubelet_tls_verify"`
 	SkipSSLValidation    bool   `yaml:"skip_ssl_validation"`
 	// Used for local debugging (default: false)
-	LocalRun bool `yaml:"local_run"`
-	// Whether the process-agent should output logs to console
-	LogToConsole bool   `yaml:"log_to_console"`
-	LogLevel     string `yaml:"log_level"`
+	LocalRun bool   `yaml:"local_run"`
+	LogLevel string `yaml:"log_level"`
 	// Incremental publishing: send only changes to server, instead of snapshots
 	IncrementalPublishingEnabled string `yaml:"incremental_publishing_enabled"`
 	// Periodically resend all data to allow downstream to recover from any lost data
 	IncrementalPublishingRefreshInterval int `yaml:"incremental_publishing_refresh_interval"`
 	// Process-specific configuration
 	Process struct {
-		// A string indicate the enabled state of the Agent.
-		// If "false" (the default) we will only collect containers.
-		// If "true" we will collect containers and processes.
-		// If "disabled" the agent will be disabled altogether and won't start.
-		Enabled string `yaml:"enabled"`
 		// The full path to the file where process-agent logs will be written.
 		LogFile string `yaml:"log_file"`
 		// The interval, in seconds, at which we will run each check. If you want consistent
 		// behavior between real-time you may set the Container/ProcessRT intervals to 10.
 		// Defaults to 10s for normal checks and 2s for others.
 		Intervals struct {
-			Container         int `yaml:"container"`
-			ContainerRealTime int `yaml:"container_realtime"`
-			Process           int `yaml:"process"`
-			ProcessRealTime   int `yaml:"process_realtime"`
-			Connections       int `yaml:"connections"`
+			Process     int `yaml:"process"`
+			Connections int `yaml:"connections"`
 		} `yaml:"intervals"`
 		// The expiration time in, in minutes, that is used to evict items from the network relation cache
 		NetworkRelationCacheDurationMin int `yaml:"network_relation_cache_duration_min"`
@@ -99,10 +89,6 @@ type YamlAgentConfig struct {
 		// The maximum number of connections per message.
 		// Only change if the defaults are causing issues.
 		MaxConnectionsPerMessage int `yaml:"max_connections_per_message"`
-		// Overrides the path to the Agent bin used for getting the hostname. The default is usually fine.
-		DDAgentBin string `yaml:"sts_agent_bin"`
-		// Overrides of the environment we pass to fetch the hostname. The default is usually fine.
-		DDAgentEnv []string `yaml:"sts_agent_env"`
 		// Optional additional pairs of endpoint_url => []apiKeys to submit to other locations.
 		AdditionalEndpoints map[string][]string `yaml:"additional_endpoints"`
 		// Windows-specific configuration goes in this section.
@@ -118,10 +104,6 @@ type YamlAgentConfig struct {
 	Network struct {
 		// A string indicating the enabled state of the network tracer.
 		NetworkTracingEnabled string `yaml:"network_tracing_enabled"`
-		// A string indicating whether we use /proc to get the initial connections
-		NetworkInitialConnectionFromProc string `yaml:"initial_connections_from_proc"`
-		// The full path to the location of the unix socket where network traces will be accessed
-		UnixSocketPath string `yaml:"nettracer_socket"`
 		// The full path to the file where network-tracer logs will be written.
 		LogFile string `yaml:"log_file"`
 		// The maximum number of in flight connections the network tracer keeps track of
@@ -144,14 +126,6 @@ type YamlAgentConfig struct {
 		DisabledProtocols           []string `yaml:"disabled_protocols"`
 		MaxHTTPStatsBuffered        int      `yaml:"http_stats_buffer_size"`
 		MaxHTTPObservationsBuffered int      `yaml:"http_observations_buffer_size"`
-		HTTPMetrics                 struct {
-			// Specifies which algorithm to use to collapse measurements: collapsing_lowest_dense, collapsing_highest_dense, unbounded
-			SketchType string `yaml:"sketch_type"`
-			// A maximum number of bins of the ddSketch we use to store percentiles
-			MaxNumBins int `yaml:"max_num_bins"`
-			// Desired accuracy for computed percentiles. 0.01 means, for example, we can say that p99 is 100ms +- 1ms
-			Accuracy float64 `yaml:"accuracy"`
-		} `yaml:"http_metrics"`
 	} `yaml:"network_tracer_config"`
 	TransactionManager struct {
 		// ChannelBufferSize is the concurrent transactions before the tx manager begins backpressure
@@ -211,29 +185,11 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 	// Debug purpose only
 	agentConf.LocalRun = yc.LocalRun
 
-	if enabled, err := isAffirmative(yc.Process.Enabled); enabled {
-		agentConf.Enabled = true
-		agentConf.EnabledChecks = processChecks
-	} else if strings.ToLower(yc.Process.Enabled) == "disabled" {
-		agentConf.Enabled = false
-	} else if !enabled && err == nil {
-		agentConf.Enabled = true
-		agentConf.EnabledChecks = processChecks // sts
-	}
-
-	if yc.LogToConsole {
-		agentConf.LogToConsole = true
-	}
 	if yc.Process.LogFile != "" {
 		agentConf.LogFile = yc.Process.LogFile
 	}
 	if yc.LogLevel != "" {
 		agentConf.LogLevel = yc.LogLevel
-	}
-
-	// (Re)configure the logging from our configuration
-	if err := NewLoggerLevel(agentConf.LogLevel, agentConf.LogFile, agentConf.LogToConsole); err != nil {
-		return nil, err
 	}
 
 	if yc.StsURL != "" {
@@ -254,21 +210,9 @@ func mergeYamlConfig(agentConf *AgentConfig, yc *YamlAgentConfig) (*AgentConfig,
 		log.Infof("Overriding incremental publishing interval with %ds", yc.IncrementalPublishingRefreshInterval)
 		agentConf.IncrementalPublishingRefreshInterval = time.Duration(yc.IncrementalPublishingRefreshInterval) * time.Second
 	}
-	if yc.Process.Intervals.Container != 0 {
-		log.Infof("Overriding container check interval to %ds", yc.Process.Intervals.Container)
-		agentConf.CheckIntervals["container"] = time.Duration(yc.Process.Intervals.Container) * time.Second
-	}
-	if yc.Process.Intervals.ContainerRealTime != 0 {
-		log.Infof("Overriding real-time container check interval to %ds", yc.Process.Intervals.ContainerRealTime)
-		agentConf.CheckIntervals["rtcontainer"] = time.Duration(yc.Process.Intervals.ContainerRealTime) * time.Second
-	}
 	if yc.Process.Intervals.Process != 0 {
 		log.Infof("Overriding process check interval to %ds", yc.Process.Intervals.Process)
 		agentConf.CheckIntervals["process"] = time.Duration(yc.Process.Intervals.Process) * time.Second
-	}
-	if yc.Process.Intervals.ProcessRealTime != 0 {
-		log.Infof("Overriding real-time process check interval to %ds", yc.Process.Intervals.ProcessRealTime)
-		agentConf.CheckIntervals["rtprocess"] = time.Duration(yc.Process.Intervals.Process) * time.Second
 	}
 	if yc.Process.Intervals.Connections != 0 {
 		log.Infof("Overriding connections check interval to %ds", yc.Process.Intervals.Connections)

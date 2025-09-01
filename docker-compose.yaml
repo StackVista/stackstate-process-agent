@@ -99,12 +99,10 @@ services:
       STS_API_KEY: "API_KEY"
       STS_PROCESS_AGENT_URL: "http://localhost:7077/stsAgent"
       STS_SKIP_SSL_VALIDATION: "true"
-      STS_PROCESS_AGENT_ENABLED: "true"
       STS_PROCESS_BLACKLIST_PATTERNS: "^s6-,^docker-,^/sbin/,^/usr/sbin,^/pause,^/usr/bin/dbus-daemon,^-bash,^su$$,^/bin/bash,/lib/systemd/,agent"
       HOST_PROC: "/host/proc"
       HOST_SYS: "/host/sys"
       STS_LOG_LEVEL: "debug"
-      STS_LOG_TO_CONSOLE: "true"
 #    healthcheck:
 #      test: curl --fail -s http://localhost:5000/ || exit 1
 #      interval: 1m30s

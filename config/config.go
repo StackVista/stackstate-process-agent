@@ -60,14 +60,12 @@ type APIEndpoint struct {
 // AgentConfig is the global config for the process-agent. This information
 // is sourced from config files and the environment variables.
 type AgentConfig struct {
-	Enabled                  bool
 	HostName                 string
 	APIEndpoints             []APIEndpoint
 	SkipSSLValidation        bool
 	SkipKubeletTLSVerify     bool
 	LogFile                  string
 	LogLevel                 string
-	LogToConsole             bool
 	QueueSize                int
 	Blacklist                []*regexp.Regexp
 	Scrubber                 *DataScrubber
@@ -183,13 +181,11 @@ func NewDefaultAgentConfig() *AgentConfig {
 	}
 
 	ac := &AgentConfig{
-		Enabled:                  true, // We'll always run inside of a container.
 		APIEndpoints:             []APIEndpoint{{Endpoint: u}},
 		SkipSSLValidation:        false,
 		SkipKubeletTLSVerify:     false,
 		LogFile:                  defaultLogFilePath,
 		LogLevel:                 "info",
-		LogToConsole:             false,
 		QueueSize:                20,
 		MaxProcFDs:               200,
 		MaxPerMessage:            maxMessageBatch,
@@ -321,7 +317,8 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 	}
 
 	// (Re)configure the logging from our configuration
-	if err := NewLoggerLevel(cfg.LogLevel, cfg.LogFile, cfg.LogToConsole); err != nil {
+	// We always log to stdout
+	if err := NewLoggerLevel(cfg.LogLevel, cfg.LogFile, true); err != nil {
 		return nil, err
 	}
 
@@ -349,13 +346,6 @@ func NewAgentConfig(agentYaml *YamlAgentConfig) (*AgentConfig, error) {
 // mergeEnvironmentVariables applies overrides from environment variables to the process agent configuration
 func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	var err error
-	if enabled, err := isAffirmative(os.Getenv("STS_PROCESS_AGENT_ENABLED")); enabled {
-		c.Enabled = true
-		c.EnabledChecks = processChecks
-	} else if !enabled && err == nil {
-		c.Enabled = false
-	}
-
 	if v := os.Getenv("STS_HOSTNAME"); v != "" {
 		log.Info("overriding hostname from env DD_HOSTNAME value")
 		c.HostName = v
@@ -379,23 +369,8 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.APIEndpoints[0].APIKey = vals[0]
 	}
 
-	// Support LOG_LEVEL and DD_LOG_LEVEL but prefer DD_LOG_LEVEL
-	if v := os.Getenv("LOG_LEVEL"); v != "" {
-		c.LogLevel = v
-	}
 	if v := os.Getenv("STS_LOG_LEVEL"); v != "" {
 		c.LogLevel = v
-	}
-
-	// Logging to console
-	if enabled, err := isAffirmative(os.Getenv("STS_LOGS_STDOUT")); err == nil {
-		c.LogToConsole = enabled
-	}
-	if enabled, err := isAffirmative(os.Getenv("LOG_TO_CONSOLE")); err == nil {
-		c.LogToConsole = enabled
-	}
-	if enabled, err := isAffirmative(os.Getenv("STS_LOG_TO_CONSOLE")); err == nil {
-		c.LogToConsole = enabled
 	}
 
 	if proxyURL := os.Getenv("HTTPS_PROXY"); proxyURL != "" {
@@ -449,20 +424,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 			log.Infof("overriding API endpoint from env")
 			c.APIEndpoints[0].Endpoint = u
 		}
-		if site := os.Getenv("STS_SITE"); site != "" {
-			log.Infof("Using 'process_dd_url' (%s) and ignoring 'site' (%s)", v, site)
-		}
 		log.Infof("Overriding process api endpoint with environment variable `STS_PROCESS_AGENT_URL`: %s", u)
-	} else if v := os.Getenv("STS_STS_URL"); v != "" {
-		// check if we don't already have a api endpoint configured, specific process configuration takes precedence.
-		u, err := url.Parse(v)
-		if err != nil {
-			log.Warnf("STS_STS_URL is invalid: %s", err)
-		} else {
-			log.Infof("overriding API endpoint from env STS_STS_URL")
-			c.APIEndpoints[0].Endpoint = u
-		}
-		log.Infof("Overriding process api endpoint with environment variable `STS_STS_URL`: %s", u)
 	}
 
 	// Process Arguments Scrubbing
@@ -617,10 +579,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	}
 
 	// STS
-	if v, err := strconv.Atoi(os.Getenv("STS_CONTAINER_CHECK_INTERVAL")); err == nil {
-		c.CheckIntervals["container"] = time.Duration(v) * time.Second
-	}
-
 	if v, err := strconv.Atoi(os.Getenv("STS_PROCESS_CHECK_INTERVAL")); err == nil {
 		c.CheckIntervals["process"] = time.Duration(v) * time.Second
 	}

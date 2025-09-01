@@ -8,7 +8,6 @@ skip_kubelet_tls_verify: true
 incremental_publishing_enabled: true
 # we are running inside k8s so we want to enrich data with k8s
 local_run: false
-# process_agent_enabled: true
 process_config:
   enabled: 'true'
   queue_size: 10

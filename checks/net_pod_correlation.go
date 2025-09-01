@@ -21,29 +21,35 @@ import (
 
 const (
 	// We export them so that we can reuse these fields in e2e tests
-	// SRC FIELDS
 
-	// SrcIPKey is the IP address of the source pod
-	SrcIPKey = "src.ip"
-	// SrcPodKey is the name of the source pod
-	SrcPodKey = "src.pod"
-	// SrcNSKey is the namespace of the source pod
-	SrcNSKey = "src.namespace"
-	// SrcLabelsKey is the labels of the source pod
-	SrcLabelsKey = "src.labels"
+	// DirectionKey is the direction of the connection (0=outgoing, 1=incoming)
+	DirectionKey = "direction"
 
-	// DST FIELDS
+	// LOCAL FIELDS
 
-	// DstIPKey is the IP address of the destination pod
-	DstIPKey = "dst.ip"
-	// DstPodKey is the name of the destination pod
-	DstPodKey = "dst.pod"
-	// DstNSKey is the namespace of the destination pod
-	DstNSKey = "dst.namespace"
-	// DstLabelsKey is the labels of the destination pod
-	DstLabelsKey = "dst.labels"
-	// DstPortKey is the port of the destination pod
-	DstPortKey = "dst.port"
+	// LocalIPKey is the IP address of the local pod
+	LocalIPKey = "local.ip"
+	// LocalPodKey is the name of the local pod
+	LocalPodKey = "local.pod"
+	// LocalNSKey is the namespace of the local pod
+	LocalNSKey = "local.namespace"
+	// LocalLabelsKey is the labels of the local pod
+	LocalLabelsKey = "local.labels"
+	// LocalPortKey is the port of the local pod
+	LocalPortKey = "local.port"
+
+	// REMOTE FIELDS
+
+	// RemoteIPKey is the IP address of the remote pod
+	RemoteIPKey = "remote.ip"
+	// RemotePodKey is the name of the remote pod
+	RemotePodKey = "remote.pod"
+	// RemoteNSKey is the namespace of the remote pod
+	RemoteNSKey = "remote.namespace"
+	// RemoteLabelsKey is the labels of the remote pod
+	RemoteLabelsKey = "remote.labels"
+	// RemotePortKey is the port of the remote pod
+	RemotePortKey = "remote.port"
 )
 
 type storedConnection struct {
@@ -111,51 +117,37 @@ func (pi *podCorrelationInfo) startKubernetesInformer(cfg *config.PodCorrelation
 func (pi *podCorrelationInfo) generateConnectionMetrics(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo) {
 	attrs := attribute.NewSet(getMetricAttributes(conn, srcPodInfo, dstPodInfo)...)
 
-	// OUTGOING case
-	receivedBytes := conn.Last.RecvBytes
-	sentBytes := conn.Last.SentBytes
-	if conn.Direction == network.INCOMING {
-		// We want to invert the sent/received bytes to obtain the effect client -> server
-		receivedBytes, sentBytes = sentBytes, receivedBytes
-	}
-
-	pi.metrics.BytesRecv.Add(context.Background(), int64(receivedBytes), metric.WithAttributeSet(attrs))
-	pi.metrics.BytesSent.Add(context.Background(), int64(sentBytes), metric.WithAttributeSet(attrs))
+	pi.metrics.BytesRecv.Add(context.Background(), int64(conn.Last.RecvBytes), metric.WithAttributeSet(attrs))
+	pi.metrics.BytesSent.Add(context.Background(), int64(conn.Last.SentBytes), metric.WithAttributeSet(attrs))
 }
 
-func getMetricAttributes(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo) []attribute.KeyValue {
-	// OUTGOING case
-	sIP := conn.ConnectionTuple.Source.String()
-	dIP := conn.ConnectionTuple.Dest.String()
-	dPort := fmt.Sprintf("%d", conn.ConnectionTuple.DPort)
-	sPod := srcPodInfo
-	dPod := dstPodInfo
-
-	if conn.Direction == network.INCOMING {
-		sIP = conn.ConnectionTuple.Dest.String()
-		dIP = conn.ConnectionTuple.Source.String()
-		dPort = fmt.Sprintf("%d", conn.ConnectionTuple.SPort)
-		sPod = dstPodInfo
-		dPod = srcPodInfo
+func connectionDirectionToString(direction network.ConnectionDirection) string {
+	if direction == network.INCOMING {
+		return "incoming"
 	}
+	return "outgoing"
+}
 
+func getMetricAttributes(conn *network.ConnectionStats, localPodInfo, remotePodInfo *kube.PodInfo) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{
-		attribute.String(SrcIPKey, sIP),
-		attribute.String(DstIPKey, dIP),
-		attribute.String(DstPortKey, dPort),
+		attribute.String(LocalIPKey, conn.ConnectionTuple.Source.String()),
+		attribute.String(LocalPortKey, fmt.Sprintf("%d", conn.ConnectionTuple.SPort)),
+		attribute.String(RemoteIPKey, conn.ConnectionTuple.Dest.String()),
+		attribute.String(RemotePortKey, fmt.Sprintf("%d", conn.ConnectionTuple.DPort)),
+		attribute.String(DirectionKey, connectionDirectionToString(conn.Direction)),
 	}
-	if sPod != nil {
+	if localPodInfo != nil {
 		attributes = append(attributes,
-			attribute.String(SrcPodKey, sPod.Name),
-			attribute.String(SrcNSKey, sPod.Namespace),
-			attribute.String(SrcLabelsKey, sPod.Labels),
+			attribute.String(LocalPodKey, localPodInfo.Name),
+			attribute.String(LocalNSKey, localPodInfo.Namespace),
+			attribute.String(LocalLabelsKey, localPodInfo.Labels),
 		)
 	}
-	if dPod != nil {
+	if remotePodInfo != nil {
 		attributes = append(attributes,
-			attribute.String(DstPodKey, dPod.Name),
-			attribute.String(DstNSKey, dPod.Namespace),
-			attribute.String(DstLabelsKey, dPod.Labels),
+			attribute.String(RemotePodKey, remotePodInfo.Name),
+			attribute.String(RemoteNSKey, remotePodInfo.Namespace),
+			attribute.String(RemoteLabelsKey, remotePodInfo.Labels),
 		)
 	}
 	return attributes
@@ -163,12 +155,6 @@ func getMetricAttributes(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *
 
 func (pi *podCorrelationInfo) generateProtocolMetrics(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo, metrics []*model.ConnectionMetric) {
 	attr := getMetricAttributes(conn, srcPodInfo, dstPodInfo)
-
-	// if the connection associated with the metrics is OUTGOING we have client latency
-	latency := pi.metrics.PostgresClientLatency
-	if conn.Direction == network.INCOMING {
-		latency = pi.metrics.PostgresServerLatency
-	}
 
 	for _, m := range metrics {
 		// todo!: for now we only support postgres metrics.
@@ -192,7 +178,7 @@ func (pi *podCorrelationInfo) generateProtocolMetrics(conn *network.ConnectionSt
 		postgresSketch.ForEach(func(value, count float64) (stop bool) {
 			for i := 0; i < int(count); i++ {
 				// `value` is in seconds
-				latency.Record(context.Background(), value, metric.WithAttributes(merged...))
+				pi.metrics.PostgresLatency.Record(context.Background(), value, metric.WithAttributes(merged...))
 			}
 			// False because we want to iterate on all samples.
 			return false
@@ -212,19 +198,9 @@ func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, m
 		// We try the resolution
 		if dstPodInfo == nil && conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
 			dstPodInfo = pi.observer.ResolvePodByIP(conn.IPTranslation.ReplSrcIP, conn.Duration)
-			// we need to replace also the destination IP and port from ClusterIP to Pod
+			// we need to replace also the remote IP and port from ClusterIP to Pod
 			conn.ConnectionTuple.Dest = conn.IPTranslation.ReplSrcIP
 			conn.ConnectionTuple.DPort = conn.IPTranslation.ReplSrcPort
-		}
-
-		if dstPodInfo != nil {
-			// It means we are in this case
-			// Pod -> Pod (OUTGOING)
-			// We will send connection metrics in the INCOMING direction so we just want to send client protocol metrics if enabled.
-			if pi.exportProtocolMetrics {
-				pi.generateProtocolMetrics(conn, srcPodInfo, dstPodInfo, metrics)
-			}
-			return
 		}
 	}
 
@@ -240,6 +216,7 @@ func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, m
 
 	// For all these cases we want connection and protocol metrics
 	// 1. Pod -> Pod (INCOMING)
+	// 1. Pod -> Pod (OUTGOING)
 	// 2. Pod -> Pod HostNetwork (OUTGOING)
 	// 3. Pod HostNetwork -> Pod (INCOMING)
 	// 5. Pod -> ExternalIP (OUTGOING)

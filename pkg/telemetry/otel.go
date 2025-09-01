@@ -27,20 +27,17 @@ const (
 	SentMetricName = "agent.network.sent"
 	// ReceivedMetricName is the name of the metric for received bytes.
 	ReceivedMetricName = "agent.network.received"
-	// PostgresClientLatencyName is the name of the metric for Postgres client latency.
-	PostgresClientLatencyName = "agent.network.postgres.client.response.time"
-	// PostgresServerLatencyName is the name of the metric for Postgres server latency.
-	PostgresServerLatencyName = "agent.network.postgres.server.response.time"
+	// PostgresLatencyName is the name of the metric for Postgres latency.
+	PostgresLatencyName = "agent.network.postgres.response.time"
 )
 
 // MetricsExporter is responsible for exporting metrics.
 type MetricsExporter struct {
-	provider              *metric.MeterProvider
-	Reader                metric.Reader
-	BytesSent             instrument.Int64Counter
-	BytesRecv             instrument.Int64Counter
-	PostgresClientLatency instrument.Float64Histogram
-	PostgresServerLatency instrument.Float64Histogram
+	provider        *metric.MeterProvider
+	Reader          metric.Reader
+	BytesSent       instrument.Int64Counter
+	BytesRecv       instrument.Int64Counter
+	PostgresLatency instrument.Float64Histogram
 }
 
 func newResource() (*resource.Resource, error) {
@@ -142,18 +139,9 @@ func NewMetricsExporter(cfg config.ExporterConfig) (*MetricsExporter, error) {
 	////////////////////////
 	// Protocol metrics
 	////////////////////////
-	postgresClient, err := meter.Float64Histogram(
-		PostgresClientLatencyName,
-		instrument.WithDescription("Total response time for Postgres client"),
-		instrument.WithUnit("s"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	postgresServer, err := meter.Float64Histogram(
-		PostgresServerLatencyName,
-		instrument.WithDescription("Total response time for Postgres server"),
+	postgresLatency, err := meter.Float64Histogram(
+		PostgresLatencyName,
+		instrument.WithDescription("Total response time for Postgres protocol"),
 		instrument.WithUnit("s"),
 	)
 	if err != nil {
@@ -161,11 +149,10 @@ func NewMetricsExporter(cfg config.ExporterConfig) (*MetricsExporter, error) {
 	}
 
 	return &MetricsExporter{
-		Reader:                reader,
-		provider:              meterProvider,
-		BytesSent:             sent,
-		BytesRecv:             received,
-		PostgresClientLatency: postgresClient,
-		PostgresServerLatency: postgresServer,
+		Reader:          reader,
+		provider:        meterProvider,
+		BytesSent:       sent,
+		BytesRecv:       received,
+		PostgresLatency: postgresLatency,
 	}, nil
 }

@@ -45,136 +45,55 @@ func updateConnStatsDuration(conn network.ConnectionStats, duration time.Duratio
 	return conn
 }
 
-func updateDstIP(conn network.ConnectionStats, ip util.Address) network.ConnectionStats {
+func updateRemoteIP(conn network.ConnectionStats, ip util.Address) network.ConnectionStats {
 	conn.Dest = ip
 	return conn
 }
 
-func updateSrcIP(conn network.ConnectionStats, ip util.Address) network.ConnectionStats {
+func updateLocalIP(conn network.ConnectionStats, ip util.Address) network.ConnectionStats {
 	conn.Source = ip
 	return conn
 }
-
-// Example of ScopeMetrics
-// 	"ScopeMetrics": [
-//     {
-//         "Scope": {
-//             "Name": "network",
-//             "Version": "",
-//             "SchemaURL": "",
-//             "Attributes": null
-//         },
-//         "Metrics": [
-//             {
-//                 "Name": "agent.network.sent",
-//                 "Description": "Total number of bytes sent",
-//                 "Unit": "By",
-//                 "Data": {
-//                     "DataPoints": [
-//                         {
-//                             "Attributes": [
-//                                 {
-//                                     "Key": "dst.ip",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "10.42.0.10"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "dst.labels",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "[app=postgres-server pod-template-hash=5bc9fb79b]"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "dst.namespace",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "default"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "dst.pod",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "postgres-server-5bc9fb79b-src29"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "dst.port",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "54964"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "netns",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "4026534025"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "src.ip",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "10.42.0.9"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "src.labels",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "[app=postgres-client pod-template-hash=796f8c67c7]"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "src.namespace",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "default"
-//                                     }
-//                                 },
-//                                 {
-//                                     "Key": "src.pod",
-//                                     "Value": {
-//                                         "Type": "STRING",
-//                                         "Value": "postgres-client-796f8c67c7-pv8gt"
-//                                     }
-//                                 }
-//                             ],
-//                             "StartTime": "2025-08-20T10:44:36.452144221+02:00",
-//                             "Time": "2025-08-20T10:53:51.452332986+02:00",
-//                             "Value": 13500
-//                         }
-//                     ],
-//                     "Temporality": "CumulativeTemporality",
-//                     "IsMonotonic": true
-//                 }
-//             }
-//         ]
-//     }
-// ]
 
 func TestPodCorrelation(t *testing.T) {
 	var (
 		rm metricdata.ResourceMetrics
 
-		postgresClientIP      = util.AddressFromString("10.244.0.2")
-		postgresClientPodName = "postgres-client"
-		postgresClientLabels  = "app=client"
-		postgresServerIP      = util.AddressFromString("10.244.0.3")
-		postgresServerPodName = "postgres-server"
-		postgresServerLabels  = "app=server"
-		postgresServerPort    = uint16(5432)
-		postgresNamespace     = "default"
-		postgresServerNs      = uint32(4026534025)
+		postgresClientIP            = util.AddressFromString("10.244.0.2")
+		postgresClientPodName       = "postgres-client"
+		postgresClientLabels        = "app=client"
+		postgresServerIP            = util.AddressFromString("10.244.0.3")
+		postgresServerPodName       = "postgres-server"
+		postgresServerLabels        = "app=server"
+		postgresServerPort          = uint16(5432)
+		postgresClientPort          = uint16(12345)
+		postgresNamespace           = "default"
+		postgresServerNs            = uint32(4026534025)
+		postgresClientNs            = uint32(4026534026)
+		postgresClientReceivedBytes = int64(111)
+		postgresClientSentBytes     = int64(222)
 
 		// pod in hostNetwork will have this IP
 		hostIP = util.AddressFromString("192.168.1.7")
 		hostNs = uint32(1)
 	)
+
+	defaultPostgresOutgoingConnection := network.ConnectionStats{
+		ConnectionTuple: network.ConnectionTuple{
+			Type:      network.TCP,
+			Direction: network.OUTGOING,
+			Source:    postgresClientIP,
+			SPort:     postgresClientPort,
+			Dest:      postgresServerIP,
+			DPort:     postgresServerPort,
+			NetNS:     postgresClientNs,
+		},
+		Duration: 10 * time.Second,
+		Last: network.StatCounters{
+			RecvBytes: uint64(postgresClientReceivedBytes),
+			SentBytes: uint64(postgresClientSentBytes),
+		},
+	}
 
 	defaultPostgresIncomingConnection := network.ConnectionStats{
 		ConnectionTuple: network.ConnectionTuple{
@@ -184,12 +103,13 @@ func TestPodCorrelation(t *testing.T) {
 			Source: postgresServerIP,
 			SPort:  postgresServerPort,
 			Dest:   postgresClientIP,
+			DPort:  postgresClientPort,
 			NetNS:  postgresServerNs,
 		},
 		Duration: 10 * time.Second,
 		Last: network.StatCounters{
-			RecvBytes: 111,
-			SentBytes: 222,
+			RecvBytes: uint64(postgresClientSentBytes),
+			SentBytes: uint64(postgresClientReceivedBytes),
 		},
 	}
 
@@ -201,6 +121,47 @@ func TestPodCorrelation(t *testing.T) {
 		exportPartialCorrelation bool
 		testBody                 func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric)
 	}{
+		{
+			name: "simple pod outgoing connection",
+			conn: []network.ConnectionStats{
+				defaultPostgresOutgoingConnection,
+			},
+			exportProtocolMetrics:    false,
+			exportPartialCorrelation: false,
+			testBody: func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric) {
+				pi.processConnections(conns, protoMetrics)
+
+				// Read metrics
+				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+				require.Len(t, rm.ScopeMetrics, 1)
+				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+				metrics := rm.ScopeMetrics[0].Metrics
+				sortOTELMetricsByName(metrics)
+
+				attributeSet := attribute.NewSet(
+					attribute.String(LocalIPKey, postgresClientIP.String()),
+					attribute.String(LocalPodKey, postgresClientPodName),
+					attribute.String(LocalNSKey, postgresNamespace),
+					attribute.String(LocalLabelsKey, postgresClientLabels),
+					attribute.String(LocalPortKey, fmt.Sprintf("%d", postgresClientPort)),
+
+					attribute.String(RemoteIPKey, postgresServerIP.String()),
+					attribute.String(RemotePodKey, postgresServerPodName),
+					attribute.String(RemoteNSKey, postgresNamespace),
+					attribute.String(RemoteLabelsKey, postgresServerLabels),
+					attribute.String(RemotePortKey, fmt.Sprintf("%d", postgresServerPort)),
+					attribute.String(DirectionKey, connectionDirectionToString(network.OUTGOING)),
+				)
+				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
+					Value:      postgresClientReceivedBytes,
+					Attributes: attributeSet,
+				})
+				assertInt64Metric(t, metrics[1], telemetry.SentMetricName, metricdata.DataPoint[int64]{
+					Value:      postgresClientSentBytes,
+					Attributes: attributeSet,
+				})
+			},
+		},
 		{
 			name: "simple pod incoming connection",
 			conn: []network.ConnectionStats{
@@ -219,24 +180,25 @@ func TestPodCorrelation(t *testing.T) {
 				sortOTELMetricsByName(metrics)
 
 				attributeSet := attribute.NewSet(
-					attribute.String(SrcIPKey, postgresClientIP.String()),
-					attribute.String(SrcPodKey, postgresClientPodName),
-					attribute.String(SrcNSKey, postgresNamespace),
-					attribute.String(SrcLabelsKey, postgresClientLabels),
+					attribute.String(LocalIPKey, postgresServerIP.String()),
+					attribute.String(LocalPodKey, postgresServerPodName),
+					attribute.String(LocalNSKey, postgresNamespace),
+					attribute.String(LocalLabelsKey, postgresServerLabels),
+					attribute.String(LocalPortKey, fmt.Sprintf("%d", postgresServerPort)),
 
-					attribute.String(DstIPKey, postgresServerIP.String()),
-					attribute.String(DstPodKey, postgresServerPodName),
-					attribute.String(DstNSKey, postgresNamespace),
-					attribute.String(DstLabelsKey, postgresServerLabels),
-					attribute.String(DstPortKey, fmt.Sprintf("%d", postgresServerPort)),
+					attribute.String(RemoteIPKey, postgresClientIP.String()),
+					attribute.String(RemotePodKey, postgresClientPodName),
+					attribute.String(RemoteNSKey, postgresNamespace),
+					attribute.String(RemoteLabelsKey, postgresClientLabels),
+					attribute.String(RemotePortKey, fmt.Sprintf("%d", postgresClientPort)),
+					attribute.String(DirectionKey, connectionDirectionToString(network.INCOMING)),
 				)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
-					// The connection is incoming so they recv/sent are inverted.
-					Value:      222,
+					Value:      postgresClientSentBytes,
 					Attributes: attributeSet,
 				})
 				assertInt64Metric(t, metrics[1], telemetry.SentMetricName, metricdata.DataPoint[int64]{
-					Value:      111,
+					Value:      postgresClientReceivedBytes,
 					Attributes: attributeSet,
 				})
 			},
@@ -269,7 +231,7 @@ func TestPodCorrelation(t *testing.T) {
 			conn: []network.ConnectionStats{
 				// before: postgres-client -> postgres-server
 				// after: hostIP -> hostIP
-				updateSrcIP(updateDstIP(defaultPostgresIncomingConnection, hostIP), hostIP),
+				updateLocalIP(updateRemoteIP(defaultPostgresIncomingConnection, hostIP), hostIP),
 			},
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: false, // nothing would change if we enable partial correlation
@@ -284,10 +246,10 @@ func TestPodCorrelation(t *testing.T) {
 		{
 			name: "partial correlation disabled",
 			conn: []network.ConnectionStats{
-				// since we have an incoming connection to update the client we need to override the destination IP
+				// since we have an incoming connection to update the postgres client we need to override the remote IP
 				// before: postgres-client -> postgres-server
 				// after: hostIP -> postgres-server
-				updateDstIP(defaultPostgresIncomingConnection, hostIP),
+				updateRemoteIP(defaultPostgresIncomingConnection, hostIP),
 			},
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: false,
@@ -300,12 +262,11 @@ func TestPodCorrelation(t *testing.T) {
 			},
 		},
 		{
-			name: "partial correlation enabled missing client",
+			name: "partial correlation enabled incoming missing remote",
 			conn: []network.ConnectionStats{
-				// since we have an incoming connection to update the client we need to override the destination IP
 				// before: postgres-client -> postgres-server
 				// after: hostIP -> postgres-server
-				updateDstIP(defaultPostgresIncomingConnection, hostIP),
+				updateRemoteIP(defaultPostgresIncomingConnection, hostIP),
 			},
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: true,
@@ -319,13 +280,15 @@ func TestPodCorrelation(t *testing.T) {
 
 				attributeSet := attribute.NewSet(
 					// we miss all the pod attributes on the client
-					attribute.String(SrcIPKey, hostIP.String()),
-					attribute.String(DstIPKey, postgresServerIP.String()),
-					attribute.String(DstPortKey, fmt.Sprintf("%d", postgresServerPort)),
+					attribute.String(DirectionKey, connectionDirectionToString(network.INCOMING)),
+					attribute.String(RemoteIPKey, hostIP.String()),
+					attribute.String(RemotePortKey, fmt.Sprintf("%d", postgresClientPort)),
 
-					attribute.String(DstPodKey, postgresServerPodName),
-					attribute.String(DstNSKey, postgresNamespace),
-					attribute.String(DstLabelsKey, postgresServerLabels),
+					attribute.String(LocalIPKey, postgresServerIP.String()),
+					attribute.String(LocalPortKey, fmt.Sprintf("%d", postgresServerPort)),
+					attribute.String(LocalPodKey, postgresServerPodName),
+					attribute.String(LocalNSKey, postgresNamespace),
+					attribute.String(LocalLabelsKey, postgresServerLabels),
 				)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
@@ -339,11 +302,11 @@ func TestPodCorrelation(t *testing.T) {
 			},
 		},
 		{
-			name: "partial correlation enabled missing server",
+			name: "partial correlation enabled incoming missing local",
 			conn: []network.ConnectionStats{
 				// before: postgres-client -> postgres-server
 				// after: postgres-client -> hostIP
-				updateSrcIP(defaultPostgresIncomingConnection, hostIP),
+				updateLocalIP(defaultPostgresIncomingConnection, hostIP),
 			},
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: true,
@@ -357,13 +320,15 @@ func TestPodCorrelation(t *testing.T) {
 
 				attributeSet := attribute.NewSet(
 					// we miss all the pod attributes on the server
-					attribute.String(SrcIPKey, postgresClientIP.String()),
-					attribute.String(DstIPKey, hostIP.String()),
-					attribute.String(DstPortKey, fmt.Sprintf("%d", postgresServerPort)),
+					attribute.String(DirectionKey, connectionDirectionToString(network.INCOMING)),
+					attribute.String(LocalIPKey, hostIP.String()),
+					attribute.String(LocalPortKey, fmt.Sprintf("%d", postgresServerPort)),
 
-					attribute.String(SrcPodKey, postgresClientPodName),
-					attribute.String(SrcNSKey, postgresNamespace),
-					attribute.String(SrcLabelsKey, postgresClientLabels),
+					attribute.String(RemoteIPKey, postgresClientIP.String()),
+					attribute.String(RemotePortKey, fmt.Sprintf("%d", postgresClientPort)),
+					attribute.String(RemotePodKey, postgresClientPodName),
+					attribute.String(RemoteNSKey, postgresNamespace),
+					attribute.String(RemoteLabelsKey, postgresClientLabels),
 				)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
@@ -459,6 +424,7 @@ func TestSketchForEach(t *testing.T) {
 func TestGetMetricAttributes(t *testing.T) {
 	clientIP := util.AddressFromString("10.0.0.10")
 	serverIP := util.AddressFromString("10.0.0.20")
+	clientPort := uint16(12345)
 	serverPort := uint16(5432)
 
 	clientPod := &kube.PodInfo{
@@ -475,103 +441,87 @@ func TestGetMetricAttributes(t *testing.T) {
 	outgoing := network.ConnectionStats{
 		ConnectionTuple: network.ConnectionTuple{
 			Source:    clientIP,
+			SPort:     clientPort,
 			Dest:      serverIP,
 			DPort:     serverPort,
 			Direction: network.OUTGOING,
 		},
 	}
-	incoming := network.ConnectionStats{
-		ConnectionTuple: network.ConnectionTuple{
-			Source:    serverIP,
-			Dest:      clientIP,
-			SPort:     serverPort,
-			Direction: network.INCOMING,
-		},
-	}
 
 	allAttributes := []attribute.KeyValue{
-		attribute.String(SrcIPKey, clientIP.String()),
-		attribute.String(DstIPKey, serverIP.String()),
-		attribute.String(DstPortKey, fmt.Sprintf("%d", serverPort)),
-		attribute.String(SrcPodKey, clientPod.Name),
-		attribute.String(SrcNSKey, clientPod.Namespace),
-		attribute.String(SrcLabelsKey, clientPod.Labels),
-		attribute.String(DstPodKey, serverPod.Name),
-		attribute.String(DstNSKey, serverPod.Namespace),
-		attribute.String(DstLabelsKey, serverPod.Labels),
+		attribute.String(LocalIPKey, clientIP.String()),
+		attribute.String(LocalPortKey, fmt.Sprintf("%d", clientPort)),
+		attribute.String(LocalPodKey, clientPod.Name),
+		attribute.String(LocalNSKey, clientPod.Namespace),
+		attribute.String(LocalLabelsKey, clientPod.Labels),
+
+		attribute.String(RemoteIPKey, serverIP.String()),
+		attribute.String(RemotePortKey, fmt.Sprintf("%d", serverPort)),
+		attribute.String(RemotePodKey, serverPod.Name),
+		attribute.String(RemoteNSKey, serverPod.Namespace),
+		attribute.String(RemoteLabelsKey, serverPod.Labels),
+
+		attribute.String(DirectionKey, connectionDirectionToString(outgoing.Direction)),
 	}
 	clientAttr := []attribute.KeyValue{
-		attribute.String(SrcIPKey, clientIP.String()),
-		attribute.String(DstIPKey, serverIP.String()),
-		attribute.String(DstPortKey, fmt.Sprintf("%d", serverPort)),
-		attribute.String(SrcPodKey, clientPod.Name),
-		attribute.String(SrcNSKey, clientPod.Namespace),
-		attribute.String(SrcLabelsKey, clientPod.Labels),
+		attribute.String(LocalIPKey, clientIP.String()),
+		attribute.String(LocalPortKey, fmt.Sprintf("%d", clientPort)),
+		attribute.String(LocalPodKey, clientPod.Name),
+		attribute.String(LocalNSKey, clientPod.Namespace),
+		attribute.String(LocalLabelsKey, clientPod.Labels),
+
+		attribute.String(RemoteIPKey, serverIP.String()),
+		attribute.String(RemotePortKey, fmt.Sprintf("%d", serverPort)),
+
+		attribute.String(DirectionKey, connectionDirectionToString(outgoing.Direction)),
 	}
 	serverAttr := []attribute.KeyValue{
-		attribute.String(SrcIPKey, clientIP.String()),
-		attribute.String(DstIPKey, serverIP.String()),
-		attribute.String(DstPortKey, fmt.Sprintf("%d", serverPort)),
-		attribute.String(DstPodKey, serverPod.Name),
-		attribute.String(DstNSKey, serverPod.Namespace),
-		attribute.String(DstLabelsKey, serverPod.Labels),
+		attribute.String(LocalIPKey, clientIP.String()),
+		attribute.String(LocalPortKey, fmt.Sprintf("%d", clientPort)),
+
+		attribute.String(RemoteIPKey, serverIP.String()),
+		attribute.String(RemotePortKey, fmt.Sprintf("%d", serverPort)),
+		attribute.String(RemotePodKey, serverPod.Name),
+		attribute.String(RemoteNSKey, serverPod.Namespace),
+		attribute.String(RemoteLabelsKey, serverPod.Labels),
+
+		attribute.String(DirectionKey, connectionDirectionToString(outgoing.Direction)),
 	}
 
 	tests := []struct {
-		name   string
-		conn   network.ConnectionStats
-		want   []attribute.KeyValue
-		srcPod *kube.PodInfo
-		dstPod *kube.PodInfo
+		name      string
+		conn      network.ConnectionStats
+		want      []attribute.KeyValue
+		localPod  *kube.PodInfo
+		remotePod *kube.PodInfo
 	}{
 		{
-			name:   "outgoing_both_pods",
-			conn:   outgoing,
-			srcPod: clientPod,
-			dstPod: serverPod,
-			want:   allAttributes,
+			name:      "outgoing_both_pods",
+			conn:      outgoing,
+			localPod:  clientPod,
+			remotePod: serverPod,
+			want:      allAttributes,
 		},
 		{
-			name:   "outgoing_missing_dst_pod_only_client_attrs",
-			conn:   outgoing,
-			srcPod: clientPod,
-			dstPod: nil,
-			want:   clientAttr,
+			name:      "outgoing_missing_dst_pod_only_client_attrs",
+			conn:      outgoing,
+			localPod:  clientPod,
+			remotePod: nil,
+			want:      clientAttr,
 		},
 		{
-			name:   "outgoing_missing_src_pod_only_server_attrs",
-			conn:   outgoing,
-			srcPod: nil,
-			dstPod: serverPod,
-			want:   serverAttr,
-		},
-		{
-			name:   "incoming_both_pods",
-			conn:   incoming,
-			srcPod: serverPod,
-			dstPod: clientPod,
-			want:   allAttributes,
-		},
-		{
-			name:   "incoming_missing_client_only_server_dst_attrs",
-			conn:   incoming,
-			srcPod: nil,
-			dstPod: clientPod,
-			want:   clientAttr,
-		},
-		{
-			name:   "incoming_missing_server_only_client_src_attrs",
-			conn:   incoming,
-			srcPod: serverPod,
-			dstPod: nil,
-			want:   serverAttr,
+			name:      "outgoing_missing_src_pod_only_server_attrs",
+			conn:      outgoing,
+			localPod:  nil,
+			remotePod: serverPod,
+			want:      serverAttr,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getMetricAttributes(&tt.conn, tt.srcPod, tt.dstPod)
-			require.Equal(t, tt.want, got)
+			got := getMetricAttributes(&tt.conn, tt.localPod, tt.remotePod)
+			require.ElementsMatch(t, tt.want, got)
 		})
 	}
 }

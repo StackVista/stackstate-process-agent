@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -46,6 +47,8 @@ const (
 	outgoingDir = "outgoing"
 	incomingDir = "incoming"
 )
+
+var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
 type queryResult struct {
 	Status string `json:"status"`
@@ -114,7 +117,7 @@ func convertOtelMetricToProm(otelName string, suffix string) string {
 
 func changeRemoteKeyIntoLocalKey(key string) string {
 	if strings.HasPrefix(key, "remote.") {
-		return strings.ReplaceAll("local."+strings.TrimPrefix(key, "remote."), ".", "_")
+		return "local." + strings.TrimPrefix(key, "remote.")
 	}
 	panic("unexpected non-remote key: " + key)
 }
@@ -134,14 +137,14 @@ func composePromQuery(otelMetric string, direction string, localAttrs, remoteAtt
 
 	promMetric += fmt.Sprintf(`{%s="%s",`, checks.DirectionKey, direction)
 	for k, v := range remoteAttrs {
-		promMetric += fmt.Sprintf(`%s="%s",`, strings.ReplaceAll(k, ".", "_"), v)
+		promMetric += fmt.Sprintf(`%s="%s",`, nonAlphanumericRegex.ReplaceAllString(k, "_"), v)
 	}
 	for k, v := range localAttrs {
-		promMetric += fmt.Sprintf(`%s="%s",`, changeRemoteKeyIntoLocalKey(k), v)
+		promMetric += fmt.Sprintf(`%s="%s",`, nonAlphanumericRegex.ReplaceAllString(changeRemoteKeyIntoLocalKey(k), "_"), v)
 	}
 	// not always present
 	for k, v := range extraAttrs {
-		promMetric += fmt.Sprintf(`%s="%s",`, strings.ReplaceAll(k, ".", "_"), v)
+		promMetric += fmt.Sprintf(`%s="%s",`, nonAlphanumericRegex.ReplaceAllString(k, "_"), v)
 	}
 	promMetric = strings.TrimSuffix(promMetric, ",") + "}"
 	return promMetric
@@ -211,11 +214,16 @@ func getPodAttributes(t *testing.T, client *kubernetes.Clientset, podLabel strin
 
 	attrs := map[string]string{
 		// we choose dst keys but we will change them to source if the the pod will be used as source
-		checks.RemotePodKey:    pod.Name,
-		checks.RemoteNSKey:     pod.Namespace,
-		checks.RemoteLabelsKey: stringifyPodLabels(pod.Labels),
-		checks.RemoteIPKey:     pod.Status.PodIP,
+		checks.RemotePodKey: pod.Name,
+		checks.RemoteNSKey:  pod.Namespace,
+		checks.RemoteIPKey:  pod.Status.PodIP,
 	}
+
+	for k, v := range pod.Labels {
+		// We will convert to prometheus format later
+		attrs[checks.RemoteLabelsKey+"."+k] = v
+	}
+
 	return attrs
 }
 

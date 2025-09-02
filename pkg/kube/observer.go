@@ -309,7 +309,8 @@ outerLoop:
 		for _, podInfo := range o.podsByIP[addr] {
 			if podInfo.Name == meta.Name && podInfo.Namespace == meta.Namespace {
 				// this is an update of an existing pod, we just update the labels
-				podInfo.Labels = stringifyPodLabels(meta.Labels)
+				// We store them already in OTEL format
+				podInfo.Labels = convertLabelsKeyIntoOtelFormat(meta.Labels)
 				if eventType == informer.EventType_DELETED {
 					podInfo.DeletionTimestamp = now
 				}
@@ -334,7 +335,7 @@ outerLoop:
 		o.podsByIP[addr] = append(o.podsByIP[addr], &PodInfo{
 			Name:              meta.Name,
 			Namespace:         meta.Namespace,
-			Labels:            stringifyPodLabels(meta.Labels),
+			Labels:            convertLabelsKeyIntoOtelFormat(meta.Labels),
 			CreationTimestamp: creationTs,
 			DeletionTimestamp: deletionTs,
 		})

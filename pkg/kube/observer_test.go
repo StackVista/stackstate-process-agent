@@ -86,7 +86,7 @@ func TestObserverCallback(t *testing.T) {
 	pod1Info := PodInfo{
 		Namespace:         pod1.Namespace,
 		Name:              pod1.Name,
-		Labels:            stringifyPodLabels(pod1.Labels),
+		Labels:            pod1.Labels,
 		CreationTimestamp: pod1.StatusTimeEpoch,
 		DeletionTimestamp: 0,
 	}
@@ -105,7 +105,7 @@ func TestObserverCallback(t *testing.T) {
 	pod2Info := PodInfo{
 		Namespace:         pod2.Namespace,
 		Name:              pod2.Name,
-		Labels:            stringifyPodLabels(pod2.Labels),
+		Labels:            pod2.Labels,
 		CreationTimestamp: pod2.StatusTimeEpoch,
 		DeletionTimestamp: 0,
 	}
@@ -124,7 +124,7 @@ func TestObserverCallback(t *testing.T) {
 	pod3Info := PodInfo{
 		Namespace:         pod3.Namespace,
 		Name:              pod3.Name,
-		Labels:            stringifyPodLabels(pod3.Labels),
+		Labels:            pod3.Labels,
 		CreationTimestamp: pod3.StatusTimeEpoch,
 		DeletionTimestamp: 0,
 	}
@@ -296,12 +296,12 @@ func TestResolvePodByIP(t *testing.T) {
 	pod1Info := &PodInfo{
 		Namespace: "namespace-1",
 		Name:      "pod-1",
-		Labels:    "app=test1",
+		Labels:    map[string]string{"app": "test1"},
 	}
 	pod2Info := &PodInfo{
 		Namespace: "namespace-2",
 		Name:      "pod-2",
-		Labels:    "app=test2",
+		Labels:    map[string]string{"app": "test2"},
 	}
 
 	tests := []struct {
@@ -518,7 +518,7 @@ func TestCleanup(t *testing.T) {
 	podInfo := &PodInfo{
 		Namespace:         "namespace",
 		Name:              "pod",
-		Labels:            "app=test",
+		Labels:            map[string]string{"app": "test"},
 		CreationTimestamp: 14,
 		DeletionTimestamp: 0,
 	}
@@ -582,6 +582,44 @@ func TestCleanup(t *testing.T) {
 
 			require.Equal(t, tt.cleanedPods, testutil.ToFloat64(obs.cleanedPods))
 			require.Equal(t, tt.inCachePods, testutil.ToFloat64(obs.activePods))
+		})
+	}
+}
+
+func TestConversionLabels(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		input    map[string]string
+		expected map[string]string
+	}{
+		{
+			name: "equal",
+			input: map[string]string{
+				"app":        "test",
+				"app.client": "test",
+			},
+			expected: map[string]string{
+				"app":        "test",
+				"app.client": "test",
+			},
+		},
+		{
+			name: "modified",
+			input: map[string]string{
+				"local/pod_label_pod_template-hash": "test",
+				"app":                               "client",
+			},
+			expected: map[string]string{
+				"local.pod.label.pod.template.hash": "test",
+				"app":                               "client",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, convertLabelsKeyIntoOtelFormat(tt.input))
 		})
 	}
 }

@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"slices"
@@ -12,7 +11,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/StackVista/stackstate-process-agent/config"
-	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-process-agent/pkg/kube"
 	"github.com/StackVista/stackstate-process-agent/pkg/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
@@ -59,10 +57,10 @@ func TestPodCorrelation(t *testing.T) {
 
 		postgresClientIP            = util.AddressFromString("10.244.0.2")
 		postgresClientPodName       = "postgres-client"
-		postgresClientLabels        = "app=client"
+		postgresClientLabels        = map[string]string{"app": "client"}
 		postgresServerIP            = util.AddressFromString("10.244.0.3")
 		postgresServerPodName       = "postgres-server"
-		postgresServerLabels        = "app=server"
+		postgresServerLabels        = map[string]string{"app": "server"}
 		postgresServerPort          = uint16(5432)
 		postgresClientPort          = uint16(12345)
 		postgresNamespace           = "default"
@@ -111,231 +109,182 @@ func TestPodCorrelation(t *testing.T) {
 		},
 	}
 
+	postgresClientPodInfo := kube.PodInfo{
+		Namespace:         postgresNamespace,
+		Name:              postgresClientPodName,
+		Labels:            postgresClientLabels,
+		CreationTimestamp: 40,
+		DeletionTimestamp: 0,
+	}
+
+	postgresServerPodInfo := kube.PodInfo{
+		Namespace:         postgresNamespace,
+		Name:              postgresServerPodName,
+		Labels:            postgresServerLabels,
+		CreationTimestamp: 41,
+		DeletionTimestamp: 0,
+	}
+
 	tests := []struct {
 		name                     string
-		conn                     []network.ConnectionStats
-		protoMetrics             map[connKey][]*model.ConnectionMetric
 		exportProtocolMetrics    bool
 		exportPartialCorrelation bool
-		testBody                 func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric)
+		testBody                 func(t *testing.T, pi *podCorrelationInfo)
 	}{
 		{
-			name: "simple pod outgoing connection",
-			conn: []network.ConnectionStats{
-				defaultPostgresOutgoingConnection,
-			},
+			name:                     "simple pod outgoing connection",
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: false,
-			testBody: func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric) {
-				pi.processConnections(conns, protoMetrics)
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
+				conn := defaultPostgresOutgoingConnection
+				pi.processConnections([]network.ConnectionStats{conn}, nil)
 
-				// Read metrics
-				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+				// Read metrics: TODO!: this seems duplicated
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
 				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 				metrics := rm.ScopeMetrics[0].Metrics
 				sortOTELMetricsByName(metrics)
 
-				attributeSet := attribute.NewSet(
-					attribute.String(LocalIPKey, postgresClientIP.String()),
-					attribute.String(LocalPodKey, postgresClientPodName),
-					attribute.String(LocalNSKey, postgresNamespace),
-					attribute.String(LocalLabelsKey, postgresClientLabels),
-					attribute.String(LocalPortKey, fmt.Sprintf("%d", postgresClientPort)),
-
-					attribute.String(RemoteIPKey, postgresServerIP.String()),
-					attribute.String(RemotePodKey, postgresServerPodName),
-					attribute.String(RemoteNSKey, postgresNamespace),
-					attribute.String(RemoteLabelsKey, postgresServerLabels),
-					attribute.String(RemotePortKey, fmt.Sprintf("%d", postgresServerPort)),
-					attribute.String(DirectionKey, connectionDirectionToString(network.OUTGOING)),
-				)
+				attrs := getMetricAttributes(&conn, &postgresClientPodInfo, &postgresServerPodInfo)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					Value:      postgresClientReceivedBytes,
-					Attributes: attributeSet,
+					Attributes: attribute.NewSet(attrs...),
 				})
 				assertInt64Metric(t, metrics[1], telemetry.SentMetricName, metricdata.DataPoint[int64]{
 					Value:      postgresClientSentBytes,
-					Attributes: attributeSet,
+					Attributes: attribute.NewSet(attrs...),
 				})
 			},
 		},
 		{
-			name: "simple pod incoming connection",
-			conn: []network.ConnectionStats{
-				defaultPostgresIncomingConnection,
-			},
+			name:                     "simple pod incoming connection",
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: false,
-			testBody: func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric) {
-				pi.processConnections(conns, protoMetrics)
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
+				conn := defaultPostgresIncomingConnection
+				pi.processConnections([]network.ConnectionStats{conn}, nil)
 
 				// Read metrics
-				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
 				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 				metrics := rm.ScopeMetrics[0].Metrics
 				sortOTELMetricsByName(metrics)
 
-				attributeSet := attribute.NewSet(
-					attribute.String(LocalIPKey, postgresServerIP.String()),
-					attribute.String(LocalPodKey, postgresServerPodName),
-					attribute.String(LocalNSKey, postgresNamespace),
-					attribute.String(LocalLabelsKey, postgresServerLabels),
-					attribute.String(LocalPortKey, fmt.Sprintf("%d", postgresServerPort)),
-
-					attribute.String(RemoteIPKey, postgresClientIP.String()),
-					attribute.String(RemotePodKey, postgresClientPodName),
-					attribute.String(RemoteNSKey, postgresNamespace),
-					attribute.String(RemoteLabelsKey, postgresClientLabels),
-					attribute.String(RemotePortKey, fmt.Sprintf("%d", postgresClientPort)),
-					attribute.String(DirectionKey, connectionDirectionToString(network.INCOMING)),
-				)
+				attrs := getMetricAttributes(&conn, &postgresServerPodInfo, &postgresClientPodInfo)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					Value:      postgresClientSentBytes,
-					Attributes: attributeSet,
+					Attributes: attribute.NewSet(attrs...),
 				})
 				assertInt64Metric(t, metrics[1], telemetry.SentMetricName, metricdata.DataPoint[int64]{
 					Value:      postgresClientReceivedBytes,
-					Attributes: attributeSet,
+					Attributes: attribute.NewSet(attrs...),
 				})
 			},
 		},
 		{
-			name: "process stored connection",
-			conn: []network.ConnectionStats{
+			name:                     "process stored connection",
+			exportProtocolMetrics:    false,
+			exportPartialCorrelation: false,
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
 				// this connection will be store 89 + boot_time(30) = 119 > now(120) - maxlatency(5)
-				updateConnStatsDuration(defaultPostgresIncomingConnection, 89*time.Second),
-			},
-			exportProtocolMetrics:    false,
-			exportPartialCorrelation: false,
-			testBody: func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric) {
-				pi.processConnections(conns, protoMetrics)
+				pi.processConnections([]network.ConnectionStats{updateConnStatsDuration(defaultPostgresIncomingConnection, 89*time.Second)}, nil)
+
 				// The connection was too young and stored.
-				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
 				require.Len(t, rm.ScopeMetrics, 0)
 				require.Len(t, pi.storedConnections, 1)
 
 				// if we call it again we process the stored connection
-				pi.processConnections([]network.ConnectionStats{}, protoMetrics)
-				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+				pi.processConnections([]network.ConnectionStats{}, nil)
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
 				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 				require.Len(t, pi.storedConnections, 0)
 			},
 		},
 		{
-			name: "invalid pod incoming connection",
-			conn: []network.ConnectionStats{
-				// before: postgres-client -> postgres-server
-				// after: hostIP -> hostIP
-				updateLocalIP(updateRemoteIP(defaultPostgresIncomingConnection, hostIP), hostIP),
-			},
+			name:                     "invalid pod incoming connection",
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: false, // nothing would change if we enable partial correlation
-			testBody: func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric) {
-				pi.processConnections(conns, protoMetrics)
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
+				// before: postgres-client -> postgres-server
+				// after: hostIP -> hostIP
+				pi.processConnections([]network.ConnectionStats{updateLocalIP(updateRemoteIP(defaultPostgresIncomingConnection, hostIP), hostIP)}, nil)
+
 				// no metrics to be exported
-				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
 				require.Len(t, rm.ScopeMetrics, 0)
 				require.Len(t, pi.storedConnections, 0)
 			},
 		},
 		{
-			name: "partial correlation disabled",
-			conn: []network.ConnectionStats{
+			name:                     "partial correlation disabled",
+			exportProtocolMetrics:    false,
+			exportPartialCorrelation: false,
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
 				// since we have an incoming connection to update the postgres client we need to override the remote IP
 				// before: postgres-client -> postgres-server
 				// after: hostIP -> postgres-server
-				updateRemoteIP(defaultPostgresIncomingConnection, hostIP),
-			},
-			exportProtocolMetrics:    false,
-			exportPartialCorrelation: false,
-			testBody: func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric) {
-				pi.processConnections(conns, protoMetrics)
+				pi.processConnections([]network.ConnectionStats{updateRemoteIP(defaultPostgresIncomingConnection, hostIP)}, nil)
 				// we don't enable partialCorrelation and so we don't expect any metrics to be exported
-				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
 				require.Len(t, rm.ScopeMetrics, 0)
 				require.Len(t, pi.storedConnections, 0)
 			},
 		},
 		{
-			name: "partial correlation enabled incoming missing remote",
-			conn: []network.ConnectionStats{
-				// before: postgres-client -> postgres-server
-				// after: hostIP -> postgres-server
-				updateRemoteIP(defaultPostgresIncomingConnection, hostIP),
-			},
+			name:                     "partial correlation enabled incoming missing remote",
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: true,
-			testBody: func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric) {
-				pi.processConnections(conns, protoMetrics)
-				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
+				// before: postgres-client -> postgres-server
+				// after: hostIP -> postgres-server
+				conn := updateRemoteIP(defaultPostgresIncomingConnection, hostIP)
+				pi.processConnections([]network.ConnectionStats{conn}, nil)
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
 				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 				metrics := rm.ScopeMetrics[0].Metrics
 				sortOTELMetricsByName(metrics)
 
-				attributeSet := attribute.NewSet(
-					// we miss all the pod attributes on the client
-					attribute.String(DirectionKey, connectionDirectionToString(network.INCOMING)),
-					attribute.String(RemoteIPKey, hostIP.String()),
-					attribute.String(RemotePortKey, fmt.Sprintf("%d", postgresClientPort)),
-
-					attribute.String(LocalIPKey, postgresServerIP.String()),
-					attribute.String(LocalPortKey, fmt.Sprintf("%d", postgresServerPort)),
-					attribute.String(LocalPodKey, postgresServerPodName),
-					attribute.String(LocalNSKey, postgresNamespace),
-					attribute.String(LocalLabelsKey, postgresServerLabels),
-				)
+				attrs := getMetricAttributes(&conn, &postgresServerPodInfo, nil)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
 					Value:      222,
-					Attributes: attributeSet,
+					Attributes: attribute.NewSet(attrs...),
 				})
 				assertInt64Metric(t, metrics[1], telemetry.SentMetricName, metricdata.DataPoint[int64]{
 					Value:      111,
-					Attributes: attributeSet,
+					Attributes: attribute.NewSet(attrs...),
 				})
 			},
 		},
 		{
-			name: "partial correlation enabled incoming missing local",
-			conn: []network.ConnectionStats{
-				// before: postgres-client -> postgres-server
-				// after: postgres-client -> hostIP
-				updateLocalIP(defaultPostgresIncomingConnection, hostIP),
-			},
+			name:                     "partial correlation enabled incoming missing local",
 			exportProtocolMetrics:    false,
 			exportPartialCorrelation: true,
-			testBody: func(t *testing.T, pi *podCorrelationInfo, conns []network.ConnectionStats, protoMetrics map[connKey][]*model.ConnectionMetric) {
-				pi.processConnections(conns, protoMetrics)
-				require.NoError(t, pi.metrics.Reader.Collect(context.Background(), &rm))
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
+				// before: postgres-client -> postgres-server
+				// after: postgres-client -> hostIP
+				conn := updateLocalIP(defaultPostgresIncomingConnection, hostIP)
+				pi.processConnections([]network.ConnectionStats{conn}, nil)
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
 				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 				metrics := rm.ScopeMetrics[0].Metrics
 				sortOTELMetricsByName(metrics)
 
-				attributeSet := attribute.NewSet(
-					// we miss all the pod attributes on the server
-					attribute.String(DirectionKey, connectionDirectionToString(network.INCOMING)),
-					attribute.String(LocalIPKey, hostIP.String()),
-					attribute.String(LocalPortKey, fmt.Sprintf("%d", postgresServerPort)),
-
-					attribute.String(RemoteIPKey, postgresClientIP.String()),
-					attribute.String(RemotePortKey, fmt.Sprintf("%d", postgresClientPort)),
-					attribute.String(RemotePodKey, postgresClientPodName),
-					attribute.String(RemoteNSKey, postgresNamespace),
-					attribute.String(RemoteLabelsKey, postgresClientLabels),
-				)
+				attrs := getMetricAttributes(&conn, nil, &postgresClientPodInfo)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
 					Value:      222,
-					Attributes: attributeSet,
+					Attributes: attribute.NewSet(attrs...),
 				})
 				assertInt64Metric(t, metrics[1], telemetry.SentMetricName, metricdata.DataPoint[int64]{
 					Value:      111,
-					Attributes: attributeSet,
+					Attributes: attribute.NewSet(attrs...),
 				})
 			},
 		},
@@ -353,20 +302,8 @@ func TestPodCorrelation(t *testing.T) {
 				kube.WithMaxControlPlaneLatency(5*time.Second),
 				kube.WithLastControlPlaneLatency(1*time.Second),
 				kube.WithPodsByIP(map[util.Address][]*kube.PodInfo{
-					postgresClientIP: {&kube.PodInfo{
-						Namespace:         postgresNamespace,
-						Name:              postgresClientPodName,
-						Labels:            postgresClientLabels,
-						CreationTimestamp: 40,
-						DeletionTimestamp: 0,
-					}},
-					postgresServerIP: {&kube.PodInfo{
-						Namespace:         postgresNamespace,
-						Name:              postgresServerPodName,
-						Labels:            postgresServerLabels,
-						CreationTimestamp: 41,
-						DeletionTimestamp: 0,
-					}},
+					postgresClientIP: {&postgresClientPodInfo},
+					postgresServerIP: {&postgresServerPodInfo},
 				}))
 			require.NoError(t, err)
 
@@ -391,7 +328,7 @@ func TestPodCorrelation(t *testing.T) {
 			///////////////////////////
 			// Run test body
 			///////////////////////////
-			tt.testBody(t, pi, tt.conn, tt.protoMetrics)
+			tt.testBody(t, pi)
 		})
 	}
 }
@@ -425,15 +362,27 @@ func TestGetMetricAttributes(t *testing.T) {
 	clientPort := uint16(12345)
 	serverPort := uint16(5432)
 
+	// Keys are already in OTEL in the podInfo struct
+	label1Key := "app.kubernetes.io.instance"
+	label1ValueClient := "client"
+	label1ValueServer := "server"
+	label2Key := "pod.template.hash"
+	label2ValueClient := "hash1"
+	label2ValueServer := "hash2"
+	remoteLabel1OTELKey := fmt.Sprintf("%s.%s", RemoteLabelsKey, label1Key)
+	remoteLabel2OTELKey := fmt.Sprintf("%s.%s", RemoteLabelsKey, label2Key)
+	localLabel1OTELKey := fmt.Sprintf("%s.%s", LocalLabelsKey, label1Key)
+	localLabel2OTELKey := fmt.Sprintf("%s.%s", LocalLabelsKey, label2Key)
+
 	clientPod := &kube.PodInfo{
 		Namespace: "default-client",
 		Name:      "client-pod",
-		Labels:    "app=client",
+		Labels:    map[string]string{label1Key: label1ValueClient, label2Key: label2ValueClient},
 	}
 	serverPod := &kube.PodInfo{
 		Namespace: "default-server",
 		Name:      "server-pod",
-		Labels:    "app=server",
+		Labels:    map[string]string{label1Key: label1ValueServer, label2Key: label2ValueServer},
 	}
 
 	outgoing := network.ConnectionStats{
@@ -451,22 +400,26 @@ func TestGetMetricAttributes(t *testing.T) {
 		attribute.String(LocalPortKey, fmt.Sprintf("%d", clientPort)),
 		attribute.String(LocalPodKey, clientPod.Name),
 		attribute.String(LocalNSKey, clientPod.Namespace),
-		attribute.String(LocalLabelsKey, clientPod.Labels),
+		attribute.String(localLabel1OTELKey, label1ValueClient),
+		attribute.String(localLabel2OTELKey, label2ValueClient),
 
 		attribute.String(RemoteIPKey, serverIP.String()),
 		attribute.String(RemotePortKey, fmt.Sprintf("%d", serverPort)),
 		attribute.String(RemotePodKey, serverPod.Name),
 		attribute.String(RemoteNSKey, serverPod.Namespace),
-		attribute.String(RemoteLabelsKey, serverPod.Labels),
+		attribute.String(remoteLabel1OTELKey, label1ValueServer),
+		attribute.String(remoteLabel2OTELKey, label2ValueServer),
 
 		attribute.String(DirectionKey, connectionDirectionToString(outgoing.Direction)),
 	}
+
 	clientAttr := []attribute.KeyValue{
 		attribute.String(LocalIPKey, clientIP.String()),
 		attribute.String(LocalPortKey, fmt.Sprintf("%d", clientPort)),
 		attribute.String(LocalPodKey, clientPod.Name),
 		attribute.String(LocalNSKey, clientPod.Namespace),
-		attribute.String(LocalLabelsKey, clientPod.Labels),
+		attribute.String(localLabel1OTELKey, label1ValueClient),
+		attribute.String(localLabel2OTELKey, label2ValueClient),
 
 		attribute.String(RemoteIPKey, serverIP.String()),
 		attribute.String(RemotePortKey, fmt.Sprintf("%d", serverPort)),
@@ -481,7 +434,8 @@ func TestGetMetricAttributes(t *testing.T) {
 		attribute.String(RemotePortKey, fmt.Sprintf("%d", serverPort)),
 		attribute.String(RemotePodKey, serverPod.Name),
 		attribute.String(RemoteNSKey, serverPod.Namespace),
-		attribute.String(RemoteLabelsKey, serverPod.Labels),
+		attribute.String(remoteLabel1OTELKey, label1ValueServer),
+		attribute.String(remoteLabel2OTELKey, label2ValueServer),
 
 		attribute.String(DirectionKey, connectionDirectionToString(outgoing.Direction)),
 	}

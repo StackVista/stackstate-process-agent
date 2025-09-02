@@ -34,7 +34,7 @@ const (
 	// LocalNSKey is the namespace of the local pod
 	LocalNSKey = "local.namespace"
 	// LocalLabelsKey is the labels of the local pod
-	LocalLabelsKey = "local.labels"
+	LocalLabelsKey = "local.pod.label"
 	// LocalPortKey is the port of the local pod
 	LocalPortKey = "local.port"
 
@@ -47,7 +47,7 @@ const (
 	// RemoteNSKey is the namespace of the remote pod
 	RemoteNSKey = "remote.namespace"
 	// RemoteLabelsKey is the labels of the remote pod
-	RemoteLabelsKey = "remote.labels"
+	RemoteLabelsKey = "remote.pod.label"
 	// RemotePortKey is the port of the remote pod
 	RemotePortKey = "remote.port"
 )
@@ -128,6 +128,14 @@ func connectionDirectionToString(direction network.ConnectionDirection) string {
 	return "outgoing"
 }
 
+func addPrefixToLabels(prefix string, labels map[string]string) []attribute.KeyValue {
+	otelLabels := make([]attribute.KeyValue, 0, len(labels))
+	for k, v := range labels {
+		otelLabels = append(otelLabels, attribute.String(fmt.Sprintf("%s.%s", prefix, k), v))
+	}
+	return otelLabels
+}
+
 func getMetricAttributes(conn *network.ConnectionStats, localPodInfo, remotePodInfo *kube.PodInfo) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{
 		attribute.String(LocalIPKey, conn.ConnectionTuple.Source.String()),
@@ -140,15 +148,15 @@ func getMetricAttributes(conn *network.ConnectionStats, localPodInfo, remotePodI
 		attributes = append(attributes,
 			attribute.String(LocalPodKey, localPodInfo.Name),
 			attribute.String(LocalNSKey, localPodInfo.Namespace),
-			attribute.String(LocalLabelsKey, localPodInfo.Labels),
 		)
+		attributes = append(attributes, addPrefixToLabels(LocalLabelsKey, localPodInfo.Labels)...)
 	}
 	if remotePodInfo != nil {
 		attributes = append(attributes,
 			attribute.String(RemotePodKey, remotePodInfo.Name),
 			attribute.String(RemoteNSKey, remotePodInfo.Namespace),
-			attribute.String(RemoteLabelsKey, remotePodInfo.Labels),
 		)
+		attributes = append(attributes, addPrefixToLabels(RemoteLabelsKey, remotePodInfo.Labels)...)
 	}
 	return attributes
 }

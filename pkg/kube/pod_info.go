@@ -2,9 +2,12 @@ package kube
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"time"
 )
+
+var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9]`)
 
 func (p *PodInfo) String() string {
 	deletionTs := time.Unix(p.DeletionTimestamp, 0).String()
@@ -24,11 +27,20 @@ func stringifyPodLabels(labels map[string]string) string {
 	return fmt.Sprintf("%v", labelsStr)
 }
 
+func convertLabelsKeyIntoOtelFormat(labels map[string]string) map[string]string {
+	newLabels := make(map[string]string, len(labels))
+	for oldKey, v := range labels {
+		// We want to replace all non-alphanumeric characters with "."
+		newLabels[nonAlphanumericRegex.ReplaceAllString(oldKey, ".")] = v
+	}
+	return newLabels
+}
+
 // PodInfo holds the metadata of a pod.
 type PodInfo struct {
 	Name              string
 	Namespace         string
-	Labels            string
+	Labels            map[string]string
 	CreationTimestamp int64
 	DeletionTimestamp int64
 }

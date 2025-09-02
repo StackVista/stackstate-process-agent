@@ -398,14 +398,14 @@ func TestGetMetricAttributes(t *testing.T) {
 	allAttributes := []attribute.KeyValue{
 		attribute.String(LocalIPKey, clientIP.String()),
 		attribute.String(LocalPortKey, fmt.Sprintf("%d", clientPort)),
-		attribute.String(LocalPodKey, clientPod.Name),
+		attribute.String(LocalPodNameKey, clientPod.Name),
 		attribute.String(LocalNSKey, clientPod.Namespace),
 		attribute.String(localLabel1OTELKey, label1ValueClient),
 		attribute.String(localLabel2OTELKey, label2ValueClient),
 
 		attribute.String(RemoteIPKey, serverIP.String()),
 		attribute.String(RemotePortKey, fmt.Sprintf("%d", serverPort)),
-		attribute.String(RemotePodKey, serverPod.Name),
+		attribute.String(RemotePodNameKey, serverPod.Name),
 		attribute.String(RemoteNSKey, serverPod.Namespace),
 		attribute.String(remoteLabel1OTELKey, label1ValueServer),
 		attribute.String(remoteLabel2OTELKey, label2ValueServer),
@@ -416,7 +416,7 @@ func TestGetMetricAttributes(t *testing.T) {
 	clientAttr := []attribute.KeyValue{
 		attribute.String(LocalIPKey, clientIP.String()),
 		attribute.String(LocalPortKey, fmt.Sprintf("%d", clientPort)),
-		attribute.String(LocalPodKey, clientPod.Name),
+		attribute.String(LocalPodNameKey, clientPod.Name),
 		attribute.String(LocalNSKey, clientPod.Namespace),
 		attribute.String(localLabel1OTELKey, label1ValueClient),
 		attribute.String(localLabel2OTELKey, label2ValueClient),
@@ -432,7 +432,7 @@ func TestGetMetricAttributes(t *testing.T) {
 
 		attribute.String(RemoteIPKey, serverIP.String()),
 		attribute.String(RemotePortKey, fmt.Sprintf("%d", serverPort)),
-		attribute.String(RemotePodKey, serverPod.Name),
+		attribute.String(RemotePodNameKey, serverPod.Name),
 		attribute.String(RemoteNSKey, serverPod.Namespace),
 		attribute.String(remoteLabel1OTELKey, label1ValueServer),
 		attribute.String(remoteLabel2OTELKey, label2ValueServer),

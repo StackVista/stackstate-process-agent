@@ -214,9 +214,9 @@ func getPodAttributes(t *testing.T, client *kubernetes.Clientset, podLabel strin
 
 	attrs := map[string]string{
 		// we choose dst keys but we will change them to source if the the pod will be used as source
-		checks.RemotePodKey: pod.Name,
-		checks.RemoteNSKey:  pod.Namespace,
-		checks.RemoteIPKey:  pod.Status.PodIP,
+		checks.RemotePodNameKey: pod.Name,
+		checks.RemoteNSKey:      pod.Namespace,
+		checks.RemoteIPKey:      pod.Status.PodIP,
 	}
 
 	for k, v := range pod.Labels {

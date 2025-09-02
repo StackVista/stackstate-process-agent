@@ -27,29 +27,29 @@ const (
 
 	// LOCAL FIELDS
 
-	// LocalIPKey is the IP address of the local pod
+	// LocalIPKey is the local IP address
 	LocalIPKey = "local.ip"
-	// LocalPodKey is the name of the local pod
-	LocalPodKey = "local.pod"
+	// LocalPortKey is the local port
+	LocalPortKey = "local.port"
+	// LocalPodNameKey is the name of the local pod
+	LocalPodNameKey = "local.pod.name"
 	// LocalNSKey is the namespace of the local pod
-	LocalNSKey = "local.namespace"
+	LocalNSKey = "local.pod.ns"
 	// LocalLabelsKey is the labels of the local pod
 	LocalLabelsKey = "local.pod.label"
-	// LocalPortKey is the port of the local pod
-	LocalPortKey = "local.port"
 
 	// REMOTE FIELDS
 
-	// RemoteIPKey is the IP address of the remote pod
+	// RemoteIPKey is the remote IP address
 	RemoteIPKey = "remote.ip"
-	// RemotePodKey is the name of the remote pod
-	RemotePodKey = "remote.pod"
+	// RemotePortKey is the remote port
+	RemotePortKey = "remote.port"
+	// RemotePodNameKey is the name of the remote pod
+	RemotePodNameKey = "remote.pod.name"
 	// RemoteNSKey is the namespace of the remote pod
-	RemoteNSKey = "remote.namespace"
+	RemoteNSKey = "remote.pod.ns"
 	// RemoteLabelsKey is the labels of the remote pod
 	RemoteLabelsKey = "remote.pod.label"
-	// RemotePortKey is the port of the remote pod
-	RemotePortKey = "remote.port"
 )
 
 type storedConnection struct {
@@ -146,14 +146,14 @@ func getMetricAttributes(conn *network.ConnectionStats, localPodInfo, remotePodI
 	}
 	if localPodInfo != nil {
 		attributes = append(attributes,
-			attribute.String(LocalPodKey, localPodInfo.Name),
+			attribute.String(LocalPodNameKey, localPodInfo.Name),
 			attribute.String(LocalNSKey, localPodInfo.Namespace),
 		)
 		attributes = append(attributes, addPrefixToLabels(LocalLabelsKey, localPodInfo.Labels)...)
 	}
 	if remotePodInfo != nil {
 		attributes = append(attributes,
-			attribute.String(RemotePodKey, remotePodInfo.Name),
+			attribute.String(RemotePodNameKey, remotePodInfo.Name),
 			attribute.String(RemoteNSKey, remotePodInfo.Namespace),
 		)
 		attributes = append(attributes, addPrefixToLabels(RemoteLabelsKey, remotePodInfo.Labels)...)

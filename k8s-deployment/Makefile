@@ -48,7 +48,7 @@ update:
 .PHONY: e2e-tests
 e2e-tests:
 	@echo "🚀 Running end-to-end tests..."
-	go test -tags 'test docker kubelet kubeapiserver linux cri containerd linux_bpf k8s_e2e' ./tests -v
+	go test -tags 'docker kubelet kubeapiserver linux cri containerd linux_bpf k8s_e2e' ./tests -v
 
 # Obtain a local copy of the json output from the test server pod
 # useful only with legacy metrics

@@ -42,6 +42,9 @@ const (
 	postgresSQLCommandTag   = "command"
 	postgresDatabaseNameTag = "database"
 	postgresTableNameTag    = "table"
+
+	outgoingDir = "outgoing"
+	incomingDir = "incoming"
 )
 
 type queryResult struct {
@@ -109,34 +112,32 @@ func convertOtelMetricToProm(otelName string, suffix string) string {
 	return strings.ReplaceAll(otelName, ".", "_") + "_" + suffix
 }
 
-func changeDstKeyIntoSrcKey(key string) string {
-	if strings.HasPrefix(key, "dst.") {
-		return strings.ReplaceAll("src."+strings.TrimPrefix(key, "dst."), ".", "_")
+func changeRemoteKeyIntoLocalKey(key string) string {
+	if strings.HasPrefix(key, "remote.") {
+		return strings.ReplaceAll("local."+strings.TrimPrefix(key, "remote."), ".", "_")
 	}
-	panic("unexpected non-dest key: " + key)
+	panic("unexpected non-remote key: " + key)
 }
 
-func composePromQuery(otelMetric string, srcAttrs, dstAttrs, extraAttrs map[string]string) string {
+func composePromQuery(otelMetric string, direction string, localAttrs, remoteAttrs, extraAttrs map[string]string) string {
 	promMetric := ""
 	switch otelMetric {
 	case telemetry.SentMetricName:
 		promMetric = convertOtelMetricToProm(telemetry.SentMetricName, "bytes_total")
 	case telemetry.ReceivedMetricName:
 		promMetric = convertOtelMetricToProm(telemetry.ReceivedMetricName, "bytes_total")
-	case telemetry.PostgresClientLatencyName:
-		promMetric = convertOtelMetricToProm(telemetry.PostgresClientLatencyName, "seconds_count")
-	case telemetry.PostgresServerLatencyName:
-		promMetric = convertOtelMetricToProm(telemetry.PostgresServerLatencyName, "seconds_count")
+	case telemetry.PostgresLatencyName:
+		promMetric = convertOtelMetricToProm(telemetry.PostgresLatencyName, "seconds_count")
 	default:
 		panic("unsupported otel metric: " + otelMetric)
 	}
 
-	promMetric += "{"
-	for k, v := range dstAttrs {
+	promMetric += fmt.Sprintf(`{%s="%s",`, checks.DirectionKey, direction)
+	for k, v := range remoteAttrs {
 		promMetric += fmt.Sprintf(`%s="%s",`, strings.ReplaceAll(k, ".", "_"), v)
 	}
-	for k, v := range srcAttrs {
-		promMetric += fmt.Sprintf(`%s="%s",`, changeDstKeyIntoSrcKey(k), v)
+	for k, v := range localAttrs {
+		promMetric += fmt.Sprintf(`%s="%s",`, changeRemoteKeyIntoLocalKey(k), v)
 	}
 	// not always present
 	for k, v := range extraAttrs {
@@ -210,10 +211,10 @@ func getPodAttributes(t *testing.T, client *kubernetes.Clientset, podLabel strin
 
 	attrs := map[string]string{
 		// we choose dst keys but we will change them to source if the the pod will be used as source
-		checks.DstPodKey:    pod.Name,
-		checks.DstNSKey:     pod.Namespace,
-		checks.DstLabelsKey: stringifyPodLabels(pod.Labels),
-		checks.DstIPKey:     pod.Status.PodIP,
+		checks.RemotePodKey:    pod.Name,
+		checks.RemoteNSKey:     pod.Namespace,
+		checks.RemoteLabelsKey: stringifyPodLabels(pod.Labels),
+		checks.RemoteIPKey:     pod.Status.PodIP,
 	}
 	return attrs
 }
@@ -269,67 +270,111 @@ func TestOTELMetricsE2E(t *testing.T) {
 	}
 
 	tests := []struct {
-		name  string
-		query string
+		name        string
+		metricName  string
+		localAttrs  map[string]string
+		remoteAttrs map[string]string
+		extraAttrs  map[string]string
 	}{
 		{
-			// process agent sends data to the test server
-			name:  "process-agent->test-server_sent",
-			query: composePromQuery(telemetry.SentMetricName, processAgentAttrs, testserverAttrs, nil),
+			// process agent sends data to the test server (we want to see both OUTGOING and INCOMING direction)
+			// here we populate the data for the outgoing direction, the test will switch them for the incoming case
+			name:        "process-agent<->test-server_sent",
+			metricName:  telemetry.SentMetricName,
+			localAttrs:  processAgentAttrs,
+			remoteAttrs: testserverAttrs,
+			extraAttrs:  nil,
 		},
 		{
-			name:  "process-agent->test-server_received",
-			query: composePromQuery(telemetry.ReceivedMetricName, processAgentAttrs, testserverAttrs, nil),
+			name:        "process-agent<->test-server_received",
+			metricName:  telemetry.ReceivedMetricName,
+			localAttrs:  processAgentAttrs,
+			remoteAttrs: testserverAttrs,
 		},
 		{
 			// prometheus scrapes data from the process agent
-			name:  "prometheus->process-agent_sent",
-			query: composePromQuery(telemetry.SentMetricName, prometheusAttrs, processAgentAttrs, nil),
+			name:        "prometheus<->process-agent_sent",
+			metricName:  telemetry.SentMetricName,
+			localAttrs:  prometheusAttrs,
+			remoteAttrs: processAgentAttrs,
 		},
 		{
-			name:  "prometheus->process-agent_received",
-			query: composePromQuery(telemetry.ReceivedMetricName, prometheusAttrs, processAgentAttrs, nil),
+			name:        "prometheus<->process-agent_received",
+			metricName:  telemetry.ReceivedMetricName,
+			localAttrs:  prometheusAttrs,
+			remoteAttrs: processAgentAttrs,
 		},
 		{
 			// prometheus scrapes data from the OTEL collector
-			name:  "prometheus->otel_sent",
-			query: composePromQuery(telemetry.SentMetricName, prometheusAttrs, otelCollectorAttrs, nil),
+			name:        "prometheus<->otel_sent",
+			metricName:  telemetry.SentMetricName,
+			localAttrs:  prometheusAttrs,
+			remoteAttrs: otelCollectorAttrs,
 		},
 		{
-			name:  "prometheus->otel_received",
-			query: composePromQuery(telemetry.ReceivedMetricName, prometheusAttrs, otelCollectorAttrs, nil),
+			name:        "prometheus<->otel_received",
+			metricName:  telemetry.ReceivedMetricName,
+			localAttrs:  prometheusAttrs,
+			remoteAttrs: otelCollectorAttrs,
 		},
 		{
 			// agent sends telemetry data to the OTEL collector
-			name:  "process-agent->otel_sent",
-			query: composePromQuery(telemetry.SentMetricName, processAgentAttrs, otelCollectorAttrs, nil),
+			name:        "process-agent<->otel_sent",
+			metricName:  telemetry.SentMetricName,
+			localAttrs:  processAgentAttrs,
+			remoteAttrs: otelCollectorAttrs,
 		},
 		{
-			name:  "process-agent->otel_received",
-			query: composePromQuery(telemetry.ReceivedMetricName, processAgentAttrs, otelCollectorAttrs, nil),
+			name:        "process-agent<->otel_received",
+			metricName:  telemetry.ReceivedMetricName,
+			localAttrs:  processAgentAttrs,
+			remoteAttrs: otelCollectorAttrs,
 		},
 		{
-			name:  "postgres-client->postgres-server_sent",
-			query: composePromQuery(telemetry.SentMetricName, postgresClientAttrs, postgresServerAttrs, nil),
+			name:        "postgres-client<->postgres-server_sent",
+			metricName:  telemetry.SentMetricName,
+			localAttrs:  postgresClientAttrs,
+			remoteAttrs: postgresServerAttrs,
 		},
 		{
-			name:  "postgres-client->postgres-server_received",
-			query: composePromQuery(telemetry.ReceivedMetricName, postgresClientAttrs, postgresServerAttrs, nil),
+			name:        "postgres-client<->postgres-server_received",
+			metricName:  telemetry.ReceivedMetricName,
+			localAttrs:  postgresClientAttrs,
+			remoteAttrs: postgresServerAttrs,
 		},
 		{
-			name:  "postgres-client->postgres-server_client_latency",
-			query: composePromQuery(telemetry.PostgresClientLatencyName, postgresClientAttrs, postgresServerAttrs, extraPostgresAttrs),
-		},
-		{
-			name:  "postgres-client->postgres-server_server_latency",
-			query: composePromQuery(telemetry.PostgresServerLatencyName, postgresClientAttrs, postgresServerAttrs, extraPostgresAttrs),
+			name:        "postgres-client<->postgres-server_latency",
+			metricName:  telemetry.PostgresLatencyName,
+			localAttrs:  postgresClientAttrs,
+			remoteAttrs: postgresServerAttrs,
+			extraAttrs:  extraPostgresAttrs,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		// Outgoing case
+		t.Run(tt.name+"_outgoing", func(t *testing.T) {
+			query := composePromQuery(tt.metricName, outgoingDir, tt.localAttrs, tt.remoteAttrs, tt.extraAttrs)
 			require.Eventually(t, func() bool {
-				results, err := pq.Query(t, tt.query)
+				results, err := pq.Query(t, query)
+				if err != nil {
+					t.Logf("error querying prometheus: %v", err)
+					return false
+				}
+				// in today tests we expect just one metric
+				if len(results) != 1 {
+					t.Logf("unexpected number of results: %d", len(results))
+					return false
+				}
+				return true
+			}, 20*time.Second, 500*time.Millisecond, "waiting for metrics to be available")
+		})
+
+		// Incoming case
+		t.Run(tt.name+"_incoming", func(t *testing.T) {
+			query := composePromQuery(tt.metricName, incomingDir, tt.remoteAttrs, tt.localAttrs, tt.extraAttrs)
+			require.Eventually(t, func() bool {
+				results, err := pq.Query(t, query)
 				if err != nil {
 					t.Logf("error querying prometheus: %v", err)
 					return false

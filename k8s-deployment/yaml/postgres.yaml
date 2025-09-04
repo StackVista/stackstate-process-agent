@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: postgres-server
   labels:
-    app: postgres-server
+    app.kubernetes.io/name: postgres-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres-server
+      app.kubernetes.io/name: postgres-server
   template:
     metadata:
       labels:
-        app: postgres-server
+        app.kubernetes.io/name: postgres-server
     spec:
       containers:
       - name: postgres
@@ -29,7 +29,7 @@ metadata:
   name: postgres-service
 spec:
   selector:
-    app: postgres-server
+    app.kubernetes.io/name: postgres-server
   ports:
     - protocol: TCP
       port: 5432
@@ -43,11 +43,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres-client
+      app.kubernetes.io/name: postgres-client
   template:
     metadata:
       labels:
-        app: postgres-client
+        app.kubernetes.io/name: postgres-client
     spec:
       containers:
       - name: client

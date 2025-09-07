@@ -168,6 +168,7 @@ type YamlAgentConfig struct {
 				Endpoint string `yaml:"endpoint"`
 				Interval int    `yaml:"interval"`
 			} `yaml:"exporter"`
+			Attributes []string `yaml:"attributes"`
 		} `yaml:"pod_correlation"`
 	} `yaml:"network_tracer_config"`
 	TransactionManager struct {
@@ -431,8 +432,6 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 
 func translateExporterType(t string) ExporterType {
 	switch t {
-	case "manual":
-		return ExporterTypeManual
 	case "stdout":
 		return ExporterTypeStdout
 	case "otlp":
@@ -453,6 +452,7 @@ func validatePodCorrelationConfig(agentConf *AgentConfig, networkConf *YamlAgent
 	agentConf.NetworkTracer.PodCorrelation.KubeConfigPath = networkConf.Network.PodCorrelation.KubeConfigPath
 	agentConf.NetworkTracer.PodCorrelation.ProtocolMetrics = networkConf.Network.PodCorrelation.ProtocolMetrics
 	agentConf.NetworkTracer.PodCorrelation.PartialCorrelation = networkConf.Network.PodCorrelation.PartialCorrelation
+	agentConf.NetworkTracer.PodCorrelation.AttributesKeys = networkConf.Network.PodCorrelation.Attributes
 	agentConf.NetworkTracer.PodCorrelation.Exporter.Type = translateExporterType(networkConf.Network.PodCorrelation.Exporter.Type)
 	agentConf.NetworkTracer.PodCorrelation.Exporter.Interval = time.Duration(networkConf.Network.PodCorrelation.Exporter.Interval) * time.Second
 	agentConf.NetworkTracer.PodCorrelation.Exporter.Endpoint = networkConf.Network.PodCorrelation.Exporter.Endpoint

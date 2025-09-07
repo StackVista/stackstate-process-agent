@@ -35,9 +35,9 @@ var (
 type ExporterType int
 
 const (
-	// ExporterTypeInvalid is an invalid exporter type.
-	ExporterTypeInvalid ExporterType = iota
-	// ExporterTypeManual is for tests, using a ManualReader.
+	// ExporterTypeDisabled is used only in some tests to disable exporting. Not exposed to users.
+	ExporterTypeDisabled ExporterType = iota
+	// ExporterTypeManual is for tests, using a ManualReader. Not exposed to users.
 	ExporterTypeManual
 	// ExporterTypeStdout prints the metrics to standard output.
 	ExporterTypeStdout
@@ -71,6 +71,8 @@ type PodCorrelationConfig struct {
 	PartialCorrelation bool
 	// The exporter to use for pod correlation
 	Exporter ExporterConfig
+	// List of attribute keys to include in the correlation
+	AttributesKeys []string
 }
 
 // NetworkTracerConfig contains some[1] of the network tracer configuration options
@@ -282,10 +284,11 @@ func NewDefaultAgentConfig() *AgentConfig {
 				ProtocolMetrics:    false,
 				PartialCorrelation: false,
 				Exporter: ExporterConfig{
-					Type:     ExporterTypeInvalid,
+					Type:     ExporterTypeDisabled,
 					Endpoint: "",
 					Interval: 0,
 				},
+				AttributesKeys: []string{},
 			},
 		},
 
@@ -693,8 +696,14 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	if value, err := isAffirmative(os.Getenv("STS_POD_CORRELATION_ENABLED")); err == nil && value {
 		c.NetworkTracer.PodCorrelation.Enabled = true
 		c.NetworkTracer.PodCorrelation.RemoteCacheAddr = os.Getenv("STS_POD_CORRELATION_REMOTE_CACHE_ADDR")
-		c.NetworkTracer.PodCorrelation.ProtocolMetrics = isAffirmativeSingleReturn("STS_POD_CORRELATION_PROTOCOL_METRICS")
-		c.NetworkTracer.PodCorrelation.PartialCorrelation = isAffirmativeSingleReturn("STS_POD_CORRELATION_PARTIAL_CORRELATION")
+		c.NetworkTracer.PodCorrelation.ProtocolMetrics = isAffirmativeSingleReturn(os.Getenv("STS_POD_CORRELATION_PROTOCOL_METRICS"))
+		c.NetworkTracer.PodCorrelation.PartialCorrelation = isAffirmativeSingleReturn(os.Getenv("STS_POD_CORRELATION_PARTIAL_CORRELATION"))
+		attrEnv := os.Getenv("STS_POD_CORRELATION_ATTRIBUTES_KEYS")
+		if attrEnv == "" {
+			c.NetworkTracer.PodCorrelation.AttributesKeys = []string{}
+		} else {
+			c.NetworkTracer.PodCorrelation.AttributesKeys = strings.Split(attrEnv, ",")
+		}
 		c.NetworkTracer.PodCorrelation.Exporter.Type = translateExporterType(os.Getenv("STS_POD_CORRELATION_EXPORTER_TYPE"))
 		c.NetworkTracer.PodCorrelation.Exporter.Endpoint = os.Getenv("STS_POD_CORRELATION_EXPORTER_OTLP_ENDPOINT")
 		c.NetworkTracer.PodCorrelation.Exporter.Interval, _ = time.ParseDuration(os.Getenv("STS_POD_CORRELATION_EXPORTER_INTERVAL"))

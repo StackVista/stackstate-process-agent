@@ -3,6 +3,7 @@ package checks
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/network"
@@ -19,7 +20,12 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// Attribute keys for pod correlation metrics
 const (
+	// Please bump this every time you add a new attribute key
+	// this is used by tests to ensure we don't forget to update the list of all keys
+	numAttributeKeys = 11
+
 	// We export them so that we can reuse these fields in e2e tests
 
 	// DirectionKey is the direction of the connection (0=outgoing, 1=incoming)
@@ -52,6 +58,32 @@ const (
 	RemoteLabelsKey = "remote.pod.label"
 )
 
+var (
+	// Keep this updated with all the possible keys
+	AllAttributeKeys = []string{
+		DirectionKey,
+		LocalIPKey,
+		LocalPortKey,
+		LocalPodNameKey,
+		LocalNSKey,
+		LocalLabelsKey,
+		RemoteIPKey,
+		RemotePortKey,
+		RemotePodNameKey,
+		RemoteNSKey,
+		RemoteLabelsKey,
+	}
+
+	DefaultAttributeKeys = []string{
+		DirectionKey,
+		LocalPodNameKey,
+		LocalNSKey,
+		LocalLabelsKey,
+		RemotePodNameKey,
+		RemoteNSKey,
+	}
+)
+
 type storedConnection struct {
 	conn            *network.ConnectionStats
 	protocolMetrics []*model.ConnectionMetric
@@ -65,26 +97,61 @@ type podCorrelationInfo struct {
 	exportPartialCorrelation bool
 	storedConnections        []*storedConnection
 	rootNSIno                uint32
+	attributesKeys           []string
+}
+
+func validateAttributeKeys(keys []string) ([]string, error) {
+	if len(keys) == 0 {
+		// return the default keys
+		return DefaultAttributeKeys, nil
+	}
+
+	// We want unique keys
+	slices.Sort(keys)
+	keys = slices.Compact(keys)
+
+	for _, key := range keys {
+		if !slices.Contains(AllAttributeKeys, key) {
+			return nil, fmt.Errorf("invalid attribute key: '%s'", key)
+		}
+	}
+	return keys, nil
 }
 
 func newPodCorrelationInfo(cfg *config.PodCorrelationConfig, logLevel string, rootNSIno uint32) (*podCorrelationInfo, error) {
+	log.Infof("Pod correlation enabled (protocol_metrics: %v), (partial_correlation: %v)", cfg.ProtocolMetrics, cfg.PartialCorrelation)
+
+	attrs, err := validateAttributeKeys(cfg.AttributesKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info("Using the following attribute keys for pod correlated metrics: ", attrs)
+
 	podCorrelationInfo := &podCorrelationInfo{
 		exportProtocolMetrics:    cfg.ProtocolMetrics,
 		exportPartialCorrelation: cfg.PartialCorrelation,
 		storedConnections:        make([]*storedConnection, 0),
 		rootNSIno:                rootNSIno,
+		attributesKeys:           attrs,
 	}
 
-	// if we are in tests we don't want to start the informer
-	if cfg.Exporter.Type != config.ExporterTypeManual {
+	switch cfg.Exporter.Type {
+	case config.ExporterTypeDisabled:
+		// Used only in tests to disable exporting and avoid starting the informer
+	case config.ExporterTypeManual:
+		// Here we only want the exporter
+		if podCorrelationInfo.metrics, err = telemetry.NewMetricsExporter(cfg.Exporter); err != nil {
+			return nil, err
+		}
+	case config.ExporterTypeStdout, config.ExporterTypeOTLP:
+		// Here we want the informer and the exporter
 		if err := podCorrelationInfo.startKubernetesInformer(cfg, logLevel); err != nil {
 			return nil, err
 		}
-	}
-
-	var err error
-	if podCorrelationInfo.metrics, err = telemetry.NewMetricsExporter(cfg.Exporter); err != nil {
-		return nil, err
+		if podCorrelationInfo.metrics, err = telemetry.NewMetricsExporter(cfg.Exporter); err != nil {
+			return nil, err
+		}
 	}
 
 	return podCorrelationInfo, nil
@@ -115,7 +182,7 @@ func (pi *podCorrelationInfo) startKubernetesInformer(cfg *config.PodCorrelation
 }
 
 func (pi *podCorrelationInfo) generateConnectionMetrics(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo) {
-	attrs := attribute.NewSet(getMetricAttributes(conn, srcPodInfo, dstPodInfo)...)
+	attrs := attribute.NewSet(pi.getMetricAttributes(conn, srcPodInfo, dstPodInfo)...)
 
 	pi.metrics.BytesRecv.Add(context.Background(), int64(conn.Last.RecvBytes), metric.WithAttributeSet(attrs))
 	pi.metrics.BytesSent.Add(context.Background(), int64(conn.Last.SentBytes), metric.WithAttributeSet(attrs))
@@ -136,33 +203,53 @@ func addPrefixToLabels(prefix string, labels map[string]string) []attribute.KeyV
 	return otelLabels
 }
 
-func getMetricAttributes(conn *network.ConnectionStats, localPodInfo, remotePodInfo *kube.PodInfo) []attribute.KeyValue {
-	attributes := []attribute.KeyValue{
-		attribute.String(LocalIPKey, conn.ConnectionTuple.Source.String()),
-		attribute.String(LocalPortKey, fmt.Sprintf("%d", conn.ConnectionTuple.SPort)),
-		attribute.String(RemoteIPKey, conn.ConnectionTuple.Dest.String()),
-		attribute.String(RemotePortKey, fmt.Sprintf("%d", conn.ConnectionTuple.DPort)),
-		attribute.String(DirectionKey, connectionDirectionToString(conn.Direction)),
-	}
-	if localPodInfo != nil {
-		attributes = append(attributes,
-			attribute.String(LocalPodNameKey, localPodInfo.Name),
-			attribute.String(LocalNSKey, localPodInfo.Namespace),
-		)
-		attributes = append(attributes, addPrefixToLabels(LocalLabelsKey, localPodInfo.Labels)...)
-	}
-	if remotePodInfo != nil {
-		attributes = append(attributes,
-			attribute.String(RemotePodNameKey, remotePodInfo.Name),
-			attribute.String(RemoteNSKey, remotePodInfo.Namespace),
-		)
-		attributes = append(attributes, addPrefixToLabels(RemoteLabelsKey, remotePodInfo.Labels)...)
+func (pi *podCorrelationInfo) getMetricAttributes(conn *network.ConnectionStats, localPodInfo, remotePodInfo *kube.PodInfo) []attribute.KeyValue {
+	attributes := make([]attribute.KeyValue, 0, len(pi.attributesKeys))
+	for _, key := range pi.attributesKeys {
+		switch key {
+		case LocalIPKey:
+			attributes = append(attributes, attribute.String(LocalIPKey, conn.ConnectionTuple.Source.String()))
+		case LocalPortKey:
+			attributes = append(attributes, attribute.String(LocalPortKey, fmt.Sprintf("%d", conn.ConnectionTuple.SPort)))
+		case RemoteIPKey:
+			attributes = append(attributes, attribute.String(RemoteIPKey, conn.ConnectionTuple.Dest.String()))
+		case RemotePortKey:
+			attributes = append(attributes, attribute.String(RemotePortKey, fmt.Sprintf("%d", conn.ConnectionTuple.DPort)))
+		case DirectionKey:
+			attributes = append(attributes, attribute.String(DirectionKey, connectionDirectionToString(conn.Direction)))
+		case LocalPodNameKey:
+			if localPodInfo != nil {
+				attributes = append(attributes, attribute.String(LocalPodNameKey, localPodInfo.Name))
+			}
+		case LocalNSKey:
+			if localPodInfo != nil {
+				attributes = append(attributes, attribute.String(LocalNSKey, localPodInfo.Namespace))
+			}
+		case LocalLabelsKey:
+			if localPodInfo != nil {
+				attributes = append(attributes, addPrefixToLabels(LocalLabelsKey, localPodInfo.Labels)...)
+			}
+		case RemotePodNameKey:
+			if remotePodInfo != nil {
+				attributes = append(attributes, attribute.String(RemotePodNameKey, remotePodInfo.Name))
+			}
+		case RemoteNSKey:
+			if remotePodInfo != nil {
+				attributes = append(attributes, attribute.String(RemoteNSKey, remotePodInfo.Namespace))
+			}
+		case RemoteLabelsKey:
+			if remotePodInfo != nil {
+				attributes = append(attributes, addPrefixToLabels(RemoteLabelsKey, remotePodInfo.Labels)...)
+			}
+		default:
+			panic(fmt.Sprintf("Unknown attribute key: %s", key))
+		}
 	}
 	return attributes
 }
 
 func (pi *podCorrelationInfo) generateProtocolMetrics(conn *network.ConnectionStats, srcPodInfo, dstPodInfo *kube.PodInfo, metrics []*model.ConnectionMetric) {
-	attr := getMetricAttributes(conn, srcPodInfo, dstPodInfo)
+	attr := pi.getMetricAttributes(conn, srcPodInfo, dstPodInfo)
 
 	for _, m := range metrics {
 		// todo!: for now we only support postgres metrics.

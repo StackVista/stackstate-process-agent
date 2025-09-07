@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -28,15 +27,14 @@ import (
 )
 
 const (
-	processAgentLabels   = "app=process-agent"
+	processAgentLabels   = "app.kubernetes.io/component=node-agent"
 	prometheusLabels     = "app.kubernetes.io/name=prometheus"
-	testserverLabels     = "app=test-server"
-	otelCollectorLabels  = "app=opentelemetry"
-	postgresClientLabels = "app=postgres-client"
-	postgresServerLabels = "app=postgres-server"
+	otelCollectorLabels  = "app.kubernetes.io/name=opentelemetry-collector"
+	postgresClientLabels = "app.kubernetes.io/name=postgres-client"
+	postgresServerLabels = "app.kubernetes.io/name=postgres-server"
 
-	prometheusServiceName = "prometheus-service"
-	prometheusPortName    = "web"
+	prometheusServiceName = "prometheus-server"
+	prometheusPortName    = "http"
 
 	namespace = "default"
 
@@ -122,7 +120,17 @@ func changeRemoteKeyIntoLocalKey(key string) string {
 	panic("unexpected non-remote key: " + key)
 }
 
-func composePromQuery(otelMetric string, direction string, localAttrs, remoteAttrs, extraAttrs map[string]string) string {
+func isAttributeRequired(requiredAttrsKeys []string, key string) bool {
+	// some attributes like labels are already in the form local.pod.labels.<label_key> so a simple contains is not enough, we need to check the prefix
+	for _, allowedKey := range requiredAttrsKeys {
+		if key == allowedKey || strings.HasPrefix(key, allowedKey+".") {
+			return true
+		}
+	}
+	return false
+}
+
+func composePromQuery(otelMetric string, direction string, localAttrs, remoteAttrs, extraAttrs map[string]string, requiredAttrsKeys []string) string {
 	promMetric := ""
 	switch otelMetric {
 	case telemetry.SentMetricName:
@@ -134,15 +142,23 @@ func composePromQuery(otelMetric string, direction string, localAttrs, remoteAtt
 	default:
 		panic("unsupported otel metric: " + otelMetric)
 	}
-
-	promMetric += fmt.Sprintf(`{%s="%s",`, checks.DirectionKey, direction)
+	promMetric += fmt.Sprintf(`{`)
+	if isAttributeRequired(requiredAttrsKeys, checks.DirectionKey) {
+		promMetric += fmt.Sprintf(`%s="%s",`, checks.DirectionKey, direction)
+	}
 	for k, v := range remoteAttrs {
+		if !isAttributeRequired(requiredAttrsKeys, k) {
+			continue
+		}
 		promMetric += fmt.Sprintf(`%s="%s",`, nonAlphanumericRegex.ReplaceAllString(k, "_"), v)
 	}
 	for k, v := range localAttrs {
+		if !isAttributeRequired(requiredAttrsKeys, k) {
+			continue
+		}
 		promMetric += fmt.Sprintf(`%s="%s",`, nonAlphanumericRegex.ReplaceAllString(changeRemoteKeyIntoLocalKey(k), "_"), v)
 	}
-	// not always present
+	// if we specify extra attributes, we assume they are all required
 	for k, v := range extraAttrs {
 		promMetric += fmt.Sprintf(`%s="%s",`, nonAlphanumericRegex.ReplaceAllString(k, "_"), v)
 	}
@@ -185,19 +201,10 @@ func getNodeIP(ctx context.Context, client *kubernetes.Clientset) (string, error
 	return "", fmt.Errorf("no node internal IP found")
 }
 
-func stringifyPodLabels(labels map[string]string) string {
-	labelsStr := make([]string, 0, len(labels))
-	for k, v := range labels {
-		labelsStr = append(labelsStr, fmt.Sprintf("%s=%s", k, v))
-	}
-	sort.Strings(labelsStr)
-	return fmt.Sprintf("%v", labelsStr)
-}
-
 func getPodAttributes(t *testing.T, client *kubernetes.Clientset, podLabel string) map[string]string {
 	var pod corev1.Pod
 	require.Eventually(t, func() bool {
-		pods, err := client.CoreV1().Pods(namespace).List(t.Context(), metav1.ListOptions{LabelSelector: podLabel})
+		pods, err := client.CoreV1().Pods("").List(t.Context(), metav1.ListOptions{LabelSelector: podLabel})
 		if err != nil {
 			t.Logf("cannot find pod with label %s: %v", podLabel, err)
 			return false
@@ -227,7 +234,54 @@ func getPodAttributes(t *testing.T, client *kubernetes.Clientset, podLabel strin
 	return attrs
 }
 
-func TestOTELMetricsE2E(t *testing.T) {
+func getProcessAgentMetricsAttributes(t *testing.T, client *kubernetes.Clientset) []string {
+	var pod corev1.Pod
+	require.Eventually(t, func() bool {
+		pods, err := client.CoreV1().Pods("").List(t.Context(), metav1.ListOptions{LabelSelector: processAgentLabels})
+		if err != nil {
+			t.Logf("cannot find pod with label %s: %v", processAgentLabels, err)
+			return false
+		}
+
+		// We expect one pod with the given label
+		if len(pods.Items) != 1 {
+			t.Logf("expected one pod for label %s, got %d", processAgentLabels, len(pods.Items))
+			return false
+		}
+		pod = pods.Items[0]
+		return true
+	}, 30*time.Second, 500*time.Millisecond, "failed to find pod with label "+processAgentLabels)
+
+	// We check the process-agent is present
+	require.Len(t, pod.Spec.Containers, 2, "expected 2 containers in the process agent pod")
+	var container corev1.Container
+	for _, cont := range pod.Spec.Containers {
+		if cont.Name == "process-agent" {
+			container = cont
+			break
+		}
+	}
+	require.NotEqual(t, container.Name, "")
+
+	attrs := []string{}
+	for _, env := range container.Env {
+		if env.Name != "STS_POD_CORRELATION_ATTRIBUTES_KEYS" {
+			continue
+		}
+		if env.Value == "" {
+			attrs = checks.DefaultAttributeKeys
+			break
+		} else {
+			attrs = strings.Split(env.Value, ",")
+			break
+		}
+	}
+
+	require.NotEqual(t, 0, len(attrs), "no pod correlation attributes found in process-agent pod")
+	return attrs
+}
+
+func TestBasicOTELMetrics(t *testing.T) {
 	//////////////////////
 	// Create k8s client
 	//////////////////////
@@ -257,6 +311,11 @@ func TestOTELMetricsE2E(t *testing.T) {
 	}, 30*time.Second, 500*time.Millisecond, "waiting for metrics to be available")
 
 	//////////////////////
+	// Get attributes keys from process-agent pod
+	//////////////////////
+	attributeKeys := getProcessAgentMetricsAttributes(t, client)
+
+	//////////////////////
 	// Create prometheus client
 	//////////////////////
 	pq := Client{HostPort: fmt.Sprintf("%s:%d", nodeIp, nodePort)}
@@ -264,17 +323,15 @@ func TestOTELMetricsE2E(t *testing.T) {
 	//////////////////////
 	// Get all pods info
 	//////////////////////
-	processAgentAttrs := getPodAttributes(t, client, processAgentLabels)
 	otelCollectorAttrs := getPodAttributes(t, client, otelCollectorLabels)
-	testserverAttrs := getPodAttributes(t, client, testserverLabels)
 	prometheusAttrs := getPodAttributes(t, client, prometheusLabels)
 	postgresClientAttrs := getPodAttributes(t, client, postgresClientLabels)
 	postgresServerAttrs := getPodAttributes(t, client, postgresServerLabels)
 
 	extraPostgresAttrs := map[string]string{
-		postgresSQLCommandTag:   "SELECT",
-		postgresDatabaseNameTag: "<unobserved>",
-		postgresTableNameTag:    "demo",
+		postgresSQLCommandTag: "SELECT",
+		// the database name could be there or not, it really depends on the timing of when the process-agent is deployed
+		postgresTableNameTag: "demo",
 	}
 
 	tests := []struct {
@@ -285,35 +342,8 @@ func TestOTELMetricsE2E(t *testing.T) {
 		extraAttrs  map[string]string
 	}{
 		{
-			// process agent sends data to the test server (we want to see both OUTGOING and INCOMING direction)
+			// prometheus scrapes data from the OTEL collector (we want to see both OUTGOING and INCOMING direction)
 			// here we populate the data for the outgoing direction, the test will switch them for the incoming case
-			name:        "process-agent<->test-server_sent",
-			metricName:  telemetry.SentMetricName,
-			localAttrs:  processAgentAttrs,
-			remoteAttrs: testserverAttrs,
-			extraAttrs:  nil,
-		},
-		{
-			name:        "process-agent<->test-server_received",
-			metricName:  telemetry.ReceivedMetricName,
-			localAttrs:  processAgentAttrs,
-			remoteAttrs: testserverAttrs,
-		},
-		{
-			// prometheus scrapes data from the process agent
-			name:        "prometheus<->process-agent_sent",
-			metricName:  telemetry.SentMetricName,
-			localAttrs:  prometheusAttrs,
-			remoteAttrs: processAgentAttrs,
-		},
-		{
-			name:        "prometheus<->process-agent_received",
-			metricName:  telemetry.ReceivedMetricName,
-			localAttrs:  prometheusAttrs,
-			remoteAttrs: processAgentAttrs,
-		},
-		{
-			// prometheus scrapes data from the OTEL collector
 			name:        "prometheus<->otel_sent",
 			metricName:  telemetry.SentMetricName,
 			localAttrs:  prometheusAttrs,
@@ -323,19 +353,6 @@ func TestOTELMetricsE2E(t *testing.T) {
 			name:        "prometheus<->otel_received",
 			metricName:  telemetry.ReceivedMetricName,
 			localAttrs:  prometheusAttrs,
-			remoteAttrs: otelCollectorAttrs,
-		},
-		{
-			// agent sends telemetry data to the OTEL collector
-			name:        "process-agent<->otel_sent",
-			metricName:  telemetry.SentMetricName,
-			localAttrs:  processAgentAttrs,
-			remoteAttrs: otelCollectorAttrs,
-		},
-		{
-			name:        "process-agent<->otel_received",
-			metricName:  telemetry.ReceivedMetricName,
-			localAttrs:  processAgentAttrs,
 			remoteAttrs: otelCollectorAttrs,
 		},
 		{
@@ -362,7 +379,7 @@ func TestOTELMetricsE2E(t *testing.T) {
 	for _, tt := range tests {
 		// Outgoing case
 		t.Run(tt.name+"_outgoing", func(t *testing.T) {
-			query := composePromQuery(tt.metricName, outgoingDir, tt.localAttrs, tt.remoteAttrs, tt.extraAttrs)
+			query := composePromQuery(tt.metricName, outgoingDir, tt.localAttrs, tt.remoteAttrs, tt.extraAttrs, attributeKeys)
 			require.Eventually(t, func() bool {
 				results, err := pq.Query(t, query)
 				if err != nil {
@@ -380,7 +397,7 @@ func TestOTELMetricsE2E(t *testing.T) {
 
 		// Incoming case
 		t.Run(tt.name+"_incoming", func(t *testing.T) {
-			query := composePromQuery(tt.metricName, incomingDir, tt.remoteAttrs, tt.localAttrs, tt.extraAttrs)
+			query := composePromQuery(tt.metricName, incomingDir, tt.remoteAttrs, tt.localAttrs, tt.extraAttrs, attributeKeys)
 			require.Eventually(t, func() bool {
 				results, err := pq.Query(t, query)
 				if err != nil {

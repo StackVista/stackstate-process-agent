@@ -146,7 +146,7 @@ func TestPodCorrelation(t *testing.T) {
 				metrics := rm.ScopeMetrics[0].Metrics
 				sortOTELMetricsByName(metrics)
 
-				attrs := getMetricAttributes(&conn, &postgresClientPodInfo, &postgresServerPodInfo)
+				attrs := pi.getMetricAttributes(&conn, &postgresClientPodInfo, &postgresServerPodInfo)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					Value:      postgresClientReceivedBytes,
 					Attributes: attribute.NewSet(attrs...),
@@ -172,7 +172,7 @@ func TestPodCorrelation(t *testing.T) {
 				metrics := rm.ScopeMetrics[0].Metrics
 				sortOTELMetricsByName(metrics)
 
-				attrs := getMetricAttributes(&conn, &postgresServerPodInfo, &postgresClientPodInfo)
+				attrs := pi.getMetricAttributes(&conn, &postgresServerPodInfo, &postgresClientPodInfo)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					Value:      postgresClientSentBytes,
 					Attributes: attribute.NewSet(attrs...),
@@ -249,7 +249,7 @@ func TestPodCorrelation(t *testing.T) {
 				metrics := rm.ScopeMetrics[0].Metrics
 				sortOTELMetricsByName(metrics)
 
-				attrs := getMetricAttributes(&conn, &postgresServerPodInfo, nil)
+				attrs := pi.getMetricAttributes(&conn, &postgresServerPodInfo, nil)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
 					Value:      222,
@@ -276,7 +276,7 @@ func TestPodCorrelation(t *testing.T) {
 				metrics := rm.ScopeMetrics[0].Metrics
 				sortOTELMetricsByName(metrics)
 
-				attrs := getMetricAttributes(&conn, nil, &postgresClientPodInfo)
+				attrs := pi.getMetricAttributes(&conn, nil, &postgresClientPodInfo)
 				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
 					// The connection is incoming so they recv/sent are inverted.
 					Value:      222,
@@ -318,8 +318,9 @@ func TestPodCorrelation(t *testing.T) {
 					Exporter: config.ExporterConfig{
 						Type: config.ExporterTypeManual,
 					},
+					AttributesKeys: AllAttributeKeys,
 				},
-				"DEBUG",
+				"debug",
 				hostNs)
 			require.NoError(t, err)
 			// Overwrite the observer in the pod correlation struct
@@ -441,39 +442,120 @@ func TestGetMetricAttributes(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		conn      network.ConnectionStats
-		want      []attribute.KeyValue
-		localPod  *kube.PodInfo
-		remotePod *kube.PodInfo
+		name                   string
+		conn                   network.ConnectionStats
+		want                   []attribute.KeyValue
+		localPod               *kube.PodInfo
+		remotePod              *kube.PodInfo
+		requiredAttributesKeys []string
 	}{
 		{
-			name:      "outgoing_both_pods",
-			conn:      outgoing,
-			localPod:  clientPod,
-			remotePod: serverPod,
-			want:      allAttributes,
+			name:                   "outgoing_both_pods",
+			conn:                   outgoing,
+			localPod:               clientPod,
+			remotePod:              serverPod,
+			requiredAttributesKeys: AllAttributeKeys,
+			want:                   allAttributes,
 		},
 		{
-			name:      "outgoing_missing_dst_pod_only_client_attrs",
-			conn:      outgoing,
-			localPod:  clientPod,
-			remotePod: nil,
-			want:      clientAttr,
+			name:                   "outgoing_both_pods_limited_required_attrs",
+			conn:                   outgoing,
+			localPod:               clientPod,
+			remotePod:              serverPod,
+			requiredAttributesKeys: DefaultAttributeKeys,
+			want: []attribute.KeyValue{
+				attribute.String(LocalPodNameKey, clientPod.Name),
+				attribute.String(LocalNSKey, clientPod.Namespace),
+				attribute.String(localLabel1OTELKey, label1ValueClient),
+				attribute.String(localLabel2OTELKey, label2ValueClient),
+				attribute.String(RemotePodNameKey, serverPod.Name),
+				attribute.String(RemoteNSKey, serverPod.Namespace),
+				attribute.String(DirectionKey, connectionDirectionToString(outgoing.Direction)),
+			},
 		},
 		{
-			name:      "outgoing_missing_src_pod_only_server_attrs",
-			conn:      outgoing,
-			localPod:  nil,
-			remotePod: serverPod,
-			want:      serverAttr,
+			name:                   "outgoing_missing_dst_pod_only_client_attrs",
+			conn:                   outgoing,
+			localPod:               clientPod,
+			remotePod:              nil,
+			requiredAttributesKeys: AllAttributeKeys,
+			want:                   clientAttr,
+		},
+		{
+			name:                   "outgoing_missing_src_pod_only_server_attrs",
+			conn:                   outgoing,
+			localPod:               nil,
+			remotePod:              serverPod,
+			requiredAttributesKeys: AllAttributeKeys,
+			want:                   serverAttr,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getMetricAttributes(&tt.conn, tt.localPod, tt.remotePod)
+			pi, err := newPodCorrelationInfo(
+				&config.PodCorrelationConfig{
+					Exporter: config.ExporterConfig{
+						Type: config.ExporterTypeDisabled,
+					},
+					AttributesKeys: tt.requiredAttributesKeys,
+				},
+				"debug",
+				0,
+			)
+			require.NoError(t, err)
+
+			got := pi.getMetricAttributes(&tt.conn, tt.localPod, tt.remotePod)
 			require.ElementsMatch(t, tt.want, got)
 		})
 	}
+}
+
+func TestAttributesKeysLen(t *testing.T) {
+	require.Equal(t, numAttributeKeys, len(AllAttributeKeys), "Please update the AllAttributeKeys variable in net_pod_correlation.go if you added a new attribute key")
+}
+
+func TestValidateAttributeKeys(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name:     "valid_set",
+			input:    AllAttributeKeys,
+			expected: AllAttributeKeys,
+		},
+		{
+			name:     "invalid_key",
+			input:    []string{LocalIPKey, "invalid.key"},
+			expected: nil,
+		},
+		{
+			name:     "empty_set",
+			input:    []string{},
+			expected: DefaultAttributeKeys,
+		},
+		{
+			name:     "duplicate_keys",
+			input:    []string{LocalIPKey, LocalIPKey, RemoteIPKey},
+			expected: []string{LocalIPKey, RemoteIPKey},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := validateAttributeKeys(tt.input)
+
+			if tt.expected == nil {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.ElementsMatch(t, tt.expected, got)
+
+		})
+	}
+
 }

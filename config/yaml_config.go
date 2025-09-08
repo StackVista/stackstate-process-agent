@@ -168,7 +168,8 @@ type YamlAgentConfig struct {
 				Endpoint string `yaml:"endpoint"`
 				Interval int    `yaml:"interval"`
 			} `yaml:"exporter"`
-			Attributes []string `yaml:"attributes"`
+			Attributes                    []string `yaml:"attributes"`
+			ShortLivedConnectionsInterval int      `yaml:"short_lived_connections_interval"`
 		} `yaml:"pod_correlation"`
 	} `yaml:"network_tracer_config"`
 	TransactionManager struct {
@@ -456,4 +457,5 @@ func validatePodCorrelationConfig(agentConf *AgentConfig, networkConf *YamlAgent
 	agentConf.NetworkTracer.PodCorrelation.Exporter.Type = translateExporterType(networkConf.Network.PodCorrelation.Exporter.Type)
 	agentConf.NetworkTracer.PodCorrelation.Exporter.Interval = time.Duration(networkConf.Network.PodCorrelation.Exporter.Interval) * time.Second
 	agentConf.NetworkTracer.PodCorrelation.Exporter.Endpoint = networkConf.Network.PodCorrelation.Exporter.Endpoint
+	agentConf.NetworkTracer.PodCorrelation.ShortLivedConnectionsInterval = time.Duration(networkConf.Network.PodCorrelation.ShortLivedConnectionsInterval) * time.Second
 }

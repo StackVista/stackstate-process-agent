@@ -73,6 +73,8 @@ type PodCorrelationConfig struct {
 	Exporter ExporterConfig
 	// List of attribute keys to include in the correlation
 	AttributesKeys []string
+	// Interval to consider a connection short-lived
+	ShortLivedConnectionsInterval time.Duration
 }
 
 // NetworkTracerConfig contains some[1] of the network tracer configuration options
@@ -288,7 +290,8 @@ func NewDefaultAgentConfig() *AgentConfig {
 					Endpoint: "",
 					Interval: 0,
 				},
-				AttributesKeys: []string{},
+				AttributesKeys:                []string{},
+				ShortLivedConnectionsInterval: 0,
 			},
 		},
 
@@ -707,6 +710,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.NetworkTracer.PodCorrelation.Exporter.Type = translateExporterType(os.Getenv("STS_POD_CORRELATION_EXPORTER_TYPE"))
 		c.NetworkTracer.PodCorrelation.Exporter.Endpoint = os.Getenv("STS_POD_CORRELATION_EXPORTER_OTLP_ENDPOINT")
 		c.NetworkTracer.PodCorrelation.Exporter.Interval, _ = time.ParseDuration(os.Getenv("STS_POD_CORRELATION_EXPORTER_INTERVAL"))
+		c.NetworkTracer.PodCorrelation.ShortLivedConnectionsInterval, _ = time.ParseDuration(os.Getenv("STS_POD_CORRELATION_SHORT_LIVED_CONNECTIONS_INTERVAL"))
 	}
 
 	return c

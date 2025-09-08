@@ -173,7 +173,7 @@ func (pi *podCorrelationInfo) startKubernetesInformer(cfg *config.PodCorrelation
 		return fmt.Errorf("failed to create kubernetes informer: %w", err)
 	}
 	// if needed we can configure the refresh interval for the deleted pods cache
-	pi.observer, err = kube.NewObserver(prometheus.DefaultRegisterer, kube.WithPodDebugEndpoint())
+	pi.observer, err = kube.NewObserver(prometheus.DefaultRegisterer, kube.WithPodDebugEndpoint(), kube.WithShortLivedConnectionsInterval(cfg.ShortLivedConnectionsInterval))
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes observer: %w", err)
 	}
@@ -333,6 +333,11 @@ func (pi *podCorrelationInfo) processConnections(conns []network.ConnectionStats
 	for _, conn := range conns {
 		if conn.Type != network.TCP {
 			log.Warnf("We should only receive TCP connections here: %v", conn)
+			continue
+		}
+
+		// skip short lived connections
+		if pi.observer.FilterShortLivedConnection(conn.Duration) {
 			continue
 		}
 

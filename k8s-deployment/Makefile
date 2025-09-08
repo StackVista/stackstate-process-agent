@@ -5,7 +5,7 @@ SETUP_AGENT_HELM_CHART_DIR ?= ~/personal/helm-charts/stable/suse-observability-a
 # SETUP_TYPE can be 'local' or 'remote' (default: local)
 SETUP_TYPE ?= local
 SETUP_API_KEY ?= null
-SETUP_CLUSTER_NAME ?= minikube-local-setup
+SETUP_CLUSTER_NAME ?= local-setup
 SETUP_RECEIVER_ENDPOINT ?= http://test-server-service:7077/stsAgent
 # To be set only in remote mode
 SETUP_OTEL_ENDPOINT ?= null

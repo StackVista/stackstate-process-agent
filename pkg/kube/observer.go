@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	defaultDeletePodsAfter       = 2 * time.Minute
-	defaultCleanCacheInterval    = 10 * time.Minute
-	defaultMaxEstimatedCPLatency = 5 * time.Second
+	defaultDeletePodsAfter        = 2 * time.Minute
+	defaultCleanCacheInterval     = 10 * time.Minute
+	defaultMaxEstimatedCPLatency  = 5 * time.Second
+	defaultShortLivedConnInterval = 0
 
 	prometheusNamespace = "stackstate_process_agent"
 	prometheusSubsystem = "observer"
@@ -54,6 +55,8 @@ type Observer struct {
 	maxControlPlaneLatency int64
 	// just used for testing
 	nowFunc func() time.Time
+	// if the connection is younger than this interval, we consider it a short lived connection and we don't try to correlate it.
+	shortLivedConnInterval time.Duration
 
 	// Metrics
 	controlPlaneLatency prometheus.Histogram
@@ -114,6 +117,12 @@ func WithPodDebugEndpoint() ObserverOption {
 	}
 }
 
+func WithShortLivedConnectionsInterval(interval time.Duration) ObserverOption {
+	return func(o *Observer) {
+		o.shortLivedConnInterval = interval
+	}
+}
+
 // NewObserver creates a new Observer instance.
 func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, error) {
 	// we need the boot time because all what we receive from ebpf is the time in nanoseconds since boot
@@ -131,6 +140,7 @@ func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, 
 		cleanCacheInterval:      defaultCleanCacheInterval,
 		deletePodsAfter:         defaultDeletePodsAfter,
 		nowFunc:                 time.Now,
+		shortLivedConnInterval:  defaultShortLivedConnInterval,
 
 		controlPlaneLatency: prometheus.NewHistogram(prometheus.HistogramOpts{
 			Namespace: prometheusNamespace,
@@ -198,7 +208,7 @@ func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, 
 	// update it after we apply the options, since nowFunc can be overridden
 	obs.lastCacheClean = obs.nowFunc()
 
-	log.Infof("Observer created with clean cache interval: %s, delete pods after: %s", obs.cleanCacheInterval, obs.deletePodsAfter)
+	log.Infof("Observer created (clean cache interval: %s), (delete pods after: %s), (short lived connections interval: %s)", obs.cleanCacheInterval, obs.deletePodsAfter, obs.shortLivedConnInterval)
 	return obs, nil
 }
 
@@ -350,6 +360,18 @@ func (o *Observer) ConnectionNeedsRetry(nsFromBoot time.Duration) bool {
 		return true
 	}
 	return false
+}
+
+// FilterShortLivedConnection returns true if the connection is short lived and should be ignored.
+func (o *Observer) FilterShortLivedConnection(nsFromBoot time.Duration) bool {
+	// if the interval is not configured we return false
+	if o.shortLivedConnInterval == 0 {
+		return false
+	}
+
+	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
+	// if the connection is younger than the configured interval we consider it a short lived connection
+	return connCreationTime > (o.nowFunc().Unix() - int64(o.shortLivedConnInterval.Seconds()))
 }
 
 // ResolvePodsByIPs resolves the pods by their IPs, returning the PodInfo for each IP.

@@ -289,6 +289,11 @@ func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, m
 	// 5. ExternalIP -> Pod (INCOMING)
 	srcPodInfo, dstPodInfo := pi.observer.ResolvePodsByIPs(conn.ConnectionTuple.Source, conn.ConnectionTuple.Dest, conn.Duration)
 
+	// if we arrive here the connection is in a pod network ns so if we are not able to resolve the src ip it means it is not in a pod. This is true for both INCOMING and OUTGOING connections
+	if srcPodInfo == nil {
+		return
+	}
+
 	if conn.Direction == network.OUTGOING {
 		// We try the resolution
 		if dstPodInfo == nil && conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
@@ -299,13 +304,8 @@ func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, m
 		}
 	}
 
-	// we can do nothing
-	if srcPodInfo == nil && dstPodInfo == nil {
-		return
-	}
-
 	// if one of the 2 is nil we need to check if we want to export partial correlation
-	if (dstPodInfo == nil || srcPodInfo == nil) && !pi.exportPartialCorrelation {
+	if dstPodInfo == nil && !pi.exportPartialCorrelation {
 		return
 	}
 

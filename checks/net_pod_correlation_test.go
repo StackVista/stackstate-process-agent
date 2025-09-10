@@ -70,7 +70,10 @@ func TestPodCorrelation(t *testing.T) {
 		postgresClientSentBytes     = int64(222)
 
 		// pod in hostNetwork will have this IP
-		hostIP = util.AddressFromString("192.168.1.7")
+		hostIP              = util.AddressFromString("192.168.1.7")
+		localhostIP         = util.AddressFromString("127.0.0.1")
+		randomLocalHostPort = uint16(46734)
+
 		hostNs = uint32(1)
 	)
 
@@ -269,23 +272,64 @@ func TestPodCorrelation(t *testing.T) {
 				// before: postgres-client -> postgres-server
 				// after: postgres-client -> hostIP
 				conn := updateLocalIP(defaultPostgresIncomingConnection, hostIP)
+				// this is now an incoming connection on the host network so we should also change the netns to 0.
+				// since the connection is in the root netns we will filter it out
+				conn.NetNS = 0
 				pi.processConnections([]network.ConnectionStats{conn}, nil)
 				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
-				require.Len(t, rm.ScopeMetrics, 1)
-				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
-				metrics := rm.ScopeMetrics[0].Metrics
-				sortOTELMetricsByName(metrics)
-
-				attrs := pi.getMetricAttributes(&conn, nil, &postgresClientPodInfo)
-				assertInt64Metric(t, metrics[0], telemetry.ReceivedMetricName, metricdata.DataPoint[int64]{
-					// The connection is incoming so they recv/sent are inverted.
-					Value:      222,
-					Attributes: attribute.NewSet(attrs...),
-				})
-				assertInt64Metric(t, metrics[1], telemetry.SentMetricName, metricdata.DataPoint[int64]{
-					Value:      111,
-					Attributes: attribute.NewSet(attrs...),
-				})
+				require.Len(t, rm.ScopeMetrics, 0)
+				require.Len(t, pi.storedConnections, 0)
+			},
+		},
+		{
+			name:                     "localhost outgoing",
+			exportProtocolMetrics:    false,
+			exportPartialCorrelation: true,
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
+				// this is an outgoing connection inside the pod (localhost -> localhost)
+				conn := network.ConnectionStats{
+					ConnectionTuple: network.ConnectionTuple{
+						Type:      network.TCP,
+						Direction: network.OUTGOING,
+						// Outgoing connection so fields are not inverted
+						Source: localhostIP,
+						SPort:  randomLocalHostPort,
+						Dest:   localhostIP,
+						DPort:  randomLocalHostPort,
+						// we suppose this is in the server pod netns
+						NetNS: postgresServerNs,
+					},
+					Duration: 10 * time.Second,
+				}
+				pi.processConnections([]network.ConnectionStats{conn}, nil)
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
+				require.Len(t, rm.ScopeMetrics, 0)
+				require.Len(t, pi.storedConnections, 0)
+			},
+		},
+		{
+			name:                     "localhost incoming",
+			exportProtocolMetrics:    false,
+			exportPartialCorrelation: true,
+			testBody: func(t *testing.T, pi *podCorrelationInfo) {
+				// this is an incoming connection inside the pod (localhost -> localhost)
+				conn := network.ConnectionStats{
+					ConnectionTuple: network.ConnectionTuple{
+						Type:      network.TCP,
+						Direction: network.INCOMING,
+						Source:    localhostIP,
+						SPort:     randomLocalHostPort,
+						Dest:      localhostIP,
+						DPort:     randomLocalHostPort,
+						// we suppose this is in the server pod netns
+						NetNS: postgresServerNs,
+					},
+					Duration: 10 * time.Second,
+				}
+				pi.processConnections([]network.ConnectionStats{conn}, nil)
+				require.NoError(t, pi.metrics.Reader.Collect(t.Context(), &rm))
+				require.Len(t, rm.ScopeMetrics, 0)
+				require.Len(t, pi.storedConnections, 0)
 			},
 		},
 	}

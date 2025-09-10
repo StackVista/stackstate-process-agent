@@ -80,6 +80,6 @@ func GetInformer(cfg InformerConfig) (meta.Notifier, error) {
 		log.Infof("Using remote K8s cache service at '%s'", cfg.MetaCacheAddr)
 		return initRemoteInformerCacheClient(context.Background(), cfg.MetaCacheAddr, cfg.SyncTimeout)
 	}
-	log.Info("Using local K8s informers")
+	log.Infof("Using local K8s informers with kubeconfig path: '%s'", cfg.KubeConfigPath)
 	return initLocalInformers(context.Background(), cfg)
 }

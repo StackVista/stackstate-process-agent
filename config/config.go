@@ -75,6 +75,8 @@ type PodCorrelationConfig struct {
 	AttributesKeys []string
 	// Interval to consider a connection short-lived
 	ShortLivedConnectionsInterval time.Duration
+	// Logger level for k8s observer
+	ObserverLogLevel string
 }
 
 // NetworkTracerConfig contains some[1] of the network tracer configuration options

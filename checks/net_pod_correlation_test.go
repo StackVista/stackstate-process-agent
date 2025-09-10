@@ -73,8 +73,6 @@ func TestPodCorrelation(t *testing.T) {
 		hostIP              = util.AddressFromString("192.168.1.7")
 		localhostIP         = util.AddressFromString("127.0.0.1")
 		randomLocalHostPort = uint16(46734)
-
-		hostNs = uint32(1)
 	)
 
 	defaultPostgresOutgoingConnection := network.ConnectionStats{
@@ -362,10 +360,9 @@ func TestPodCorrelation(t *testing.T) {
 					Exporter: config.ExporterConfig{
 						Type: config.ExporterTypeManual,
 					},
-					AttributesKeys: AllAttributeKeys,
-				},
-				"debug",
-				hostNs)
+					AttributesKeys:   AllAttributeKeys,
+					ObserverLogLevel: "debug",
+				})
 			require.NoError(t, err)
 			// Overwrite the observer in the pod correlation struct
 			pi.observer = obs
@@ -544,8 +541,6 @@ func TestGetMetricAttributes(t *testing.T) {
 					},
 					AttributesKeys: tt.requiredAttributesKeys,
 				},
-				"debug",
-				0,
 			)
 			require.NoError(t, err)
 

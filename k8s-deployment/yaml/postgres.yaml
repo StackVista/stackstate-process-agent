@@ -60,7 +60,6 @@ spec:
           #
           #
           # For 90000 seconds we send a select query every 1 second on the same PostgreSQL connection.
-          # Then we start again with a new connection.
           #
           #
           - |

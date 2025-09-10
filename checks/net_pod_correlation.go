@@ -3,11 +3,14 @@ package checks
 import (
 	"context"
 	"fmt"
+	"net/netip"
 	"slices"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/network"
+	"github.com/DataDog/datadog-agent/pkg/network/netlink"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
+	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/sketches-go/ddsketch"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
@@ -18,6 +21,7 @@ import (
 	"go.opentelemetry.io/obi/pkg/kubecache/meta"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"golang.org/x/sys/unix"
 )
 
 // Attribute keys for pod correlation metrics
@@ -98,6 +102,7 @@ type podCorrelationInfo struct {
 	storedConnections        []*storedConnection
 	rootNSIno                uint32
 	attributesKeys           []string
+	rootCtrk                 *netlink.Conntrack
 }
 
 func validateAttributeKeys(keys []string) ([]string, error) {
@@ -118,7 +123,7 @@ func validateAttributeKeys(keys []string) ([]string, error) {
 	return keys, nil
 }
 
-func newPodCorrelationInfo(cfg *config.PodCorrelationConfig, logLevel string, rootNSIno uint32) (*podCorrelationInfo, error) {
+func newPodCorrelationInfo(cfg *config.PodCorrelationConfig) (*podCorrelationInfo, error) {
 	log.Infof("Pod correlation enabled (protocol_metrics: %v), (partial_correlation: %v)", cfg.ProtocolMetrics, cfg.PartialCorrelation)
 
 	attrs, err := validateAttributeKeys(cfg.AttributesKeys)
@@ -132,21 +137,41 @@ func newPodCorrelationInfo(cfg *config.PodCorrelationConfig, logLevel string, ro
 		exportProtocolMetrics:    cfg.ProtocolMetrics,
 		exportPartialCorrelation: cfg.PartialCorrelation,
 		storedConnections:        make([]*storedConnection, 0),
-		rootNSIno:                rootNSIno,
 		attributesKeys:           attrs,
 	}
 
 	switch cfg.Exporter.Type {
 	case config.ExporterTypeDisabled:
 		// Used only in tests to disable exporting and avoid starting the informer
+		podCorrelationInfo.rootNSIno = 0
+		podCorrelationInfo.rootCtrk = nil
 	case config.ExporterTypeManual:
-		// Here we only want the exporter
+		// Used only in tests to query the exporter
+		podCorrelationInfo.rootNSIno = 0
+		podCorrelationInfo.rootCtrk = nil
 		if podCorrelationInfo.metrics, err = telemetry.NewMetricsExporter(cfg.Exporter); err != nil {
 			return nil, err
 		}
 	case config.ExporterTypeStdout, config.ExporterTypeOTLP:
+		// We create the root netns handle and the conntrack table only in production use cases
+		rootHandle, err := kernel.GetRootNetNamespace(kernel.ProcFSRoot())
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get root net namespace: %v", err)
+		}
+
+		podCorrelationInfo.rootNSIno, err = kernel.GetInoForNs(rootHandle)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get inode for root net namespace: %v", err)
+		}
+
+		ctrk, err := netlink.NewConntrack(rootHandle)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create conntrack for root namespace: %v", err)
+		}
+		podCorrelationInfo.rootCtrk = &ctrk
+
 		// Here we want the informer and the exporter
-		if err := podCorrelationInfo.startKubernetesInformer(cfg, logLevel); err != nil {
+		if err := podCorrelationInfo.startKubernetesInformer(cfg); err != nil {
 			return nil, err
 		}
 		if podCorrelationInfo.metrics, err = telemetry.NewMetricsExporter(cfg.Exporter); err != nil {
@@ -157,14 +182,14 @@ func newPodCorrelationInfo(cfg *config.PodCorrelationConfig, logLevel string, ro
 	return podCorrelationInfo, nil
 }
 
-func (pi *podCorrelationInfo) startKubernetesInformer(cfg *config.PodCorrelationConfig, logLevel string) error {
+func (pi *podCorrelationInfo) startKubernetesInformer(cfg *config.PodCorrelationConfig) error {
 	log.Info("starting kubernetes informer for pod correlated metrics")
 	informerCfg := kube.InformerConfig{
 		KubeConfigPath: cfg.KubeConfigPath,
 		SyncTimeout:    30 * time.Second,
 		ResyncPeriod:   5 * time.Minute,
 		MetaCacheAddr:  cfg.RemoteCacheAddr,
-		LogLevel:       logLevel,
+		LogLevel:       cfg.ObserverLogLevel,
 	}
 
 	var err error
@@ -281,6 +306,69 @@ func (pi *podCorrelationInfo) generateProtocolMetrics(conn *network.ConnectionSt
 	}
 }
 
+func conntrackOriginTCP(connTuple *network.ConnectionTuple) netlink.ConTuple {
+	return netlink.ConTuple{
+		Src:   netip.AddrPortFrom(connTuple.Source.Addr, connTuple.SPort),
+		Dst:   netip.AddrPortFrom(connTuple.Dest.Addr, connTuple.DPort),
+		Proto: unix.IPPROTO_TCP,
+	}
+}
+
+func (pi *podCorrelationInfo) tryClusterIpResolution(conn *network.ConnectionStats) *kube.PodInfo {
+	// if we arrive here dstPodInfo is nil and the connection is OUTGOING
+	var dstPodInfo *kube.PodInfo
+	// First we try the resolution using the translation info attached to the connection
+	// this comes from the ebpf conntrack cache, that could be expired
+	if conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
+		dstPodInfo = pi.observer.ResolvePodByIP(conn.IPTranslation.ReplSrcIP, conn.Duration)
+		// we need to replace also the remote IP and port from ClusterIP to Pod
+		if dstPodInfo != nil {
+			conn.ConnectionTuple.Dest = conn.IPTranslation.ReplSrcIP
+			conn.ConnectionTuple.DPort = conn.IPTranslation.ReplSrcPort
+			return dstPodInfo
+		}
+	}
+
+	// dstPodInfo is still nil...
+
+	// if the conntrack ebpf cache is expired, we try to query the conntrack table in the root netns if present. At the moment we don't define it for tests
+	if pi.rootCtrk == nil {
+		return nil
+	}
+
+	// we convert the tuple in the conntrack format
+	// we need only the origin field.
+	origin := netlink.Con{Origin: conntrackOriginTCP(&conn.ConnectionTuple)}
+	reply, err := (*pi.rootCtrk).Get(&origin)
+	// if there is no entry we don't return an error we return an empty reply
+	if err != nil {
+		log.Warnf("Failed to query conntrack table in root netns for connection %v: %v", conn, err)
+		return nil
+	}
+
+	// if there are no entries we obtain an empty netlink.Con{}
+	// we check if the port is 0 to understand if it is empty
+	if reply.Reply.Src.Port() == 0 {
+		return nil
+	}
+
+	// Example of a conntrack entry that converts a ClusterIP to Pod IP:
+	// key: src(10.42.0.10:35926) -> dst(10.43.168.100:5432) ---  value: src(10.42.0.9:5432) -> dst(10.42.0.10:35926)
+	// if there is not natting we are not interested
+	if conn.ConnectionTuple.Dest.Addr == reply.Reply.Src.Addr() {
+		return nil
+	}
+
+	// it is possible that we have the translated IP in the reply src field
+	dstPodInfo = pi.observer.ResolvePodByIP(util.Address{Addr: reply.Reply.Src.Addr()}, conn.Duration)
+	if dstPodInfo != nil {
+		log.Debugf("Resolved pod info for connection %v -> %v", conn.ConnectionTuple.Dest, reply.Reply.Src.Addr())
+		conn.ConnectionTuple.Dest = util.Address{Addr: reply.Reply.Src.Addr()}
+		conn.ConnectionTuple.DPort = reply.Reply.Src.Port()
+	}
+	return dstPodInfo
+}
+
 func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, metrics []*model.ConnectionMetric) {
 	// 1. Pod -> Pod (INCOMING and OUTGOING)
 	// 2. Pod -> Pod HostNetwork (OUTGOING)
@@ -294,14 +382,9 @@ func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, m
 		return
 	}
 
-	if conn.Direction == network.OUTGOING {
-		// We try the resolution
-		if dstPodInfo == nil && conn.IPTranslation != nil && conn.IPTranslation.ReplSrcIP.IsValid() {
-			dstPodInfo = pi.observer.ResolvePodByIP(conn.IPTranslation.ReplSrcIP, conn.Duration)
-			// we need to replace also the remote IP and port from ClusterIP to Pod
-			conn.ConnectionTuple.Dest = conn.IPTranslation.ReplSrcIP
-			conn.ConnectionTuple.DPort = conn.IPTranslation.ReplSrcPort
-		}
+	// if we have the destination pod there is no need to try to resolve it
+	if conn.Direction == network.OUTGOING && dstPodInfo == nil {
+		dstPodInfo = pi.tryClusterIpResolution(conn)
 	}
 
 	// if one of the 2 is nil we need to check if we want to export partial correlation

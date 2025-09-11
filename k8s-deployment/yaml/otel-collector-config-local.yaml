@@ -1,0 +1,61 @@
+mode: deployment
+image:
+  # we need the contrib image for the prometheus exporter
+  repository: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib"
+ports:
+  # These are internal metrics of the collector
+  metrics:
+    enabled: true
+    servicePort: 8888
+  # This is the port for the prometheus exporter we configure in the collector
+  prom-metrics:
+    enabled: true
+    containerPort: 9464
+    servicePort: 9464
+    protocol: TCP
+
+presets:
+  kubernetesAttributes:
+    enabled: true
+    extractAllPodLabels: true
+
+# This is the config file for the collector:
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  processors:
+    batch: {}
+    resource:
+      attributes:
+      - key: service.instance.id
+        from_attribute: k8s.pod.uid
+        action: insert
+        # Use the k8s namespace also as the open telemetry namespace
+      - key: service.namespace
+        from_attribute: k8s.namespace.name
+        action: insert
+  exporters:
+    debug:
+      verbosity: normal
+    prometheus:
+      endpoint: 0.0.0.0:9464
+    nop: {}
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: []
+        exporters: [nop]
+      metrics:
+        receivers: [otlp]
+        processors: [resource, batch]
+        exporters: [debug, prometheus]
+      logs:
+        receivers: [otlp]
+        processors: []
+        exporters: [nop]

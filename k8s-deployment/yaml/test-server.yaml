@@ -1,0 +1,48 @@
+# ##############################
+# # Test Server with its service
+# ##############################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-server
+  # we deploy it in the same namespace as the process-agent
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-server
+  template:
+    metadata:
+      labels:
+        app: test-server
+    spec:
+      containers:
+      - name: test-server
+        image: test-server:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 7077
+        volumeMounts:
+        - mountPath: /output
+          name: output-dir
+        env:
+          - name: CONFIG_PATH
+            value: "/config.json"
+      volumes:
+        - name: output-dir
+          hostPath:
+            path: /tmp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-server-service
+spec:
+  selector:
+    app: test-server
+  ports:
+  - protocol: TCP
+    port: 7077 # ClusterIP Port
+    targetPort: 7077 # Container Port
+---

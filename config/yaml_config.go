@@ -14,6 +14,32 @@ import (
 
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration
 // available in Agent versions >= 6
+//
+// todo!: we need to cleanup this flow and avoid manual merge of the configs.
+// - we should express the env variables in the yaml config -> APIKey string `yaml:"api_key" env:"STS_API_KEY"`
+// - we should initialize a default YamlAgentConfig
+// - we should marshal the yaml config into the default YamlAgentConfig
+// - we should parse the env variables and override the YamlAgentConfig
+// Something similar to this
+//
+//	func LoadConfig(file io.Reader) (*Config, error) {
+//		cfg := DefaultConfig
+//		if file != nil {
+//			cfgBuf, err := io.ReadAll(file)
+//			if err != nil {
+//				return nil, fmt.Errorf("reading YAML configuration: %w", err)
+//			}
+//			// replaces environment variables in YAML file
+//			cfgBuf = config.ReplaceEnv(cfgBuf)
+//			if err := yaml.Unmarshal(cfgBuf, &cfg); err != nil {
+//				return nil, fmt.Errorf("parsing YAML configuration: %w", err)
+//			}
+//		}
+//		if err := env.Parse(&cfg); err != nil {
+//			return nil, fmt.Errorf("reading env vars: %w", err)
+//		}
+//		return &cfg, nil
+//	}
 type YamlAgentConfig struct {
 	APIKey               string `yaml:"api_key"`
 	StsURL               string `yaml:"sts_url"`
@@ -126,6 +152,25 @@ type YamlAgentConfig struct {
 		DisabledProtocols           []string `yaml:"disabled_protocols"`
 		MaxHTTPStatsBuffered        int      `yaml:"http_stats_buffer_size"`
 		MaxHTTPObservationsBuffered int      `yaml:"http_observations_buffer_size"`
+		PodCorrelation              struct {
+			// If true, the agent will send pod correlated connections
+			Enabled bool `yaml:"enabled"`
+			// Address of the remote kube cache service, if any. (address:port)
+			RemoteCacheAddr string `yaml:"remote_cache_addr"`
+			// Path to the kubeconfig file, used for local informers (debugging purposes)
+			KubeConfigPath string `yaml:"kube_config_path"`
+			// If true, the agent will export protocol metrics
+			ProtocolMetrics bool `yaml:"protocol_metrics"`
+			// If true, we export connections/metrics if we have at least one pod between the source and destination.
+			PartialCorrelation bool `yaml:"partial_correlation"`
+			Exporter           struct {
+				Type     string `yaml:"type"`
+				Endpoint string `yaml:"endpoint"`
+				Interval int    `yaml:"interval"`
+			} `yaml:"exporter"`
+			Attributes                    []string `yaml:"attributes"`
+			ShortLivedConnectionsInterval int      `yaml:"short_lived_connections_interval"`
+		} `yaml:"pod_correlation"`
 	} `yaml:"network_tracer_config"`
 	TransactionManager struct {
 		// ChannelBufferSize is the concurrent transactions before the tx manager begins backpressure
@@ -382,5 +427,35 @@ func mergeNetworkYamlConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig
 	if networkConf.Network.DisabledProtocols != nil {
 		agentConf.NetworkTracer.DisabledProtocols = networkConf.Network.DisabledProtocols
 	}
+	validatePodCorrelationConfig(agentConf, networkConf)
 	return agentConf, nil
+}
+
+func translateExporterType(t string) ExporterType {
+	switch t {
+	case "stdout":
+		return ExporterTypeStdout
+	case "otlp":
+		return ExporterTypeOTLP
+	default:
+		panic(fmt.Sprintf("invalid pod correlation exporter type: %s", t))
+	}
+}
+
+func validatePodCorrelationConfig(agentConf *AgentConfig, networkConf *YamlAgentConfig) {
+	// Simplification here:
+	// if someone in the config sets the PodCorrelation.Enabled to true we assume all the configs related to the correlation are set
+	agentConf.NetworkTracer.PodCorrelation.Enabled = networkConf.Network.PodCorrelation.Enabled
+	if !agentConf.NetworkTracer.PodCorrelation.Enabled {
+		return
+	}
+	agentConf.NetworkTracer.PodCorrelation.RemoteCacheAddr = networkConf.Network.PodCorrelation.RemoteCacheAddr
+	agentConf.NetworkTracer.PodCorrelation.KubeConfigPath = networkConf.Network.PodCorrelation.KubeConfigPath
+	agentConf.NetworkTracer.PodCorrelation.ProtocolMetrics = networkConf.Network.PodCorrelation.ProtocolMetrics
+	agentConf.NetworkTracer.PodCorrelation.PartialCorrelation = networkConf.Network.PodCorrelation.PartialCorrelation
+	agentConf.NetworkTracer.PodCorrelation.AttributesKeys = networkConf.Network.PodCorrelation.Attributes
+	agentConf.NetworkTracer.PodCorrelation.Exporter.Type = translateExporterType(networkConf.Network.PodCorrelation.Exporter.Type)
+	agentConf.NetworkTracer.PodCorrelation.Exporter.Interval = time.Duration(networkConf.Network.PodCorrelation.Exporter.Interval) * time.Second
+	agentConf.NetworkTracer.PodCorrelation.Exporter.Endpoint = networkConf.Network.PodCorrelation.Exporter.Endpoint
+	agentConf.NetworkTracer.PodCorrelation.ShortLivedConnectionsInterval = time.Duration(networkConf.Network.PodCorrelation.ShortLivedConnectionsInterval) * time.Second
 }

@@ -31,6 +31,54 @@ var (
 	}
 )
 
+// ExporterType define the type of exporter to use.
+type ExporterType int
+
+const (
+	// ExporterTypeDisabled is used only in some tests to disable exporting. Not exposed to users.
+	ExporterTypeDisabled ExporterType = iota
+	// ExporterTypeManual is for tests, using a ManualReader. Not exposed to users.
+	ExporterTypeManual
+	// ExporterTypeStdout prints the metrics to standard output.
+	ExporterTypeStdout
+	// ExporterTypeOTLP sends the metrics to an OpenTelemetry collector.
+	ExporterTypeOTLP
+)
+
+// ExporterConfig contains the configuration for the telemetry exporter.
+type ExporterConfig struct {
+	// Type specifies which exporter to use.
+	Type ExporterType
+	// Endpoint is the address of the exporter (e.g. "localhost:4317").
+	// Used only if Type is OTLP.
+	Endpoint string
+	// Interval is the frequency at which metrics are exported.
+	// Not used with TypeManual.
+	Interval time.Duration
+}
+
+// PodCorrelationConfig contains the configuration for pod correlation
+type PodCorrelationConfig struct {
+	// If true, the agent will send pod correlated connections
+	Enabled bool
+	// Address of the remote kube cache service, if any. (address:port)
+	RemoteCacheAddr string
+	// Path to the kubeconfig file, used for local informers (debugging purposes)
+	KubeConfigPath string
+	// If true, the agent will export protocol metrics
+	ProtocolMetrics bool
+	// If true, we export connections/metrics if we have at least one pod between the source and destination.
+	PartialCorrelation bool
+	// The exporter to use for pod correlation
+	Exporter ExporterConfig
+	// List of attribute keys to include in the correlation
+	AttributesKeys []string
+	// Interval to consider a connection short-lived
+	ShortLivedConnectionsInterval time.Duration
+	// Logger level for k8s observer
+	ObserverLogLevel string
+}
+
 // NetworkTracerConfig contains some[1] of the network tracer configuration options
 type NetworkTracerConfig struct {
 	// Enables protocol inspection from eBPF code
@@ -49,6 +97,8 @@ type NetworkTracerConfig struct {
 	MaxHTTPObservationsBuffered int
 	// Protocols to disable, mostly for debugging
 	DisabledProtocols []string
+	// Pod correlation configuration
+	PodCorrelation PodCorrelationConfig
 }
 
 // APIEndpoint is a single endpoint where process data will be submitted.
@@ -231,6 +281,20 @@ func NewDefaultAgentConfig() *AgentConfig {
 			MaxHTTPStatsBuffered:        100000,
 			MaxHTTPObservationsBuffered: 100000,
 			DisabledProtocols:           []string{},
+			PodCorrelation: PodCorrelationConfig{
+				Enabled:            false,
+				RemoteCacheAddr:    "",
+				KubeConfigPath:     "",
+				ProtocolMetrics:    false,
+				PartialCorrelation: false,
+				Exporter: ExporterConfig{
+					Type:     ExporterTypeDisabled,
+					Endpoint: "",
+					Interval: 0,
+				},
+				AttributesKeys:                []string{},
+				ShortLivedConnectionsInterval: 0,
+			},
 		},
 
 		// Check config
@@ -631,6 +695,26 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.HTTPStatsPerPath = enabled
 	}
 
+	// if `err==nil` it means we successfully parsed the environment variable.
+	// To keep it easy until we refactor it, we don't support mixed env + config file.
+	// If we set `STS_POD_CORRELATION_ENABLED` it means we are using helm and we will take the values of all the env variables since they will be always defined.
+	if value, err := isAffirmative(os.Getenv("STS_POD_CORRELATION_ENABLED")); err == nil && value {
+		c.NetworkTracer.PodCorrelation.Enabled = true
+		c.NetworkTracer.PodCorrelation.RemoteCacheAddr = os.Getenv("STS_POD_CORRELATION_REMOTE_CACHE_ADDR")
+		c.NetworkTracer.PodCorrelation.ProtocolMetrics = isAffirmativeSingleReturn(os.Getenv("STS_POD_CORRELATION_PROTOCOL_METRICS"))
+		c.NetworkTracer.PodCorrelation.PartialCorrelation = isAffirmativeSingleReturn(os.Getenv("STS_POD_CORRELATION_PARTIAL_CORRELATION"))
+		attrEnv := os.Getenv("STS_POD_CORRELATION_ATTRIBUTES_KEYS")
+		if attrEnv == "" {
+			c.NetworkTracer.PodCorrelation.AttributesKeys = []string{}
+		} else {
+			c.NetworkTracer.PodCorrelation.AttributesKeys = strings.Split(attrEnv, ",")
+		}
+		c.NetworkTracer.PodCorrelation.Exporter.Type = translateExporterType(os.Getenv("STS_POD_CORRELATION_EXPORTER_TYPE"))
+		c.NetworkTracer.PodCorrelation.Exporter.Endpoint = os.Getenv("STS_POD_CORRELATION_EXPORTER_OTLP_ENDPOINT")
+		c.NetworkTracer.PodCorrelation.Exporter.Interval, _ = time.ParseDuration(os.Getenv("STS_POD_CORRELATION_EXPORTER_INTERVAL"))
+		c.NetworkTracer.PodCorrelation.ShortLivedConnectionsInterval, _ = time.ParseDuration(os.Getenv("STS_POD_CORRELATION_SHORT_LIVED_CONNECTIONS_INTERVAL"))
+	}
+
 	return c
 }
 
@@ -738,6 +822,11 @@ func isAffirmative(value string) (bool, error) {
 	}
 	v := strings.ToLower(value)
 	return v == "true" || v == "yes" || v == "1", nil
+}
+
+func isAffirmativeSingleReturn(value string) bool {
+	v := strings.ToLower(value)
+	return v == "true" || v == "yes" || v == "1"
 }
 
 // ConfigureHostname puts the hostname into the config. This has been separateded to allow the rest of the config to be processed before finding the hostname

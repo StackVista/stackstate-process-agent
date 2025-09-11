@@ -1,0 +1,88 @@
+# Set the API key from the secret as an env var:
+extraEnvsFrom:
+  - secretRef:
+      name: open-telemetry-collector
+  - configMapRef:
+      name: open-telemetry-collector-config 
+mode: deployment
+image:
+  # we need the contrib image for the prometheus exporter
+  repository: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib"
+ports:
+  # These are internal metrics of the collector
+  metrics:
+    enabled: true
+    servicePort: 8888
+  # This is the port for the prometheus exporter we configure in the collector
+  prom-metrics:
+    enabled: true
+    containerPort: 9464
+    servicePort: 9464
+    protocol: TCP
+
+presets:
+  kubernetesAttributes:
+    enabled: true
+    extractAllPodLabels: true
+
+# This is the config file for the collector:
+config:
+  extensions:
+    # Use the API key from the env for authentication
+    bearertokenauth:
+      scheme: SUSEObservability
+      token: "${env:SETUP_API_KEY}"
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  processors:
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+    batch: {}
+    resource:
+      attributes:
+      - key: k8s.cluster.name
+        action: upsert
+        value: "${env:SETUP_CLUSTER_NAME}"
+      - key: service.instance.id
+        from_attribute: k8s.pod.uid
+        action: insert
+        # Use the k8s namespace also as the open telemetry namespace
+      - key: service.namespace
+        from_attribute: k8s.namespace.name
+        action: insert
+  exporters:
+    nop: {}
+    otlp/suse-observability:
+      auth:
+        authenticator: bearertokenauth
+      endpoint: "${env:SETUP_OTEL_ENDPOINT}"
+      compression: snappy
+    prometheus:
+      endpoint: 0.0.0.0:9464
+  connectors:
+    # Generate metrics for spans
+    spanmetrics:
+      metrics_expiration: 5m
+      namespace: otel_span
+  service:
+    extensions: [ health_check,  bearertokenauth ]
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, resource, batch]
+        exporters: [debug, spanmetrics, otlp/suse-observability]
+      metrics:
+        receivers: [otlp, spanmetrics]
+        processors: [memory_limiter, resource, batch]
+        exporters: [debug, otlp/suse-observability, prometheus]
+      logs:
+        receivers: [otlp]
+        processors: []
+        exporters: [nop]

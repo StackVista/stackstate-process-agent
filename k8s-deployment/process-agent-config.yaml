@@ -18,6 +18,14 @@ network_tracer_config:
   ebpf_debuglog_enabled: 'false'
   ebpf_artifact_dir: '/suse/ebpf-object-files/x86_64'
   http_tracing_enabled: 'false'
+  pod_correlation:
+    enabled: true
+    protocol_metrics: true
+    partial_correlation: false
+    exporter:
+      type: otlp
+      interval: 10
+      endpoint: "otel-collector-service:4317"
 transaction_manager:
   timeout_duration_seconds: 5
   eviction_duration_seconds: 10

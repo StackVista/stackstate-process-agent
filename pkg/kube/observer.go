@@ -1,8 +1,10 @@
 package kube
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
 	"sync"
 	"time"
 
@@ -15,9 +17,10 @@ import (
 )
 
 const (
-	defaultDeletePodsAfter       = 2 * time.Minute
-	defaultCleanCacheInterval    = 10 * time.Minute
-	defaultMaxEstimatedCPLatency = 5 * time.Second
+	defaultDeletePodsAfter        = 2 * time.Minute
+	defaultCleanCacheInterval     = 10 * time.Minute
+	defaultMaxEstimatedCPLatency  = 5 * time.Second
+	defaultShortLivedConnInterval = 0
 
 	prometheusNamespace = "stackstate_process_agent"
 	prometheusSubsystem = "observer"
@@ -52,6 +55,8 @@ type Observer struct {
 	maxControlPlaneLatency int64
 	// just used for testing
 	nowFunc func() time.Time
+	// if the connection is younger than this interval, we consider it a short lived connection and we don't try to correlate it.
+	shortLivedConnInterval time.Duration
 
 	// Metrics
 	controlPlaneLatency prometheus.Histogram
@@ -88,6 +93,37 @@ func WithMaxControlPlaneLatency(maxLatency time.Duration) ObserverOption {
 	}
 }
 
+// WithPodDebugEndpoint adds an HTTP endpoint to expose the current pods in the cache.
+func WithPodDebugEndpoint() ObserverOption {
+	return func(o *Observer) {
+		http.HandleFunc("/pods", func(w http.ResponseWriter, r *http.Request) {
+			o.access.RLock()
+			defer o.access.RUnlock()
+
+			// Build a serializable map[string][]*PodInfo where the key is the IP string.
+			out := make(map[string][]*PodInfo, len(o.podsByIP))
+			for addr, pods := range o.podsByIP {
+				out[addr.String()] = pods
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			enc := json.NewEncoder(w)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(out); err != nil {
+				http.Error(w, fmt.Sprintf("failed to encode pods json: %v", err), http.StatusInternalServerError)
+				return
+			}
+		})
+	}
+}
+
+// WithShortLivedConnectionsInterval sets the interval for filtering short lived connections.
+func WithShortLivedConnectionsInterval(interval time.Duration) ObserverOption {
+	return func(o *Observer) {
+		o.shortLivedConnInterval = interval
+	}
+}
+
 // NewObserver creates a new Observer instance.
 func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, error) {
 	// we need the boot time because all what we receive from ebpf is the time in nanoseconds since boot
@@ -95,6 +131,7 @@ func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get boot time: %w", err)
 	}
+	log.Infof("Host boot time: %v", time.Unix(int64(bt), 0))
 
 	obs := &Observer{
 		podsByIP:                make(map[util.Address][]*PodInfo),
@@ -104,6 +141,7 @@ func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, 
 		cleanCacheInterval:      defaultCleanCacheInterval,
 		deletePodsAfter:         defaultDeletePodsAfter,
 		nowFunc:                 time.Now,
+		shortLivedConnInterval:  defaultShortLivedConnInterval,
 
 		controlPlaneLatency: prometheus.NewHistogram(prometheus.HistogramOpts{
 			Namespace: prometheusNamespace,
@@ -171,7 +209,7 @@ func NewObserver(reg prometheus.Registerer, opts ...ObserverOption) (*Observer, 
 	// update it after we apply the options, since nowFunc can be overridden
 	obs.lastCacheClean = obs.nowFunc()
 
-	log.Infof("Observer created with clean cache interval: %s, delete pods after: %s", obs.cleanCacheInterval, obs.deletePodsAfter)
+	log.Infof("Observer created (clean cache interval: %s), (delete pods after: %s), (short lived connections interval: %s)", obs.cleanCacheInterval, obs.deletePodsAfter, obs.shortLivedConnInterval)
 	return obs, nil
 }
 
@@ -240,7 +278,7 @@ func (o *Observer) processPodMeta(meta *informer.ObjectMeta, eventType informer.
 	o.access.Lock()
 	defer o.access.Unlock()
 
-	if o.lastCacheClean.Add(o.cleanCacheInterval).After(o.nowFunc()) {
+	if o.lastCacheClean.Add(o.cleanCacheInterval).Before(o.nowFunc()) {
 		o.cleanup()
 		o.lastCacheClean = o.nowFunc()
 	}
@@ -264,22 +302,26 @@ outerLoop:
 		}
 
 		log.Debugf("[%s] pod to store: %s/%s with IP %v and labels %v", eventName(eventType),
-			meta.Namespace, meta.Name, ip, meta.Labels)
+			meta.Namespace, meta.Name, ip, stringifyPodLabels(meta.Labels))
 
 		now := o.nowFunc().Unix()
-		o.lastControlPlaneLatency = now - meta.StatusTimeEpoch
-		o.controlPlaneLatency.Observe(float64(o.lastControlPlaneLatency))
-		if o.lastControlPlaneLatency > o.maxControlPlaneLatency {
-			exceedCPLatencyWarning.Do(func() {
-				log.Warnf("control plane latency exceed expected one: %d s > %d s", o.lastControlPlaneLatency, o.maxControlPlaneLatency)
-			})
+		if eventType != informer.EventType_CREATED {
+			// We receive here CREATE events only at the beginning when we start the agent.
+			// Their initial timestamp is the time the pod started in the cluster so it's not useful to compare it with `now`
+			o.lastControlPlaneLatency = now - meta.StatusTimeEpoch
+			o.controlPlaneLatency.Observe(float64(o.lastControlPlaneLatency))
+			if o.lastControlPlaneLatency > o.maxControlPlaneLatency {
+				exceedCPLatencyWarning.Do(func() {
+					log.Warnf("control plane latency exceed expected one: %d s > %d s", o.lastControlPlaneLatency, o.maxControlPlaneLatency)
+				})
+			}
 		}
-
 		// we need to understand if this is a new pod or an update of an existing pod
 		for _, podInfo := range o.podsByIP[addr] {
 			if podInfo.Name == meta.Name && podInfo.Namespace == meta.Namespace {
 				// this is an update of an existing pod, we just update the labels
-				podInfo.Labels = meta.Labels
+				// We store them already in OTEL format
+				podInfo.Labels = convertLabelsKeyIntoOtelFormat(meta.Labels)
 				if eventType == informer.EventType_DELETED {
 					podInfo.DeletionTimestamp = now
 				}
@@ -304,45 +346,58 @@ outerLoop:
 		o.podsByIP[addr] = append(o.podsByIP[addr], &PodInfo{
 			Name:              meta.Name,
 			Namespace:         meta.Namespace,
-			Labels:            meta.Labels,
+			Labels:            convertLabelsKeyIntoOtelFormat(meta.Labels),
 			CreationTimestamp: creationTs,
 			DeletionTimestamp: deletionTs,
 		})
 	}
 }
 
+// ConnectionNeedsRetry returns true if the connection needs to be retried.
+func (o *Observer) ConnectionNeedsRetry(nsFromBoot time.Duration) bool {
+	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
+	if connCreationTime > o.nowFunc().Unix()-o.maxControlPlaneLatency {
+		o.resolutionRetries.Inc()
+		return true
+	}
+	return false
+}
+
+// FilterShortLivedConnection returns true if the connection is short lived and should be ignored.
+func (o *Observer) FilterShortLivedConnection(nsFromBoot time.Duration) bool {
+	// if the interval is not configured we return false
+	if o.shortLivedConnInterval == 0 {
+		return false
+	}
+
+	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
+	// if the connection is younger than the configured interval we consider it a short lived connection
+	return connCreationTime > (o.nowFunc().Unix() - int64(o.shortLivedConnInterval.Seconds()))
+}
+
 // ResolvePodsByIPs resolves the pods by their IPs, returning the PodInfo for each IP.
-func (o *Observer) ResolvePodsByIPs(srcIP, dstIP util.Address, nsFromBoot time.Duration) (*PodInfo, *PodInfo, bool) {
+func (o *Observer) ResolvePodsByIPs(srcIP, dstIP util.Address, nsFromBoot time.Duration) (*PodInfo, *PodInfo) {
 	o.access.RLock()
 	defer o.access.RUnlock()
-	srcPod, srcRetry := o.resolvePodByIPNoLock(srcIP, nsFromBoot)
-	dstPod, dstRetry := o.resolvePodByIPNoLock(dstIP, nsFromBoot)
-	return srcPod, dstPod, srcRetry || dstRetry
+	return o.resolvePodByIPNoLock(srcIP, nsFromBoot), o.resolvePodByIPNoLock(dstIP, nsFromBoot)
 }
 
 // ResolvePodByIP resolves a pod by its IP, returning the PodInfo for the IP.
-func (o *Observer) ResolvePodByIP(ip util.Address, nsFromBoot time.Duration) (*PodInfo, bool) {
+func (o *Observer) ResolvePodByIP(ip util.Address, nsFromBoot time.Duration) *PodInfo {
 	o.access.RLock()
 	defer o.access.RUnlock()
 	return o.resolvePodByIPNoLock(ip, nsFromBoot)
 }
 
-func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duration) (*PodInfo, bool) {
+func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duration) *PodInfo {
 	connCreationTime := o.bootTime + int64(nsFromBoot.Seconds())
 	lastControlPlaneLatency := o.lastControlPlaneLatency
 	maxControlPlaneLatency := o.maxControlPlaneLatency
 
-	// we do this to wait for possible control plane events that could be delayed.
-	if connCreationTime > o.nowFunc().Unix()-maxControlPlaneLatency {
-		// we need to store the connection and retry later
-		o.resolutionRetries.Inc()
-		return nil, true
-	}
-
 	podSlice := o.podsByIP[ip]
 	if len(podSlice) == 0 {
 		o.resolutionMisses.Inc()
-		return nil, false
+		return nil
 	}
 
 	matchingPods := make([]*PodInfo, 0)
@@ -356,7 +411,7 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 
 	if len(matchingPods) == 1 {
 		o.resolutionHits.Inc()
-		return matchingPods[0], false
+		return matchingPods[0]
 	}
 
 	if len(matchingPods) == 0 {
@@ -370,9 +425,9 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 		// 1.connection before first pod: c   C-M-----------------D
 		// 2.connection between 2 pods: C-M-----------------D c C-M------------------D
 		// 3.connection after last pod: C-M-----------------D c
-		log.Infof("connection (IP %s) doesn't fall in any pod range. %v", ip, podSlice)
+		log.Infof("connection (IP %s, creation ts: %v) doesn't fall in any pod range. %v", ip, time.Unix(connCreationTime, 0), podSlice)
 		o.resolutionMisses.Inc()
-		return nil, false
+		return nil
 	}
 
 	// This is the tricky case. We got multiple potential matching pods (this can happen because we take potential network delays into account when calculating hits).
@@ -404,8 +459,8 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 		} else {
 			// Conntime is within the pod create/delete. We can do an early exit because we know pod
 			// times are disjoint
-			log.Infof("connection (IP %s) after disambiguation falls into pod '%s'. Available pods: %v", ip, matchingPod, podSlice)
-			return matchingPod, false
+			log.Infof("connection (IP %s, creation ts: %v) after disambiguation falls into pod '%s'. Available pods: %v", ip, time.Unix(connCreationTime, 0), matchingPod, podSlice)
+			return matchingPod
 		}
 
 		if podTimeDistance < closestPodDistance {
@@ -413,8 +468,8 @@ func (o *Observer) resolvePodByIPNoLock(ip util.Address, nsFromBoot time.Duratio
 			closestPodDistance = podTimeDistance
 		}
 	}
-	log.Infof("connection (IP %s) after disambiguation doesn't fall in any pod. Pick the closest one '%s'. Available pods: %v", ip, closestMatchingPod, podSlice)
-	return closestMatchingPod, false
+	log.Infof("connection (IP %s, creation ts: %v) after disambiguation doesn't fall in any pod. Pick the closest one '%s'. Available pods: %v", ip, time.Unix(connCreationTime, 0), closestMatchingPod, podSlice)
+	return closestMatchingPod
 }
 
 // This method models another resolution algorithm where we always try to match the closest pod to the

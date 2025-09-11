@@ -33,6 +33,14 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, _ *model.SystemInfo) er
 		return fmt.Errorf("failed to create network tracer: %s.  Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", err)
 	}
 
+	if cfg.NetworkTracer.PodCorrelation.Enabled {
+		cfg.NetworkTracer.PodCorrelation.ObserverLogLevel = cfg.LogLevel
+		c.podCorrelation, err = newPodCorrelationInfo(&cfg.NetworkTracer.PodCorrelation)
+		if err != nil {
+			return err
+		}
+	}
+
 	c.podsCache = pods.MakeCachedPods(60 * time.Second)
 	c.localTracer = t
 

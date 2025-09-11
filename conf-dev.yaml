@@ -44,6 +44,14 @@ network_tracer_config:
   ebpf_debuglog_enabled: 'false'
   ebpf_artifact_dir: './ebpf-object-files/x86_64'
   http_tracing_enabled: 'false'
+  pod_correlation:
+    enabled: true
+    protocol_metrics: true
+    partial_correlation: false
+    kube_config_path: ~/kubeconfig
+    exporter:
+      type: stdout
+      interval: 15
 transaction_manager:
   # for testing purposes
   timeout_duration_seconds: 5

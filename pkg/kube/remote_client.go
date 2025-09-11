@@ -53,6 +53,7 @@ func (sc *cacheSvcClient) Start() {
 				sc.log.Debug("context done, stopping client")
 				return
 			default:
+				sc.log.Info("Connecting to K8s cache service", "address", sc.address)
 				err := sc.connect(sc.ctx)
 				sc.log.Warn("K8s cache service connection lost. Reconnecting...", "error", err)
 				time.Sleep(sc.reconnectTime)

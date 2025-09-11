@@ -117,6 +117,7 @@ func WithPodDebugEndpoint() ObserverOption {
 	}
 }
 
+// WithShortLivedConnectionsInterval sets the interval for filtering short lived connections.
 func WithShortLivedConnectionsInterval(interval time.Duration) ObserverOption {
 	return func(o *Observer) {
 		o.shortLivedConnInterval = interval

@@ -69,7 +69,9 @@ const (
 )
 
 var (
-	// Keep this updated with all the possible keys
+	// Keep these updated with all the possible keys
+
+	// AllAttributeKeys expose all the possible attribute keys
 	AllAttributeKeys = []string{
 		DirectionKey,
 		LocalIPKey,
@@ -84,6 +86,7 @@ var (
 		RemoteLabelsKey,
 	}
 
+	// DefaultAttributeKeys are the default attribute keys used if the user doesn't specify any
 	DefaultAttributeKeys = []string{
 		DirectionKey,
 		LocalPodNameKey,
@@ -329,7 +332,7 @@ func conntrackOriginTCP(connTuple *network.ConnectionTuple) netlink.ConTuple {
 	}
 }
 
-func (pi *podCorrelationInfo) tryClusterIpResolution(conn *network.ConnectionStats) *kube.PodInfo {
+func (pi *podCorrelationInfo) tryClusterIPResolution(conn *network.ConnectionStats) *kube.PodInfo {
 	// if we arrive here dstPodInfo is nil and the connection is OUTGOING
 	var dstPodInfo *kube.PodInfo
 	// First we try the resolution using the translation info attached to the connection
@@ -412,7 +415,7 @@ func (pi *podCorrelationInfo) exportOTELMetrics(conn *network.ConnectionStats, m
 
 	// if we have the destination pod there is no need to try to resolve it
 	if conn.Direction == network.OUTGOING && dstPodInfo == nil {
-		dstPodInfo = pi.tryClusterIpResolution(conn)
+		dstPodInfo = pi.tryClusterIPResolution(conn)
 	}
 
 	// if one of the 2 is nil we need to check if we want to export partial correlation

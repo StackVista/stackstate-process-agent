@@ -44,6 +44,9 @@ const (
 
 	outgoingDir = "outgoing"
 	incomingDir = "incoming"
+
+	telemetryNs = "open-telemetry"
+	defaultNs   = "default"
 )
 
 var nonAlphanumericRegex = regexp.MustCompile(`[^a-zA-Z0-9]`)
@@ -201,10 +204,10 @@ func getNodeIP(ctx context.Context, client *kubernetes.Clientset) (string, error
 	return "", fmt.Errorf("no node internal IP found")
 }
 
-func getPodAttributes(t *testing.T, client *kubernetes.Clientset, podLabel string) map[string]string {
+func getPodAttributes(t *testing.T, client *kubernetes.Clientset, podLabel string, ns string) map[string]string {
 	var pod corev1.Pod
 	require.Eventually(t, func() bool {
-		pods, err := client.CoreV1().Pods("").List(t.Context(), metav1.ListOptions{LabelSelector: podLabel})
+		pods, err := client.CoreV1().Pods(ns).List(t.Context(), metav1.ListOptions{LabelSelector: podLabel})
 		if err != nil {
 			t.Logf("cannot find pod with label %s: %v", podLabel, err)
 			return false
@@ -323,10 +326,10 @@ func TestBasicOTELMetrics(t *testing.T) {
 	//////////////////////
 	// Get all pods info
 	//////////////////////
-	otelCollectorAttrs := getPodAttributes(t, client, otelCollectorLabels)
-	prometheusAttrs := getPodAttributes(t, client, prometheusLabels)
-	postgresClientAttrs := getPodAttributes(t, client, postgresClientLabels)
-	postgresServerAttrs := getPodAttributes(t, client, postgresServerLabels)
+	otelCollectorAttrs := getPodAttributes(t, client, otelCollectorLabels, telemetryNs)
+	prometheusAttrs := getPodAttributes(t, client, prometheusLabels, telemetryNs)
+	postgresClientAttrs := getPodAttributes(t, client, postgresClientLabels, defaultNs)
+	postgresServerAttrs := getPodAttributes(t, client, postgresServerLabels, defaultNs)
 
 	extraPostgresAttrs := map[string]string{
 		postgresSQLCommandTag: "SELECT",

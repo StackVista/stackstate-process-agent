@@ -17,6 +17,7 @@ import (
 	"github.com/StackVista/stackstate-process-agent/pkg/kube"
 	"github.com/StackVista/stackstate-process-agent/pkg/telemetry"
 	log "github.com/cihub/seelog"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/obi/pkg/kubecache/meta"
 	"go.opentelemetry.io/otel/attribute"
@@ -62,6 +63,11 @@ const (
 	RemoteLabelsKey = "remote.pod.label"
 )
 
+const (
+	// at the moment this is not configurable by the user
+	clusterIPCacheDim = 10000
+)
+
 var (
 	// Keep this updated with all the possible keys
 	AllAttributeKeys = []string{
@@ -103,6 +109,8 @@ type podCorrelationInfo struct {
 	rootNSIno                uint32
 	attributesKeys           []string
 	rootCtrk                 *netlink.Conntrack
+	// we cannot do clusterIP -> Pod because the same clusterIP can match multiple pods according to the connection
+	clusterIPResolution *lru.Cache[network.ConnectionTuple, *kube.PodInfo]
 }
 
 func validateAttributeKeys(keys []string) ([]string, error) {
@@ -177,6 +185,13 @@ func newPodCorrelationInfo(cfg *config.PodCorrelationConfig) (*podCorrelationInf
 		if podCorrelationInfo.metrics, err = telemetry.NewMetricsExporter(cfg.Exporter); err != nil {
 			return nil, err
 		}
+
+		// LRU cache to avoid querying the conntrack table for every connection
+		podCorrelationInfo.clusterIPResolution, err = lru.New[network.ConnectionTuple, *kube.PodInfo](clusterIPCacheDim)
+		if err != nil {
+			return nil, fmt.Errorf("could not create cluster IP cache: %v", err)
+		}
+
 	}
 
 	return podCorrelationInfo, nil
@@ -330,10 +345,18 @@ func (pi *podCorrelationInfo) tryClusterIpResolution(conn *network.ConnectionSta
 	}
 
 	// dstPodInfo is still nil...
+	// todo!: possible optimization for the future: we could catch the service CIDR from the k8s api and avoid querying the conntrack table if the dst ip is not in the service cidr!
+	// at the moment we are quering the conntrack table for every outgoing connection that we are not able to resolve, for example `Pod -> ExternalIP` or `Pod -> Host`, in these case we will never find a resolution.
 
 	// if the conntrack ebpf cache is expired, we try to query the conntrack table in the root netns if present. At the moment we don't define it for tests
 	if pi.rootCtrk == nil {
 		return nil
+	}
+
+	// Before using the conntrack table we try to use a cache to avoid querying the conntrack table for every connection
+	dstPodInfo, ok := pi.clusterIPResolution.Get(conn.ConnectionTuple)
+	if ok {
+		return dstPodInfo
 	}
 
 	// we convert the tuple in the conntrack format
@@ -343,20 +366,25 @@ func (pi *podCorrelationInfo) tryClusterIpResolution(conn *network.ConnectionSta
 	// if there is no entry we don't return an error we return an empty reply
 	if err != nil {
 		log.Warnf("Failed to query conntrack table in root netns for connection %v: %v", conn, err)
-		return nil
+		return dstPodInfo
 	}
+
+	// We store the result in the cache even if it is nil (we don't want to query the conntrack table again for the same connection)
+	defer func() {
+		pi.clusterIPResolution.Add(conn.ConnectionTuple, dstPodInfo)
+	}()
 
 	// if there are no entries we obtain an empty netlink.Con{}
 	// we check if the port is 0 to understand if it is empty
 	if reply.Reply.Src.Port() == 0 {
-		return nil
+		return dstPodInfo
 	}
 
 	// Example of a conntrack entry that converts a ClusterIP to Pod IP:
 	// key: src(10.42.0.10:35926) -> dst(10.43.168.100:5432) ---  value: src(10.42.0.9:5432) -> dst(10.42.0.10:35926)
 	// if there is not natting we are not interested
 	if conn.ConnectionTuple.Dest.Addr == reply.Reply.Src.Addr() {
-		return nil
+		return dstPodInfo
 	}
 
 	// it is possible that we have the translated IP in the reply src field

@@ -14,7 +14,7 @@ variables:
   QUAY_REGISTRY: quay.io
   DOCKER_REGISTRY: docker.io
   VERSION_LOGIC: '(if [ "$${CI_COMMIT_TAG}" == "" ]; then echo "$${CI_COMMIT_SHORT_SHA}"; else echo "$${CI_COMMIT_TAG}"; fi);'
-  LINUX_BUILDER: ${DOCKER_PROXY_URL}/stackstate/datadog_build_deb_arm64:61b4ad67
+  LINUX_BUILDER: ${REGISTRY_QUAY_URL}/stackstate/datadog_build_deb_arm64:61b4ad67
   GOPATH: "$CI_PROJECT_DIR/.go"
 
 .go_process_agent_cache:
@@ -66,7 +66,7 @@ prebuild_agent:
         - prebuild_artifacts/artifacts/*
   stage: prebuild
   needs: [ dependencies ]
-  image: ${DOCKER_PROXY_URL}/stackstate/datadog_build_system-probe_arm64:61b4ad67
+  image: ${REGISTRY_QUAY_URL}/stackstate/datadog_build_system-probe_arm64:61b4ad67
   tags:
     - sts-k8s-xl-arm64-runner
   script:
@@ -135,9 +135,9 @@ publish_binaries:
     - cd $CI_PROJECT_DIR/packaging && ./publish_staging_package.sh
 
 .docker_build:
-  image: ${DOCKER_PROXY_URL}/docker:20
+  image: ${REGISTRY_DOCKER_URL}/docker:20
   services:
-    - name: ${DOCKER_PROXY_URL}/docker:20-dind
+    - name: ${REGISTRY_DOCKER_URL}/docker:20-dind
       alias: docker
   variables:
     DOCKER_DRIVER: overlay

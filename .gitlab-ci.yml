@@ -85,13 +85,21 @@ notify-on-master-fail:
 # To run this job you need to specify 2 variables:
 # SOURCE_IMAGE: the full URL of the image you want to push to Quay `(e.g. docker.io/stackstate/stackstate-k8s-process-agent:latest-amd64)`
 # QUAY_IMAGE: the full URL of the destination image on Quay `(e.g. quay.io/stackstate/stackstate-k8s-process-agent:latest-amd64)`
+variables:
+  # Temporary fix until gitlab StackVista group env variables have been updated.
+  PROXY_URL: registry.tooling.stackstate.io/docker
 push_image_to_quay:
   stage: postbuild
-  image: ${DOCKER_PROXY_URL}/docker:20
+  image: ${PROXY_URL}/docker:20
   services:
-    - name: ${DOCKER_PROXY_URL}/docker:20-dind
+    - alias: docker
+      command:
+        - --experimental
+        - --tls=false
+      name: ${PROXY_URL}/docker:20-dind
   variables:
     # We cannot access the host docker socket in GitLab CI, so we need to use the Docker-in-Docker service
+    DOCKER_DRIVER: overlay2
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
   script:

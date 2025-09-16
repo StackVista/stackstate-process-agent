@@ -121,5 +121,6 @@ push_image_to_quay:
   rules:
     - changes:
         - remote-kube-cache-push.env
-      if: '$CI_COMMIT_BRANCH == "master"'
-  allow_failure: false
+      if: $CI_COMMIT_BRANCH == "master"
+      when: manual
+  allow_failure: true

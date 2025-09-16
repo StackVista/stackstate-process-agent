@@ -96,12 +96,18 @@ push_image_to_quay:
     DOCKER_TLS_CERTDIR: ""
   script:
     - |
+      if [ ! -f remote-kube-cache-push.env ]; then
+        echo "remote-kube-cache-push.env file not found!"; exit 1;
+      fi
+      set -o allexport
+      source remote-kube-cache-push.env
+      set +o allexport
       if [ -z "$SOURCE_IMAGE" ]; then
-        echo "SOURCE_IMAGE not set. Please set the CI/CD variable SOURCE_IMAGE to the URL of the image to push."
+        echo "SOURCE_IMAGE not set"
         exit 1
       fi
       if [ -z "$QUAY_IMAGE" ]; then
-        echo "QUAY_IMAGE not set. Please set the CI/CD variable QUAY_IMAGE to the destination URL on Quay."
+        echo "QUAY_IMAGE not set"
         exit 1
       fi
       echo "Login to Quay.io..."
@@ -113,7 +119,7 @@ push_image_to_quay:
       echo "Push to Quay: $QUAY_IMAGE"
       docker push "$QUAY_IMAGE"
   rules:
-    # We don't need the manual job on each branch, only on master
-    - if: '$CI_COMMIT_REF_NAME == "master"'
-      when: manual
+    - changes:
+        - remote-kube-cache-push.env
+      if: '$CI_COMMIT_BRANCH == "master"'
   allow_failure: false

@@ -124,8 +124,6 @@ push_image_to_quay:
       echo "Push to Quay: $QUAY_IMAGE"
       docker push "$QUAY_IMAGE"
   rules:
-    - changes:
-        - remote-kube-cache-push.env
-      if: $CI_COMMIT_BRANCH == "master"
+    - if: $CI_COMMIT_BRANCH == "master"
       when: manual
   allow_failure: true

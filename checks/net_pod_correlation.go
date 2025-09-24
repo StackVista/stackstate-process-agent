@@ -169,6 +169,7 @@ func newPodCorrelationInfo(cfg *config.PodCorrelationConfig) (*podCorrelationInf
 		if err != nil {
 			return nil, fmt.Errorf("Failed to get root net namespace: %v", err)
 		}
+		defer rootHandle.Close()
 
 		podCorrelationInfo.rootNSIno, err = kernel.GetInoForNs(rootHandle)
 		if err != nil {

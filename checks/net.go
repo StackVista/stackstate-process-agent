@@ -17,7 +17,6 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/postgres"
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
-	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/kubelet"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
 	"github.com/StackVista/stackstate-receiver-go-client/pkg/model/telemetry"
@@ -61,6 +60,9 @@ type ConnectionsCheck struct {
 	cache *NetworkRelationCache
 
 	podCorrelation *podCorrelationInfo
+
+	// Inode of the root network namespace
+	rootNSIno uint32
 }
 
 // Name returns the name of the ConnectionsCheck.
@@ -533,32 +535,21 @@ func (c *ConnectionsCheck) formatConnections(
 	// It is unlikely that we will be able to correlate connections from the root namespace
 	var unsentNonRootObservations = 0
 	var unsentNonRootConnectionMetrics = 0
-	rootHandle, err := kernel.GetRootNetNamespace(kernel.ProcFSRoot())
-	if err == nil {
-		ino, err := kernel.GetInoForNs(rootHandle)
-		if err == nil {
-			for k, v := range uncorrelatedObservations {
-				if k.NetNs != ino {
-					log.Debugf("Unsent non-root observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
-					unsentNonRootObservations++
-					continue
-				}
-				log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
-			}
 
-			for k := range uncorrelatedConnectionMetrics {
-				if k.NetNs != ino {
-					unsentNonRootConnectionMetrics++
-					continue
-				}
-			}
-		} else {
-			unsentNonRootObservations = 0
-			unsentNonRootConnectionMetrics = 0
+	for k, v := range uncorrelatedObservations {
+		if k.NetNs != c.rootNSIno {
+			log.Debugf("Unsent non-root observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
+			unsentNonRootObservations++
+			continue
 		}
-	} else {
-		unsentNonRootObservations = 0
-		unsentNonRootConnectionMetrics = 0
+		log.Debugf("Unsent connection observation: %v:%d<-%v:%d @ %d = %v", util.FromLowHigh(k.DstIPLow, k.DstIPHigh), k.DstPort, util.FromLowHigh(k.SrcIPLow, k.SrcIPHigh), k.SrcPort, k.NetNs, v)
+	}
+
+	for k := range uncorrelatedConnectionMetrics {
+		if k.NetNs != c.rootNSIno {
+			unsentNonRootConnectionMetrics++
+			continue
+		}
 	}
 
 	connectionMetricsProcessedCounter.WithLabelValues("no_process").Add(connectionMetricNoProcess)

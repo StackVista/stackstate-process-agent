@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/network/tracer"
+	"github.com/DataDog/datadog-agent/pkg/util/kernel"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/model"
 	"github.com/StackVista/stackstate-process-agent/pkg/pods"
@@ -31,6 +32,18 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, _ *model.SystemInfo) er
 	t, err := retryTracerInit(cfg.NetworkTracerInitRetryDuration, cfg.NetworkTracerInitRetryAmount, conf, tracer.NewTracer)
 	if err != nil {
 		return fmt.Errorf("failed to create network tracer: %s.  Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", err)
+	}
+
+	// Get the root NS inode so that we will reuse it when formatting connections.
+	rootHandle, err := kernel.GetRootNetNamespace(kernel.ProcFSRoot())
+	if err != nil {
+		return fmt.Errorf("Failed to get root net namespace handle: %v", err)
+	}
+	defer rootHandle.Close()
+
+	c.rootNSIno, err = kernel.GetInoForNs(rootHandle)
+	if err != nil {
+		return fmt.Errorf("failed to get root network namespace inode: %s", err)
 	}
 
 	if cfg.NetworkTracer.PodCorrelation.Enabled {

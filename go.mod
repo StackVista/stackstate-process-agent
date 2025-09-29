@@ -560,234 +560,234 @@ replace github.com/moby/buildkit v0.11.0 => github.com/moby/buildkit v0.12.5
 ////////////////////////////
 // DataDog modules replacement
 ////////////////////////////
-replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent => github.com/StackVista/datadog-agent-upstream-for-process-agent v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/api/api/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/api/api/def v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/api/api/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/api/api/def v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/api/authtoken => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/api/authtoken v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/api/authtoken => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/api/authtoken v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/config => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/config v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/config => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/config v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/flare/builder => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/flare/builder v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/flare/builder => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/flare/builder v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/flare/types => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/flare/types v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/flare/types => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/flare/types v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/hostname/hostnameinterface => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/hostname/hostnameinterface v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/hostname/hostnameinterface => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/hostname/hostnameinterface v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/log/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/log/def v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/log/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/log/def v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/log/impl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/log/impl v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/log/impl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/log/impl v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/log/impl-trace => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/log/impl-trace v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/log/impl-trace => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/log/impl-trace v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/log/mock => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/log/mock v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/log/mock => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/log/mock v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/secrets => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/secrets v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/secrets => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/secrets v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/status => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/status v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/status => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/status v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/status/statusimpl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/status/statusimpl v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/status/statusimpl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/status/statusimpl v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/tagger/origindetection => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/tagger/origindetection v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/tagger/origindetection => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/tagger/origindetection v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/tagger/tags => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/tagger/tags v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/tagger/tags => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/tagger/tags v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/tagger/types => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/tagger/types v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/tagger/types => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/tagger/types v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/tagger/utils => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/tagger/utils v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/tagger/utils => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/tagger/utils v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/core/telemetry => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/telemetry v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/core/telemetry => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/core/telemetry v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/def v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/def v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/forwarder/defaultforwarder v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/forwarder/defaultforwarder v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/forwarder/orchestrator/orchestratorinterface => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/forwarder/orchestrator/orchestratorinterface v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/forwarder/orchestrator/orchestratorinterface => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/forwarder/orchestrator/orchestratorinterface v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/logs/agent/config => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/logs/agent/config v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/logs/agent/config => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/logs/agent/config v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/netflow/payload => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/netflow/payload v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/netflow/payload => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/netflow/payload v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/collector-contrib/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/collector-contrib/def v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/collector-contrib/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/collector-contrib/def v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/collector-contrib/impl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/collector-contrib/impl v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/collector-contrib/impl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/collector-contrib/impl v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/converter/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/converter/def v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/converter/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/converter/def v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/converter/impl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/converter/impl v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/converter/impl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/converter/impl v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/ddflareextension/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/ddflareextension/def v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/ddflareextension/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/ddflareextension/def v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/ddflareextension/impl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/ddflareextension/impl v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/ddflareextension/impl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/ddflareextension/impl v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/logsagentpipeline => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/logsagentpipeline v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/logsagentpipeline => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/logsagentpipeline v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/logsagentpipeline/logsagentpipelineimpl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/logsagentpipeline/logsagentpipelineimpl v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/logsagentpipeline/logsagentpipelineimpl => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/logsagentpipeline/logsagentpipelineimpl v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/exporter/datadogexporter => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/exporter/datadogexporter v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/exporter/datadogexporter => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/exporter/datadogexporter v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/exporter/logsagentexporter => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/exporter/logsagentexporter v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/exporter/logsagentexporter => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/exporter/logsagentexporter v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/exporter/serializerexporter => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/exporter/serializerexporter v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/exporter/serializerexporter => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/exporter/serializerexporter v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/metricsclient => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/metricsclient v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/metricsclient => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/metricsclient v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/processor/infraattributesprocessor => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/processor/infraattributesprocessor v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/processor/infraattributesprocessor => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/processor/infraattributesprocessor v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/statsprocessor => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/statsprocessor v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/components/statsprocessor => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/components/statsprocessor v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/testutil => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/testutil v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/otelcol/otlp/testutil => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/otelcol/otlp/testutil v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/serializer/compression => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/serializer/compression v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/serializer/compression => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/serializer/compression v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/trace/agent/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/trace/agent/def v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/trace/agent/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/trace/agent/def v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/trace/compression/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/trace/compression/def v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/trace/compression/def => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/trace/compression/def v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/trace/compression/impl-gzip => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/trace/compression/impl-gzip v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/trace/compression/impl-gzip => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/trace/compression/impl-gzip v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/comp/trace/compression/impl-zstd => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/trace/compression/impl-zstd v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/comp/trace/compression/impl-zstd => github.com/StackVista/datadog-agent-upstream-for-process-agent/comp/trace/compression/impl-zstd v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/aggregator/ckey => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/aggregator/ckey v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/aggregator/ckey => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/aggregator/ckey v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/api => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/api v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/api => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/api v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/collector/check/defaults => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/collector/check/defaults v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/collector/check/defaults => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/collector/check/defaults v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/env => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/env v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/env => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/env v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/mock => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/mock v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/mock => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/mock v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/model => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/model v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/model => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/model v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/nodetreemodel => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/nodetreemodel v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/nodetreemodel => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/nodetreemodel v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/remote => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/remote v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/remote => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/remote v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/setup => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/setup v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/setup => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/setup v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/structure => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/structure v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/structure => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/structure v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/teeconfig => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/teeconfig v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/teeconfig => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/teeconfig v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/config/utils => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/utils v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/config/utils => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/config/utils v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/errors => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/errors v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/errors => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/errors v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/gohai => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/gohai v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/gohai => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/gohai v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/auditor => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/auditor v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/auditor => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/auditor v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/client => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/client v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/client => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/client v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/diagnostic => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/diagnostic v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/diagnostic => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/diagnostic v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/message => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/message v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/message => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/message v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/metrics => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/metrics v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/metrics => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/metrics v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/pipeline => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/pipeline v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/pipeline => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/pipeline v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/processor => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/processor v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/processor => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/processor v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/sds => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/sds v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/sds => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/sds v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/sender => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/sender v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/sender => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/sender v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/sources => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/sources v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/sources => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/sources v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/status/statusinterface => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/status/statusinterface v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/status/statusinterface => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/status/statusinterface v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/status/utils => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/status/utils v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/status/utils => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/status/utils v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/logs/util/testutils => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/util/testutils v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/logs/util/testutils => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/logs/util/testutils v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/metrics => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/metrics v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/metrics => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/metrics v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/networkdevice/profile => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/networkdevice/profile v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/networkdevice/profile => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/networkdevice/profile v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/obfuscate => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/obfuscate v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/obfuscate => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/obfuscate v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/orchestrator/model => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/orchestrator/model v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/orchestrator/model => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/orchestrator/model v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/process/util/api => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/process/util/api v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/process/util/api => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/process/util/api v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/proto => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/proto v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/proto => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/proto v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/remoteconfig/state => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/remoteconfig/state v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/remoteconfig/state => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/remoteconfig/state v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/security/secl => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/security/secl v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/security/secl => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/security/secl v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/security/seclwin => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/security/seclwin v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/security/seclwin => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/security/seclwin v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/serializer => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/serializer v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/serializer => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/serializer v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/status/health => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/status/health v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/status/health => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/status/health v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/tagger/types => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/tagger/types v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/tagger/types => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/tagger/types v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/tagset => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/tagset v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/tagset => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/tagset v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/telemetry => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/telemetry v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/telemetry => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/telemetry v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/trace => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/trace v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/trace => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/trace v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/backoff => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/backoff v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/backoff => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/backoff v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/buf => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/buf v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/buf => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/buf v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/cache => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/cache v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/cache => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/cache v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/cgroups => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/cgroups v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/cgroups => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/cgroups v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/common => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/common v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/common => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/common v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/containers/image => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/containers/image v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/containers/image => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/containers/image v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/defaultpaths => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/defaultpaths v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/defaultpaths => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/defaultpaths v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/executable => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/executable v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/executable => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/executable v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/filesystem => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/filesystem v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/filesystem => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/filesystem v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/flavor => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/flavor v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/flavor => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/flavor v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/fxutil => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/fxutil v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/fxutil => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/fxutil v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/grpc => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/grpc v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/grpc => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/grpc v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/hostname/validate => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/hostname/validate v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/hostname/validate => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/hostname/validate v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/http => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/http v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/http => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/http v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/json => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/json v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/json => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/json v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/log => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/log => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/log/setup => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log/setup v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/log/setup => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/log/setup v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/optional => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/optional v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/optional => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/optional v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/pointer => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/pointer v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/pointer => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/pointer v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/scrubber => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/scrubber v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/scrubber => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/scrubber v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/sort => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/sort v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/sort => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/sort v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/startstop => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/startstop v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/startstop => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/startstop v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/statstracker => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/statstracker v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/statstracker => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/statstracker v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/system => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/system v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/system => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/system v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/system/socket => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/system/socket v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/system/socket => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/system/socket v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/testutil => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/testutil v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/testutil => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/testutil v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/utilizationtracker => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/utilizationtracker v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/utilizationtracker => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/utilizationtracker v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/uuid => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/uuid v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/uuid => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/uuid v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/util/winutil => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/winutil v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/util/winutil => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/util/winutil v0.0.0-20250929082039-a59fa5768b78
 
-replace github.com/DataDog/datadog-agent/pkg/version => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/version v0.0.0-20250911141654-90abf3b90b0e
+replace github.com/DataDog/datadog-agent/pkg/version => github.com/StackVista/datadog-agent-upstream-for-process-agent/pkg/version v0.0.0-20250929082039-a59fa5768b78

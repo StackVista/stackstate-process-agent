@@ -55,7 +55,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, HTTPProtocolName),
 		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, HTTP2ProtocolName),
 
-		EnableKafkaMonitoring: false && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, KafkaProtocolName),
+		EnableKafkaMonitoring: false,
 
 		EnableMongoMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, MongoProtocolName),
 		MaxMongoStatsBuffered: 100000,
@@ -67,7 +67,7 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		MaxPostgresStatsBuffered:   100000,
 		MaxPostgresTelemetryBuffer: 160, // Default value from DataDog
 
-		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, "tls"),
+		EnableNativeTLSMonitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, TLSProtocolName),
 		EnableIstioMonitoring:     false,
 		EnableGoTLSSupport:        false,
 

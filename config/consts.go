@@ -13,4 +13,6 @@ const (
 	MongoProtocolName = "mongo"
 	// KafkaProtocolName is the protocol name for Kafka
 	KafkaProtocolName = "kafka"
+	// TLSProtocolName is the protocol name for TLS
+	TLSProtocolName = "tls"
 )

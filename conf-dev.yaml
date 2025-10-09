@@ -38,7 +38,6 @@ process_config:
 #      amount_top_mem_usage: 3
 #      mem_usage_threshold: 35
 network_tracer_config:
-  network_tracing_enabled: 'true'
   protocol_inspection_enabled: 'true'
   initial_connections_from_proc: 'true'
   ebpf_debuglog_enabled: 'false'

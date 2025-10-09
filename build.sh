@@ -26,7 +26,6 @@ docker run \\
     -v /sys:/host/sys \\
     -v /proc:/host/proc \\
     -v /etc:/host/etc \\
-    -e STS_NETWORK_TRACING_ENABLED=true \\
     -e STS_PROTOCOL_INSPECTION_ENABLED=true \\
     europe-west4-docker.pkg.dev/stackstate-sandbox-390311/dev/stackstate-process-agent:dev
 

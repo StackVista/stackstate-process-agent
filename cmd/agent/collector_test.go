@@ -13,6 +13,8 @@ import (
 func TestHealthStateMessageCut(t *testing.T) {
 	assert := assert.New(t)
 	cfg := config.NewDefaultAgentConfig()
+	// Enable only the process check to avoid injection of ebpf stuff with the connnections check
+	cfg.EnabledChecks = []string{config.ProcessCheckName}
 	c, err := NewCollector(cfg, nil, nil, nil)
 	assert.NoError(err)
 

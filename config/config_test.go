@@ -313,11 +313,10 @@ func TestDefaultConfig(t *testing.T) {
 
 	// assert that some sane defaults are set
 	assert.Equal("info", agentConfig.LogLevel)
-	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
+	assert.Equal([]string{ProcessCheckName, ConnectionsCheckName}, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	os.Setenv("DOCKER_STS_AGENT", "yes")
-	agentConfig = NewDefaultAgentConfig()
 	if pathExists("/host") {
 		assert.Equal(os.Getenv("HOST_PROC"), "/host/proc")
 		assert.Equal(os.Getenv("HOST_SYS"), "/host/sys")
@@ -326,7 +325,6 @@ func TestDefaultConfig(t *testing.T) {
 		assert.Equal(os.Getenv("HOST_SYS"), "")
 	}
 	os.Setenv("DOCKER_STS_AGENT", "no")
-	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 }
 
 func TestAgentConfigYamlOnly(t *testing.T) {
@@ -357,7 +355,7 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal(10, agentConfig.QueueSize)
 	assert.Equal(true, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(1*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
-	assert.Equal(processChecks, agentConfig.EnabledChecks)
+	assert.Equal([]string{ProcessCheckName, ConnectionsCheckName}, agentConfig.EnabledChecks)
 	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
 	assert.Equal(false, agentConfig.Scrubber.Enabled)
 
@@ -387,7 +385,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(false, agentConfig.EnableIncrementalPublishing)
 	assert.Equal(2*time.Minute, agentConfig.IncrementalPublishingRefreshInterval)
-	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
@@ -408,7 +405,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	ep = agentConfig.APIEndpoints[0]
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
-	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
@@ -438,7 +434,6 @@ func TestAgentConfigYamlOnly(t *testing.T) {
 	assert.Equal("localhost", eps[1].Endpoint.Hostname())
 	assert.Equal("bar", eps[2].APIKey)
 	assert.Equal("localhost", eps[2].Endpoint.Hostname())
-	assert.Equal(processChecks, agentConfig.EnabledChecks) // sts
 	assert.Equal(true, agentConfig.Scrubber.Enabled)
 
 	ddy = YamlAgentConfig{}
@@ -499,7 +494,6 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 		"      enabled: true",
 		"      qualifier_secs: 30",
 		"network_tracer_config:",
-		"  network_tracing_enabled: 'true'",
 		"  initial_connections_from_proc: 'true'",
 	}, "\n")), &ddy)
 	assert.NoError(err)
@@ -511,9 +505,8 @@ func TestStackStateNetworkConfigFromMainAgentConfig(t *testing.T) {
 	assert.Equal("apikey_20", ep.APIKey)
 	assert.Equal("stackstate.com", ep.Endpoint.Hostname())
 	assert.Equal(10, agentConfig.QueueSize)
-	assert.Equal(30*time.Second, agentConfig.CheckIntervals["process"])
+	assert.Equal(30*time.Second, agentConfig.CheckIntervals[ProcessCheckName])
 	assert.Equal(10000, agentConfig.NetworkTracerMaxConnections)
-	assert.Equal(append(processChecks, "connections"), agentConfig.EnabledChecks)
 	assert.Equal(10*time.Minute, agentConfig.NetworkRelationCacheDurationMin)
 	assert.Equal(15*time.Minute, agentConfig.ProcessCacheDurationMin)
 	assert.Equal(false, agentConfig.EnableShortLivedProcessFilter)
@@ -641,7 +634,6 @@ func TestEnvOverrides(t *testing.T) {
 	os.Setenv("STS_MAX_PROCESSES_PER_MESSAGE", "501")
 	os.Setenv("STS_MAX_CONNECTIONS_PER_MESSAGE", "502")
 	os.Setenv("STS_PROTOCOL_INSPECTION_ENABLED", "false")
-	os.Setenv("STS_NETWORK_TRACING_ENABLED", "true")
 	os.Setenv("STS_HTTP_TRACING_ENABLED", "true")
 	os.Setenv("STS_HTTP_STATS_BUFFER_SIZE", "150000")
 	os.Setenv("STS_HTTP_OBSERVATIONS_BUFFER_SIZE", "160000")
@@ -653,7 +645,6 @@ func TestEnvOverrides(t *testing.T) {
 	assert.Equal(501, agentConfig.MaxPerMessage)
 	assert.Equal(502, agentConfig.MaxConnectionsPerMessage)
 	assert.Equal(false, agentConfig.NetworkTracer.EnableProtocolInspection)
-	assert.Equal(true, agentConfig.EnableNetworkTracing)
 	assert.Equal(true, agentConfig.NetworkTracer.EnableHTTPTracing)
 	assert.Equal(150000, agentConfig.NetworkTracer.MaxHTTPStatsBuffered)
 	assert.Equal(160000, agentConfig.NetworkTracer.MaxHTTPObservationsBuffered)

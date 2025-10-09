@@ -24,14 +24,14 @@ func (c *ConnectionsCheck) Init(cfg *config.AgentConfig, _ *model.SystemInfo) er
 	// Checking whether the current kernel version is supported by the tracer
 	if isSupported, reason := tracer.IsTracerSupportedByOS(nil); !isSupported {
 
-		return fmt.Errorf("network tracer unsupported by OS: %s. Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", reason)
+		return fmt.Errorf("network tracer unsupported by OS: %s.", reason)
 	}
 
 	conf := config.TracerConfig(cfg)
 
 	t, err := retryTracerInit(cfg.NetworkTracerInitRetryDuration, cfg.NetworkTracerInitRetryAmount, conf, tracer.NewTracer)
 	if err != nil {
-		return fmt.Errorf("failed to create network tracer: %s.  Set the environment STS_NETWORK_TRACING_ENABLED to false to disable network connections reporting", err)
+		return fmt.Errorf("failed to create network tracer: %s.", err)
 	}
 
 	// Get the root NS inode so that we will reuse it when formatting connections.

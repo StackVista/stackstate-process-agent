@@ -22,7 +22,10 @@ import (
 )
 
 var (
-	processChecks = []string{"process"}
+	// ProcessCheckName name of the process check
+	ProcessCheckName = "process"
+	// ConnectionsCheckName name of the connections check
+	ConnectionsCheckName = "connections"
 
 	// List of known Kubernetes images that we want to exclude by default.
 	defaultKubeBlacklist = []string{
@@ -155,8 +158,6 @@ type AgentConfig struct {
 	IncrementalPublishingRefreshInterval time.Duration // Periodically resend all data to allow downstream to recover from any lost data
 
 	// Network collection configuration
-	EnableNetworkTracing              bool
-	EnableLocalNetworkTracer          bool // To have the network tracer embedded in the process-agent
 	NetworkInitialConnectionsFromProc bool
 	NetworkTracerSocketPath           string
 	NetworkTracerLogFile              string
@@ -268,7 +269,6 @@ func NewDefaultAgentConfig() *AgentConfig {
 		ShortLivedProcessQualifierSecs: 60 * time.Second,
 
 		// Network collection configuration
-		EnableNetworkTracing:           false,
 		NetworkTracerMaxConnections:    10000,
 		NetworkTracerInitRetryDuration: 5 * time.Second,
 		NetworkTracerInitRetryAmount:   3,
@@ -297,11 +297,11 @@ func NewDefaultAgentConfig() *AgentConfig {
 			},
 		},
 
-		// Check config
-		EnabledChecks: processChecks,
+		// Enable by default both checks
+		EnabledChecks: []string{ProcessCheckName, ConnectionsCheckName},
 		CheckIntervals: map[string]time.Duration{
-			"process":     30 * time.Second,
-			"connections": 30 * time.Second,
+			ProcessCheckName:     30 * time.Second,
+			ConnectionsCheckName: 30 * time.Second,
 		},
 		ReportCheckHealthState:       true,
 		CheckHealthStateMessageLimit: 2048,
@@ -513,12 +513,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.ContainerWhitelist = strings.Split(v, ",")
 	}
 
-	// Note: this feature is in development and should not be used in production environments
-	// STS: ignore DD notes, this will enable our tcptracer-ebpf and that is production ready
-	if ok, _ := isAffirmative(os.Getenv("STS_NETWORK_TRACING_ENABLED")); ok {
-		c.EnabledChecks = append(c.EnabledChecks, "connections")
-		c.EnableNetworkTracing = ok
-	}
 	if v := os.Getenv("STS_NETTRACER_EBPF_ARTIFACTS_DIR"); v != "" {
 		c.NetworkTracer.EbpfArtifactDir = v
 	}

@@ -151,8 +151,8 @@ github.com/DataDog/go-sqllexer v0.0.17 h1:u47fJAVg/+5DA74ZW3w0Qu+3qXHd3GtnA8ZBYi
 github.com/DataDog/go-sqllexer v0.0.17/go.mod h1:KwkYhpFEVIq+BfobkTC1vfqm4gTi65skV/DpDBXtexc=
 github.com/DataDog/gopacket v0.0.0-20240626205202-4ac4cee31f14 h1:t34NfJA77KgFZsh8kcNFW57LZLa0kW2YSUs4MvLKRxU=
 github.com/DataDog/gopacket v0.0.0-20240626205202-4ac4cee31f14/go.mod h1:riddUzxTSBpJXk3qBHtYr4qOhFhT6k/1c0E3qkQjQpA=
-github.com/DataDog/gopsutil v1.2.2 h1:8lmthwyyCXa1NKiYcHlrtl9AAFdfbNI2gPcioCJcBPU=
-github.com/DataDog/gopsutil v1.2.2/go.mod h1:glkxNt/qRu9lnpmUEQwOIAXW+COWDTBOTEAHqbgBPts=
+github.com/DataDog/gopsutil v1.2.3-0.20251112162544-0057e4d0813a h1:S6kRmlH0DZ6bnqQwNEPCp1NROX0qCioZKuhQ4YDB5f4=
+github.com/DataDog/gopsutil v1.2.3-0.20251112162544-0057e4d0813a/go.mod h1:glkxNt/qRu9lnpmUEQwOIAXW+COWDTBOTEAHqbgBPts=
 github.com/DataDog/mmh3 v0.0.0-20210722141835-012dc69a9e49 h1:EbzDX8HPk5uE2FsJYxD74QmMw0/3CqSKhEr6teh0ncQ=
 github.com/DataDog/mmh3 v0.0.0-20210722141835-012dc69a9e49/go.mod h1:SvsjzyJlSg0rKsqYgdcFxeEVflx3ZNAyFfkUHP0TxXg=
 github.com/DataDog/nikos v1.12.9 h1:mE8UUY+9iWI1+V71xJmRy7X8K8wXkO+UboI4he8sMK4=

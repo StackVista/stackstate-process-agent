@@ -41,7 +41,7 @@ replace (
 
 require (
 	github.com/DataDog/agent-payload/v5 v5.0.138
-	github.com/DataDog/gopsutil v1.2.2
+	github.com/DataDog/gopsutil v1.2.3-0.20251112162544-0057e4d0813a
 	github.com/DataDog/sketches-go v1.4.6
 	github.com/DataDog/zstd v1.5.6
 	github.com/StackExchange/wmi v1.2.1 // indirect

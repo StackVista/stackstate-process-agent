@@ -87,13 +87,13 @@ notify-on-master-fail:
 # QUAY_IMAGE: the full URL of the destination image on Quay `(e.g. quay.io/stackstate/stackstate-k8s-process-agent:latest-amd64)`
 push_image_to_quay:
   stage: postbuild
-  image: ${REGISTRY_DOCKER_URL}/docker:20
+  image: ${REGISTRY_DOCKER_URL}/library/docker:20
   services:
     - alias: docker
       command:
         - --experimental
         - --tls=false
-      name: ${REGISTRY_DOCKER_URL}/docker:20-dind
+      name: ${REGISTRY_DOCKER_URL}/library/docker:20-dind
   variables:
     # We cannot access the host docker socket in GitLab CI, so we need to use the Docker-in-Docker service
     DOCKER_DRIVER: overlay2

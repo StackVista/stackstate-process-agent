@@ -415,7 +415,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 		c.HostName = v
 	}
 
-	// Support API_KEY and DD_API_KEY but prefer DD_API_KEY.
+	// Support API_KEY and STS_API_KEY but prefer STS_API_KEY.
 	var apiKey string
 	if v := os.Getenv("API_KEY"); v != "" {
 		apiKey = v
@@ -423,7 +423,7 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 	}
 	if v := os.Getenv("STS_API_KEY"); v != "" {
 		apiKey = v
-		log.Infof("overriding API key from env DD_API_KEY value %s", apiKey)
+		log.Infof("overriding API key from env STS_API_KEY value")
 	}
 	if apiKey != "" {
 		vals := strings.Split(apiKey, ",")

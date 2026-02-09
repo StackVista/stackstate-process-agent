@@ -800,17 +800,18 @@ func aggregateStats(stats []http.RequestStat) (int, *ddsketch.DDSketch) {
 	latencies := emptySketch()
 
 	for _, stat := range stats {
-		requestCount += stat.Count
 		if stat.Count == 0 {
 			continue
-		} else if stat.Count == 1 {
+		}
+
+		requestCount += stat.Count
+
+		if stat.Count == 1 {
 			latencies.Add(stat.FirstLatencySample * nsToS)
-		} else {
-			if stat.Latencies != nil {
-				var scaled = emptySketch()
-				scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), nsToS)
-				latencies.MergeWith(scaled)
-			}
+		} else if stat.Latencies != nil {
+			var scaled = emptySketch()
+			scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), nsToS)
+			latencies.MergeWith(scaled)
 		}
 	}
 	return requestCount, latencies
@@ -1024,9 +1025,6 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, sendForPath b
 			}
 
 			statusCodeGroup := statusCodeClassToString(statusCodeClass)
-			if statusCodeGroup == "" {
-				continue
-			}
 			connKey := getConnectionKeyForHTTPStats(statKey)
 			connStats := regroupedStats[connKey]
 

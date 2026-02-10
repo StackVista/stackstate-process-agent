@@ -742,9 +742,10 @@ const (
 	httpResponseTime  metricName = "http_response_time_seconds"
 	httpRequestsDelta metricName = "http_requests_delta"
 
-	httpStatusCodeTag = "code"
-	httpPathTag       = "path"
-	httpMethodTag     = "method"
+	httpStatusCodeTag  = "code"
+	httpPathTag        = "path"
+	httpMethodTag      = "method"
+	httpHighLatencyTag = "known_high_latency"
 
 	mongoResponseTime  metricName = "mongo_response_time_seconds"
 	mongoRequestsDelta metricName = "mongo_requests_delta"
@@ -795,25 +796,31 @@ func (k aggStatsKey) toMap() map[string]string {
 // We need to transform the nanoseconds to seconds here
 const nsToS float64 = 0.000000001
 
-func aggregateStats(stats []http.RequestStat) (int, *ddsketch.DDSketch) {
+func aggregateStats(stats []http.RequestStat) (int, *ddsketch.DDSketch, bool) {
 	requestCount := 0
 	latencies := emptySketch()
+	highLatency := false
 
 	for _, stat := range stats {
-		requestCount += stat.Count
 		if stat.Count == 0 {
 			continue
-		} else if stat.Count == 1 {
+		}
+
+		if stat.IsWatchAPI() {
+			highLatency = true
+		}
+
+		requestCount += stat.Count
+
+		if stat.Count == 1 {
 			latencies.Add(stat.FirstLatencySample * nsToS)
-		} else {
-			if stat.Latencies != nil {
-				var scaled = emptySketch()
-				scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), nsToS)
-				latencies.MergeWith(scaled)
-			}
+		} else if stat.Latencies != nil {
+			var scaled = emptySketch()
+			scaled = stat.Latencies.ChangeMapping(scaled.IndexMapping, scaled.GetPositiveValueStore(), scaled.GetNegativeValueStore(), nsToS)
+			latencies.MergeWith(scaled)
 		}
 	}
-	return requestCount, latencies
+	return requestCount, latencies, highLatency
 }
 
 func aggregateHTTPTraceObservations(httpObservations []http.TransactionObservation) map[connKey][]*model.HTTPTraceObservation {
@@ -1015,6 +1022,8 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, sendForPath b
 		return connStats
 	}
 
+	// httpStats has the following structure: (coming from datadog tracer)
+	// Key: struct{Tuple, Path, Method} -> Value: map[code(100/200/300/...)]struct{Latency, Count, StaticTags}
 	for statKey, statsByCode := range httpStats {
 		for statusCodeClass := uint16(100); statusCodeClass <= 500; statusCodeClass += 100 {
 			stat := statsByCode.Data[statusCodeClass]
@@ -1024,14 +1033,12 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, sendForPath b
 			}
 
 			statusCodeGroup := statusCodeClassToString(statusCodeClass)
-			if statusCodeGroup == "" {
-				continue
-			}
 			connKey := getConnectionKeyForHTTPStats(statKey)
 			connStats := regroupedStats[connKey]
 
 			connStats = appendStatsForStatusGroup(connStats, statusCodeGroup, statKey, stat)
 
+			// Key: struct{Tuple} -> Value: map[struct{Path(optional), Method, StatusCode}][]struct{Latency, Count, StaticTags}
 			regroupedStats[connKey] = connStats
 		}
 	}
@@ -1041,7 +1048,10 @@ func aggregateHTTPStats(httpStats map[http.Key]*http.RequestStats, sendForPath b
 	for connKey, statsByTags := range regroupedStats {
 		for tagsKey, stats := range statsByTags {
 			data := tagsKey.toMap()
-			requestCount, latencies := aggregateStats(stats)
+			requestCount, latencies, highLatency := aggregateStats(stats)
+			if highLatency {
+				data[httpHighLatencyTag] = "true"
+			}
 			result[connKey] = append(result[connKey],
 				makeConnectionMetricWithNumber(
 					httpRequestsDelta, data,

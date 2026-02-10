@@ -623,6 +623,54 @@ func msToNs(ms float64) float64 {
 	return ms * 1000000
 }
 
+func TestHTTPAggregation_HighLatency(t *testing.T) {
+	// this is not a watch API
+	conn1 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12345, 80,
+		[]byte("/api/v1/namespaces/default/pods?limit=500"), true, http.MethodGet, 0)
+	stats1 := http.NewRequestStats()
+	stats1.AddRequest(200, msToNs(6.0), 0, nil)
+
+	// this is a watch API but on a different dest port, so we have a different conn tuple (source port)
+	conn2 := http.NewKey(
+		util.AddressFromString("10.0.0.1"), util.AddressFromString("192.168.1.1"), 12346, 80,
+		[]byte("/api/v1/namespaces/default/pods?resourceVersion=418&watch=true"), true, http.MethodGet, 0)
+	stats2 := http.NewRequestStats()
+	stats2.AddRequest(200, msToNs(60000.0), http.WatchAPI, nil)
+
+	metrics := aggregateHTTPStats(map[http.Key]*http.RequestStats{
+		conn1: stats1,
+		conn2: stats2,
+	}, false)
+
+	assert.Len(t, metrics, 2)
+
+	// conn1 shouldn't have high latency
+	conn1Metrics := metrics[getConnectionKeyForHTTPStats(conn1)]
+	// for each metric we have 5 status groups (1xx, 2xx, 3xx, 4xx, 5xx)
+	// we have 2 metrics:
+	// - http_requests_delta
+	// - http_response_time_seconds
+	assert.Len(t, conn1Metrics, 10)
+	// all the metrics should have the httpHighLatencyTag
+	for _, metric := range conn1Metrics {
+		assert.NotContains(t, metric.Tags, httpHighLatencyTag)
+	}
+
+	// conn2 should have high latency
+	conn2Metrics := metrics[getConnectionKeyForHTTPStats(conn2)]
+	assert.Len(t, conn2Metrics, 10)
+	for _, metric := range conn2Metrics {
+		// only metrics with 2xx status should have the httpHighLatencyTag
+		// because are the only one with at least a stat with high latency
+		if metric.Tags[httpStatusCodeTag] == "2xx" {
+			assert.Contains(t, metric.Tags, httpHighLatencyTag)
+		} else {
+			assert.NotContains(t, metric.Tags, httpHighLatencyTag)
+		}
+	}
+}
+
 func TestHTTPAggregation_SingleReq(t *testing.T) {
 
 	conn1req1 := http.NewKey(

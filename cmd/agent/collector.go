@@ -125,6 +125,7 @@ func (l *Collector) runCheck(c checks.Check) {
 			err:     err,
 		}
 		// update proc and container count for info
+
 		updateProcContainerCount(result.CollectorMessages)
 	}
 

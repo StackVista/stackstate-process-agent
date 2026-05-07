@@ -7,7 +7,10 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/StackVista/stackstate-process-agent/checks"
@@ -146,7 +149,14 @@ func (l *Collector) run(exit chan bool) {
 	}
 	log.Infof("Starting process-agent for host=%s, endpoints=%s, enabled checks=%v", l.cfg.HostName, eps, l.cfg.EnabledChecks)
 
-	go handleSignals(exit)
+	sigterm := make(chan os.Signal, 1)
+	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigterm
+		log.Criticalf("Caught signal '%s'; terminating.", sig)
+		close(exit)
+	}()
+
 	queueSizeTicker := time.NewTicker(10 * time.Second)
 
 	go func() {

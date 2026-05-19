@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"go.opentelemetry.io/obi/pkg/kubecache/informer"
-	"go.opentelemetry.io/obi/pkg/kubecache/meta"
+	"go.opentelemetry.io/obi/pkg/kube/kubecache/informer"
+	"go.opentelemetry.io/obi/pkg/kube/kubecache/meta"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

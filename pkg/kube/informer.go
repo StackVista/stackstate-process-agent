@@ -7,7 +7,7 @@ import (
 
 	log "github.com/cihub/seelog"
 
-	"go.opentelemetry.io/obi/pkg/kubecache/meta"
+	"go.opentelemetry.io/obi/pkg/kube/kubecache/meta"
 )
 
 const defaultReconnectTime = 5 * time.Second

@@ -166,5 +166,5 @@ publish_k8s_docker:
     - sts-k8s-xl-arm64-runner
   variables:
     REPO: $STS_DOCKER_REPO
-    TAG: "$CI_COMMIT_REF_NAME-$SHORT_ARCH"
+    TAG: "$CI_COMMIT_REF_SLUG-$SHORT_ARCH"
     EXTRA_TAG: $CI_COMMIT_SHORT_SHA-$SHORT_ARCH

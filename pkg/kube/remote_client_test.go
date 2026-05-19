@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 
-	"go.opentelemetry.io/obi/pkg/components/testutil"
-	"go.opentelemetry.io/obi/pkg/kubecache/informer"
-	"go.opentelemetry.io/obi/pkg/kubecache/meta"
+	"go.opentelemetry.io/obi/pkg/kube/kubecache/informer"
+	"go.opentelemetry.io/obi/pkg/kube/kubecache/meta"
 )
 
 const (
@@ -60,7 +60,7 @@ func TestClientForwardsLastTimestamp(t *testing.T) {
 	svc.Subscribe(dummySubscriber{})
 
 	// the server pushed the client message inside this channel on subscription
-	firstSubscribe := testutil.ReadChannel(t, fcs.clientMessages, timeout)
+	firstSubscribe := readChannel(t, fcs.clientMessages, timeout)
 	assert.Zero(t, firstSubscribe.FromTimestampEpoch)
 
 	// There is a restart of the server
@@ -70,8 +70,20 @@ func TestClientForwardsLastTimestamp(t *testing.T) {
 	}
 
 	// THEN the client sends another subscription message, with the timestamp of the last received event
-	secondSubscribe := testutil.ReadChannel(t, fcs.clientMessages, timeout)
+	secondSubscribe := readChannel(t, fcs.clientMessages, timeout)
 	assert.Equal(t, itemTime, secondSubscribe.FromTimestampEpoch)
+}
+
+func readChannel[T any](t *testing.T, inCh <-chan T, timeout time.Duration) T {
+	t.Helper()
+	select {
+	case value := <-inCh:
+		return value
+	case <-time.After(timeout):
+		require.FailNow(t, "timed out while reading from channel")
+		var zero T
+		return zero
+	}
 }
 
 // cacheSvcClient requires a subscriber to start processing the events, so we provide a dummy here

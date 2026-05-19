@@ -567,8 +567,6 @@ require (
 )
 
 // OBI tries to update the version, but the datadog ebpf manager needs `v0.16.0`.
-replace github.com/cilium/ebpf v0.19.0 => github.com/cilium/ebpf v0.16.0
-
 replace github.com/cilium/ebpf v0.20.0 => github.com/cilium/ebpf v0.16.0
 
 // OBI updates go-connections, but docker/docker v27 still expects the older DialPipe API.

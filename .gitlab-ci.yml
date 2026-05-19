@@ -41,7 +41,7 @@ merge_k8s_docker_manifest:
   <<: *merge_docker_manifest
   variables:
     DST_REPOSITORY: quay.io/stackstate/stackstate-k8s-process-agent
-    DST_TAG: "$CI_COMMIT_REF_NAME"
+    DST_TAG: "$CI_COMMIT_REF_SLUG"
 
 merge_extra_k8s_docker_manifest:
   <<: *merge_docker_manifest

@@ -12,7 +12,8 @@ then
 else
 
   if ! type "rsync" > /dev/null; then
-    apt install rsync -y --no-install-recommends
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends rsync
   fi
 
   mkdir -p $WORKDIR
@@ -58,4 +59,3 @@ chown -R "$OUTPUT_USER_ID:$OUTPUT_GROUP_ID" "$OUTPUTDIR/gofiles"
 mkdir -p "$OUTPUTDIR/ebpf/"
 cp -r ./pkg/ebpf/bytecode/build/* "$OUTPUTDIR/ebpf/"
 chown -R "$OUTPUT_USER_ID:$OUTPUT_GROUP_ID" "$OUTPUTDIR/ebpf"
-

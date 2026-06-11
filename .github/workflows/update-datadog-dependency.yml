@@ -23,6 +23,9 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          # No later step pushes via git: the updater only reads, and
+          # create-pull-request authenticates with its own token input
+          persist-credentials: false
 
       - name: Setup Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -42,10 +45,13 @@ jobs:
       - name: Run updater script
         id: update
         shell: bash
+        env:
+          # Passed via env rather than interpolated into the script (template injection)
+          UPSTREAM_BRANCH: ${{ github.event.inputs.upstream_branch }}
         run: |
           set -euo pipefail
           # Use provided input if present; otherwise default to the configured default value
-          BRANCH='${{ github.event.inputs.upstream_branch }}'
+          BRANCH="${UPSTREAM_BRANCH}"
           if [ -z "$BRANCH" ]; then BRANCH='stackstate-7.62.2'; fi
           COMMIT=$(git ls-remote https://github.com/StackVista/datadog-agent-upstream-for-process-agent.git "${BRANCH}" | tail -n 1 | awk '{print $1}')
           echo "Upstream branch: $BRANCH, commit: $COMMIT"
@@ -92,6 +98,9 @@ jobs:
             Re-run this workflow with a different `upstream_branch` to refresh the PR.
           branch: update-datadog-${{ steps.update.outputs.short_commit }}
           delete-branch: true
+          # master requires signed commits (pulumi-infra branch protection);
+          # sign-commits creates the commit via the GitHub API so it is verified
+          sign-commits: true
 
       - name: No updates needed
         if: steps.update.outputs.changed != 'true'

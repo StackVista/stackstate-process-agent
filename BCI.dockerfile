@@ -22,7 +22,8 @@ ENV DOCKER_STS_AGENT=true \
     SHORT_ARCH=${SHORT_ARCH} \
     EBPF_SUBFOLDER=${EBPF_SUBFOLDER}
 
-RUN zypper -n --no-gpg-checks --installroot /chroot refresh && \
+RUN zypper -n --gpg-auto-import-keys --installroot /chroot refresh && \
+    zypper -n --gpg-auto-import-keys --installroot /chroot update && \
     zypper -n --installroot /chroot install util-linux libudev1 ca-certificates curl wget xz iproute2 conntrack-tools && \
     zypper -n --root /chroot clean --all
 

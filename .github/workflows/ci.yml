@@ -28,9 +28,11 @@ jobs:
         include:
           - arch: amd64
             runner: ubuntu-24.04
+            llvm-arch: x86_64
             prebuild-image: quay.io/stackstate/datadog_build_system-probe_x64:61b4ad67
           - arch: arm64
             runner: ubuntu-24.04-arm
+            llvm-arch: arm64
             prebuild-image: quay.io/stackstate/datadog_build_system-probe_arm64:61b4ad67
     steps:
       - name: Check out source commit
@@ -44,12 +46,16 @@ jobs:
       # supported toolchain and is also used to build the upstream agent fork.
       - name: Generate DataDog eBPF and Go artifacts
         env:
+          LLVM_ARCH: ${{ matrix.llvm-arch }}
           PREBUILD_IMAGE: ${{ matrix.prebuild-image }}
         run: |
           set -euo pipefail
           docker run --rm \
             --volume "${GITHUB_WORKSPACE}:/workspace" \
             --workdir /workspace \
+            --env LLVM_ARCH="${LLVM_ARCH}" \
+            --env OUTPUT_USER_ID="$(id -u)" \
+            --env OUTPUT_GROUP_ID="$(id -g)" \
             "${PREBUILD_IMAGE}" \
             bash -c '
               set -euo pipefail

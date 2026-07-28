@@ -51,11 +51,7 @@ jobs:
             --volume "${GITHUB_WORKSPACE}:/workspace" \
             --workdir /workspace \
             "${PREBUILD_IMAGE}" \
-            bash -lc '
-              eval "$(gimme)"
-              source /root/.bashrc
-              source /etc/profile
-              conda activate ddpy3
+            bash -c '
               set -euo pipefail
               ./prebuild-datadog-agent.sh --generate-no-docker
             '

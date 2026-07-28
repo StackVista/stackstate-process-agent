@@ -37,7 +37,7 @@ COPY process-agent                        /chroot/opt/stackstate-agent/bin/agent
 COPY DockerFiles/agent/probe.sh           /chroot/
 COPY DockerFiles/agent/entrypoint/init-process.sh /chroot/
 
-RUN chmod 755 /chroot/probe.sh /chroot/init-process.sh && \
+RUN chmod 755 /chroot/probe.sh /chroot/init-process.sh /chroot/opt/stackstate-agent/bin/agent/process-agent && \
     chroot /chroot useradd -r -s /sbin/nologin -g root stackstate-agent && \
     chroot /chroot chown -R stackstate-agent:root /etc/stackstate-agent /var/log/stackstate-agent && \
     rm -rf /chroot/var/cache/zypp /chroot/tmp/* /chroot/var/tmp/*

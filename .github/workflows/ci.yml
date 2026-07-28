@@ -122,7 +122,9 @@ jobs:
             bash -c '
               source /root/.bashrc
               conda activate ddpy3
-              set -euo pipefail
+              # RVM's directory hook reads an unset rvm_saved_env variable.
+              # Keep fail-fast/pipefail without nounset in this legacy builder.
+              set -eo pipefail
               export PATH="${GOPATH}/bin:${PATH}"
 
               go mod verify

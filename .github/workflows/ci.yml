@@ -113,10 +113,8 @@ jobs:
             --env GOPATH=/workspace/.go \
             --env PROCESS_AGENT_VERSION="${short_sha}" \
             "${BUILDER_IMAGE}" \
-            bash -lc '
-              eval "$(gimme)"
+            bash -c '
               source /root/.bashrc
-              source /etc/profile
               conda activate ddpy3
               set -euo pipefail
               export PATH="${GOPATH}/bin:${PATH}"

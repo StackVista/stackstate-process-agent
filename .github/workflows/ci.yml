@@ -128,7 +128,8 @@ jobs:
               export PATH="${GOPATH}/bin:${PATH}"
 
               go mod verify
-              (cd "$(go list -f "{{ .Dir }}" -m github.com/gogo/protobuf)" && make install)
+              gogo_version="$(go list -m -f "{{.Version}}" github.com/gogo/protobuf)"
+              go install "github.com/gogo/protobuf/protoc-gen-gogofaster@${gogo_version}"
               rake protobuf
               git diff --exit-code -- model
               rake ci

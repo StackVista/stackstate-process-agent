@@ -17,8 +17,8 @@ env:
   IMAGE: quay.io/stackstate/stackstate-k8s-process-agent
 
 jobs:
-  prebuild-datadog-agent:
-    name: Prebuild DataDog eBPF dependencies (${{ matrix.arch }})
+  build-and-test:
+    name: Prebuild, generated-code check, build, and unit tests (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -30,15 +30,18 @@ jobs:
             runner: ubuntu-24.04
             llvm-arch: x86_64
             prebuild-image: quay.io/stackstate/datadog_build_system-probe_x64:61b4ad67
+            builder-image: quay.io/stackstate/datadog_build_deb_x64:61b4ad67
           - arch: arm64
             runner: ubuntu-24.04-arm
             llvm-arch: arm64
             prebuild-image: quay.io/stackstate/datadog_build_system-probe_arm64:61b4ad67
+            builder-image: quay.io/stackstate/datadog_build_deb_arm64:61b4ad67
     steps:
       - name: Check out source commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
           persist-credentials: false
 
       # A general-purpose BCI builder cannot generate DataDog's eBPF artifacts.
@@ -61,44 +64,6 @@ jobs:
               set -euo pipefail
               ./prebuild-datadog-agent.sh --generate-no-docker
             '
-
-      - name: Upload prebuild artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: prebuild-${{ matrix.arch }}
-          path: prebuild_artifacts/artifacts
-          if-no-files-found: error
-          retention-days: 1
-
-  build-and-test:
-    name: Build, generated-code check, and unit tests (${{ matrix.arch }})
-    needs: prebuild-datadog-agent
-    runs-on: ${{ matrix.runner }}
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-24.04
-            builder-image: quay.io/stackstate/datadog_build_deb_x64:61b4ad67
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-            builder-image: quay.io/stackstate/datadog_build_deb_arm64:61b4ad67
-    steps:
-      - name: Check out source commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Download prebuild artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: prebuild-${{ matrix.arch }}
-          path: prebuild_artifacts/artifacts
 
       # The DataDog builder carries the matching compiler, Ruby, conda, LLVM,
       # and native libraries needed by the fork. There is no equivalent BCI
@@ -190,18 +155,6 @@ jobs:
           short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
           echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
 
-      - name: Resolve canonical OCI labels
-        id: oci
-        uses: StackVista/image-pipeline/.github/actions/apply-oci-labels@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
-        with:
-          image-name: stackstate-k8s-process-agent
-          tag: ${{ steps.image.outputs.tag }}
-          title: SUSE Observability Process Agent
-          description: Process agent collecting per-process and per-container telemetry for SUSE Observability.
-          component: stackstate-k8s-process-agent
-          dockerfile: BCI.dockerfile
-          base-name: registry.suse.com/bci/bci-micro:15.7
-
       - name: Build local BCI runtime image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
@@ -216,9 +169,6 @@ jobs:
             EBPF_SUBFOLDER=${{ matrix.llvm-arch }}
             LONG_ARCH=${{ matrix.long-arch }}
             SHORT_ARCH=${{ matrix.arch }}
-          labels: |
-            ${{ steps.oci.outputs.labels }}
-            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
           tags: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
 
       - name: Smoke test packaged process-agent binary
@@ -358,7 +308,6 @@ jobs:
   ci-success:
     name: Process-agent CI
     needs:
-      - prebuild-datadog-agent
       - build-and-test
       - image-smoke-and-scan
       - publish-image

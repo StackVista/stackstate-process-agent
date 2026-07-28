@@ -2,7 +2,7 @@
 
 ### Setup an environment
 ```bash
-source ./.gitlab-scripts/set_environment.sh
+source ./scripts/set_environment.sh
 export DOCKER_HOST_IP=localhost && echo "DOCKER_HOST_IP overriden to: ${DOCKER_HOST_IP}"
 PROJECT_DIR=`pwd`
 ```

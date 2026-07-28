@@ -51,7 +51,14 @@ jobs:
             --volume "${GITHUB_WORKSPACE}:/workspace" \
             --workdir /workspace \
             "${PREBUILD_IMAGE}" \
-            bash -lc './prebuild-datadog-agent.sh --generate-no-docker'
+            bash -lc '
+              eval "$(gimme)"
+              source /root/.bashrc
+              source /etc/profile
+              conda activate ddpy3
+              set -euo pipefail
+              ./prebuild-datadog-agent.sh --generate-no-docker
+            '
 
       - name: Upload prebuild artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -219,7 +219,7 @@ jobs:
           labels: |
             ${{ steps.oci.outputs.labels }}
             org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
-          tags: local/stackstate-k8s-process-agent:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
+          tags: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
 
       - name: Smoke test packaged process-agent binary
         env:
@@ -227,7 +227,7 @@ jobs:
           TAG: ${{ steps.image.outputs.tag }}
         run: |
           set -euo pipefail
-          image="local/stackstate-k8s-process-agent:${TAG}-${ARCH}"
+          image="${IMAGE}:${TAG}-${ARCH}"
           output="$(docker run --rm \
             --entrypoint /opt/stackstate-agent/bin/agent/process-agent \
             "${image}" -version)"
@@ -240,7 +240,7 @@ jobs:
       - name: Scan image with VEX-aware Trivy and Grype
         uses: StackVista/image-pipeline/.github/actions/scan-image@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
         with:
-          image: local/stackstate-k8s-process-agent:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
+          image: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
           mode: gate
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
           with-grype: true

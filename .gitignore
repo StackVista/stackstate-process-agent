@@ -37,5 +37,6 @@ derived.gen.go
 
 # Prebuild
 prebuild_artifacts
+datadog-agent-workdir/
 ebpf-object-files/
 ebpf-object-files-root/

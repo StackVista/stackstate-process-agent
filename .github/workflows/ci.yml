@@ -155,20 +155,6 @@ jobs:
           short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
           echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
 
-      # Image-scoped OpenVEX statements match the canonical OCI product
-      # identity, even though this architecture image remains local.
-      - name: Resolve canonical OCI labels
-        id: oci
-        uses: StackVista/image-pipeline/.github/actions/apply-oci-labels@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
-        with:
-          image-name: stackstate-k8s-process-agent
-          tag: ${{ steps.image.outputs.tag }}
-          title: SUSE Observability Process Agent
-          description: Process agent collecting per-process and per-container telemetry for SUSE Observability.
-          component: stackstate-k8s-process-agent
-          dockerfile: BCI.dockerfile
-          base-name: registry.suse.com/bci/bci-micro:15.7
-
       - name: Build local BCI runtime image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
@@ -183,9 +169,6 @@ jobs:
             EBPF_SUBFOLDER=${{ matrix.llvm-arch }}
             LONG_ARCH=${{ matrix.long-arch }}
             SHORT_ARCH=${{ matrix.arch }}
-          labels: |
-            ${{ steps.oci.outputs.labels }}
-            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
           tags: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
 
       - name: Smoke test packaged process-agent binary
@@ -211,6 +194,7 @@ jobs:
           mode: gate
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
           with-grype: true
+          exceptions-path: exceptions
           upload-sarif: false
           sarif-category: process-agent-${{ matrix.arch }}
 

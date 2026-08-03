@@ -2,9 +2,9 @@
 # Wrapper around `docker build` for stackstate-k8s-process-agent that splices
 # canonical SUSE Observability OCI labels via packaging/oci-labels.sh.
 #
-# Replaces the previous inline docker build line in .gitlab-ci-x64.yml and
-# .gitlab-ci-arm.yml so the same recipe runs identically on both arches. The
-# base image label is derived from BCI.dockerfile by oci-labels.sh itself.
+# Keeps the architecture-specific image build recipe available to local and
+# legacy automation. The base image label is derived from BCI.dockerfile by
+# oci-labels.sh itself.
 #
 # Required env (exported by the CI job):
 #   BUILD_TAG       — full repo:tag for the local build (e.g. stackstate-k8s-process-agent:foo-amd64)

@@ -1,0 +1,333 @@
+name: Process-agent CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: process-agent-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: quay.io/stackstate/stackstate-k8s-process-agent
+
+jobs:
+  build-and-test:
+    name: Prebuild, generated-code check, build, and unit tests (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            llvm-arch: x86_64
+            prebuild-image: quay.io/stackstate/datadog_build_system-probe_x64:61b4ad67
+            builder-image: quay.io/stackstate/datadog_build_deb_x64:61b4ad67
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            llvm-arch: arm64
+            prebuild-image: quay.io/stackstate/datadog_build_system-probe_arm64:61b4ad67
+            builder-image: quay.io/stackstate/datadog_build_deb_arm64:61b4ad67
+    steps:
+      - name: Check out source commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # A general-purpose BCI builder cannot generate DataDog's eBPF artifacts.
+      # This repository-owned, architecture-specific builder is the existing
+      # supported toolchain and is also used to build the upstream agent fork.
+      - name: Generate DataDog eBPF and Go artifacts
+        env:
+          LLVM_ARCH: ${{ matrix.llvm-arch }}
+          PREBUILD_IMAGE: ${{ matrix.prebuild-image }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --volume "${GITHUB_WORKSPACE}:/workspace" \
+            --workdir /workspace \
+            --env LLVM_ARCH="${LLVM_ARCH}" \
+            --env OUTPUT_USER_ID="$(id -u)" \
+            --env OUTPUT_GROUP_ID="$(id -g)" \
+            "${PREBUILD_IMAGE}" \
+            bash -c '
+              set -euo pipefail
+              ./prebuild-datadog-agent.sh --generate-no-docker
+            '
+
+      # The DataDog builder carries the matching compiler, Ruby, conda, LLVM,
+      # and native libraries needed by the fork. There is no equivalent BCI
+      # image that can compile this legacy eBPF dependency graph.
+      - name: Verify generated code, build, and test
+        env:
+          BUILDER_IMAGE: ${{ matrix.builder-image }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
+
+          docker run --rm \
+            --volume "${GITHUB_WORKSPACE}:/workspace" \
+            --workdir /workspace \
+            --env CI=true \
+            --env GO111MODULE=on \
+            --env GOPATH=/workspace/.go \
+            --env PROCESS_AGENT_VERSION="${short_sha}" \
+            "${BUILDER_IMAGE}" \
+            bash -c '
+              source /root/.bashrc
+              conda activate ddpy3
+              # The RVM directory hook reads an unset rvm_saved_env variable.
+              # Keep fail-fast/pipefail without nounset in this legacy builder.
+              set -eo pipefail
+              export PATH="${GOPATH}/bin:${PATH}"
+
+              go mod verify
+              gogo_version="$(go list -m -f "{{.Version}}" github.com/gogo/protobuf)"
+              go install "github.com/gogo/protobuf/protoc-gen-gogofaster@${gogo_version}"
+              rake protobuf
+              git diff --exit-code -- model
+              rake ci
+              ./prebuild-datadog-agent.sh --install-ebpf
+              git diff --exit-code
+            '
+
+      - name: Upload process-agent image inputs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: process-agent-${{ matrix.arch }}
+          path: |
+            process-agent
+            ebpf-object-files
+          if-no-files-found: error
+          retention-days: 1
+
+  image-smoke-and-scan:
+    name: BCI image smoke test, Trivy secrets/CVEs, and Grype (${{ matrix.arch }})
+    needs: build-and-test
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            long-arch: x86_64
+            llvm-arch: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            long-arch: aarch64
+            llvm-arch: arm64
+    steps:
+      - name: Check out source commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Download process-agent image inputs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: process-agent-${{ matrix.arch }}
+          path: .
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Resolve image metadata
+        id: image
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
+          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build local BCI runtime image
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: BCI.dockerfile
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          push: false
+          provenance: false
+          sbom: false
+          build-args: |
+            EBPF_SUBFOLDER=${{ matrix.llvm-arch }}
+            LONG_ARCH=${{ matrix.long-arch }}
+            SHORT_ARCH=${{ matrix.arch }}
+          tags: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
+
+      - name: Smoke test packaged process-agent binary
+        env:
+          ARCH: ${{ matrix.arch }}
+          TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          set -euo pipefail
+          image="${IMAGE}:${TAG}-${ARCH}"
+          output="$(docker run --rm \
+            --entrypoint /opt/stackstate-agent/bin/agent/process-agent \
+            "${image}" -version)"
+          printf '%s\n' "${output}"
+          grep -F "Version: ${TAG}" <<< "${output}"
+
+          healthcheck="$(docker image inspect --format '{{json .Config.Healthcheck.Test}}' "${image}")"
+          grep -F '/probe.sh' <<< "${healthcheck}"
+
+      - name: Scan image with VEX-aware Trivy and Grype
+        uses: StackVista/image-pipeline/.github/actions/scan-image@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
+        with:
+          image: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
+          mode: gate
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          with-grype: true
+          exceptions-path: exceptions
+          upload-sarif: false
+          sarif-category: process-agent-${{ matrix.arch }}
+
+  publish-image:
+    name: Publish and sign commit image (${{ matrix.arch }})
+    needs: image-smoke-and-scan
+    if: >-
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            long-arch: x86_64
+            llvm-arch: x86_64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            long-arch: aarch64
+            llvm-arch: arm64
+    steps:
+      - name: Check out source commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Download process-agent image inputs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: process-agent-${{ matrix.arch }}
+          path: .
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Resolve image tag
+        id: image
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
+          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Resolve canonical OCI labels
+        id: oci
+        uses: StackVista/image-pipeline/.github/actions/apply-oci-labels@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
+        with:
+          image-name: stackstate-k8s-process-agent
+          tag: ${{ steps.image.outputs.tag }}
+          title: SUSE Observability Process Agent
+          description: Process agent collecting per-process and per-container telemetry for SUSE Observability.
+          component: stackstate-k8s-process-agent
+          dockerfile: BCI.dockerfile
+          base-name: registry.suse.com/bci/bci-micro:15.7
+
+      - name: Build, publish, and sign architecture image
+        uses: StackVista/image-pipeline/.github/actions/push-single-arch@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
+        with:
+          image: ${{ env.IMAGE }}
+          tag: ${{ steps.image.outputs.tag }}
+          arch: ${{ matrix.arch }}
+          dockerfile: BCI.dockerfile
+          labels: |
+            ${{ steps.oci.outputs.labels }}
+            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
+          build-args: |
+            EBPF_SUBFOLDER=${{ matrix.llvm-arch }}
+            LONG_ARCH=${{ matrix.long-arch }}
+            SHORT_ARCH=${{ matrix.arch }}
+          target-registry: quay.io
+          target-registry-user: ${{ vars.QUAY_USER }}
+          target-registry-password: ${{ secrets.QUAY_PASSWORD }}
+
+  merge-multiarch-manifest:
+    name: Publish and sign multi-architecture commit image
+    needs: publish-image
+    if: >-
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Resolve image tag
+        id: image
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
+          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Merge and sign multi-architecture manifest
+        uses: StackVista/image-pipeline/.github/actions/merge-multiarch@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
+        with:
+          image: ${{ env.IMAGE }}
+          tag: ${{ steps.image.outputs.tag }}
+          target-registry: quay.io
+          target-registry-user: ${{ vars.QUAY_USER }}
+          target-registry-password: ${{ secrets.QUAY_PASSWORD }}
+
+  ci-success:
+    name: Process-agent CI
+    needs:
+      - build-and-test
+      - image-smoke-and-scan
+      - publish-image
+      - merge-multiarch-manifest
+    if: always()
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Verify all required jobs succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          failed="$(jq -r '
+            to_entries[] |
+            select(.value.result != "success" and .value.result != "skipped") |
+            .key
+          ' <<< "${NEEDS}")"
+          if [ -n "${failed}" ]; then
+            echo "Required process-agent jobs failed:"
+            printf '%s\n' "${failed}"
+            exit 1
+          fi
+          echo "All required process-agent jobs passed."

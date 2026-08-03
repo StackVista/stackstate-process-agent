@@ -66,11 +66,11 @@ If you modify any of the `.proto` files you _must_ rebuild the `*.pb.go` files.
 
 Make sure protobuf 3.6.1.3 is installed, typically has to be built from source: `https://github.com/protocolbuffers/protobuf/tree/v3.6.1.3`
 
-Make sure you install the gogo-proto binaries from the go mod directory:
+Install the gogo-proto generator at the version pinned in `go.mod`:
 
 ```bash
-cd $GO_PATH/pkg/github.com/gogo/protobuf@1.3.2
-make install
+GOGO_PROTOBUF_VERSION="$(go list -m -f '{{.Version}}' github.com/gogo/protobuf)"
+go install "github.com/gogo/protobuf/protoc-gen-gogofaster@${GOGO_PROTOBUF_VERSION}"
 ```
 
 Make sure `$GO_PATH/bin` is in the `PATH`.

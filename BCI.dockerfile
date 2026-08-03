@@ -22,7 +22,8 @@ ENV DOCKER_STS_AGENT=true \
     SHORT_ARCH=${SHORT_ARCH} \
     EBPF_SUBFOLDER=${EBPF_SUBFOLDER}
 
-RUN zypper -n --no-gpg-checks --installroot /chroot refresh && \
+RUN zypper -n --gpg-auto-import-keys --installroot /chroot refresh && \
+    zypper -n --gpg-auto-import-keys --installroot /chroot update && \
     zypper -n --installroot /chroot install util-linux libudev1 ca-certificates curl wget xz iproute2 conntrack-tools && \
     zypper -n --root /chroot clean --all
 
@@ -36,7 +37,7 @@ COPY process-agent                        /chroot/opt/stackstate-agent/bin/agent
 COPY DockerFiles/agent/probe.sh           /chroot/
 COPY DockerFiles/agent/entrypoint/init-process.sh /chroot/
 
-RUN chmod 755 /chroot/probe.sh /chroot/init-process.sh && \
+RUN chmod 755 /chroot/probe.sh /chroot/init-process.sh /chroot/opt/stackstate-agent/bin/agent/process-agent && \
     chroot /chroot useradd -r -s /sbin/nologin -g root stackstate-agent && \
     chroot /chroot chown -R stackstate-agent:root /etc/stackstate-agent /var/log/stackstate-agent && \
     rm -rf /chroot/var/cache/zypp /chroot/tmp/* /chroot/var/tmp/*

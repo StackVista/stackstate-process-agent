@@ -9,7 +9,7 @@
 set -euo pipefail
 
 product="suse-observability"
-source_url="https://gitlab.com/stackvista/agent/stackstate-process-agent"
+source_url="https://github.com/StackVista/stackstate-process-agent"
 documentation_url="https://documentation.suse.com/cloudnative/suse-observability/latest/en/classic.html"
 readme_url=""
 image_name=""
@@ -108,7 +108,7 @@ fi
 # is actually pushed to quay.io. Matches apply-oci-labels and OciLabels.compute.
 ref_name="registry.rancher.com/suse-observability/${image_name}:${tag}"
 if [[ -z "$readme_url" ]]; then
-  readme_url="${source_url%/}/-/blob/master/README.md"
+  readme_url="${source_url%/}/blob/master/README.md"
 fi
 revision="${CI_COMMIT_SHA:-$(git rev-parse HEAD)}"
 source="${CI_PROJECT_URL:-$source_url}"

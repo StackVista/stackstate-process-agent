@@ -131,7 +131,7 @@ task :lint do
 end
 
 desc "Compile the protobuf files for the Process Agent"
-task :protobuf do
+task :protobuf => [:deps] do
   protocv = `bash -c "protoc --version"`.strip
   if protocv != 'libprotoc 3.6.1'
     fail "Requires protoc version 3.6.1"

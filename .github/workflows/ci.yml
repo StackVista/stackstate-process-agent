@@ -202,9 +202,8 @@ jobs:
     name: Publish and sign commit image (${{ matrix.arch }})
     needs: image-smoke-and-scan
     if: >-
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -280,9 +279,8 @@ jobs:
     name: Publish and sign multi-architecture commit image
     needs: publish-image
     if: >-
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
     permissions:
       contents: read

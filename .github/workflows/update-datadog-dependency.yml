@@ -12,19 +12,37 @@ on:
         default: 'stackstate-7.62.2'
 
 permissions:
-  contents: write
-  pull-requests: write
+  # All write auth below uses a short-lived GitHub App installation token.
+  # The default GITHUB_TOKEN stays read-only on purpose: events raised with it
+  # are subject to GitHub's recursion-prevention rule, so a PR it opened would
+  # never trigger the required "Process-agent CI" check and could not merge.
+  contents: read
+
+concurrency:
+  # Two scheduled/dispatched runs must not race on the same working branch.
+  group: update-datadog-dependency
+  cancel-in-progress: false
 
 jobs:
   update-dependency:
     runs-on: ubuntu-latest
     steps:
+      - name: Create updatecli GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.UPDATECLI_GH_APP_CLIENT_ID }}
+          private-key: ${{ secrets.UPDATECLI_GH_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          repositories: stackstate-process-agent
+
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-          # No later step pushes via git: the updater only reads, and
-          # create-pull-request authenticates with its own token input
+          # Nothing here pushes over git: the branch, the commit and the PR are
+          # all created through the API using the App token.
           persist-credentials: false
 
       - name: Setup Go
@@ -79,13 +97,20 @@ jobs:
 
       - name: Create pull request if changes detected
         if: steps.update.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
-        with:
-          title: |
-            chore: update datadog-agent upstream (${{ steps.update.outputs.branch }}) -> ${{ steps.update.outputs.short_commit }}
-          commit-message: |
-            chore: update datadog-agent upstream to ${{ steps.update.outputs.commit }} (branch ${{ steps.update.outputs.branch }})
-          body: |
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          BASE_BRANCH: ${{ github.ref_name }}
+          HEAD_BRANCH: update-datadog-${{ steps.update.outputs.short_commit }}
+          COMMIT_MESSAGE: >-
+            chore: update datadog-agent upstream to
+            ${{ steps.update.outputs.commit }}
+            (branch ${{ steps.update.outputs.branch }})
+          PR_TITLE: >-
+            chore: update datadog-agent upstream
+            (${{ steps.update.outputs.branch }}) ->
+            ${{ steps.update.outputs.short_commit }}
+          PR_BODY: |
             This automated PR updates all github.com/DataDog/datadog-agent module replaces to the upstream mirror at the latest commit.
 
             • Branch: `${{ steps.update.outputs.branch }}`
@@ -96,11 +121,9 @@ jobs:
             `./update-datadog-dependency.sh -b "${{ steps.update.outputs.branch }}"`
 
             Re-run this workflow with a different `upstream_branch` to refresh the PR.
-          branch: update-datadog-${{ steps.update.outputs.short_commit }}
-          delete-branch: true
-          # master requires signed commits (pulumi-infra branch protection);
-          # sign-commits creates the commit via the GitHub API so it is verified
-          sign-commits: true
+        run: |
+          chmod +x .github/scripts/open-signed-pr.sh
+          .github/scripts/open-signed-pr.sh
 
       - name: No updates needed
         if: steps.update.outputs.changed != 'true'

@@ -331,3 +331,20 @@ jobs:
             exit 1
           fi
           echo "All required process-agent jobs passed."
+
+  # Terminal job, master only. ci-success aggregates every other job, so hanging
+  # the notification off it means one funnel for all failures rather than a
+  # notify job per pipeline job. Replaces `notify-on-master-fail` from the
+  # retired .gitlab-ci.yml (STAC-25519).
+  cerberus-notify:
+    name: Report failure to Slack (Cerberus)
+    needs: ci-success
+    if: >-
+      failure() &&
+      github.ref == 'refs/heads/master' &&
+      github.event_name == 'push'
+    uses: ./.github/workflows/cerberus-notify.yml
+    with:
+      suite: build
+    secrets:
+      CERBERUS_LAMBDA_URL: ${{ secrets.CERBERUS_LAMBDA_URL }}

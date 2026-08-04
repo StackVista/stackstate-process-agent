@@ -34,8 +34,15 @@ done
 BASE_SHA=$(git rev-parse HEAD)
 
 # Files the updater touched, split into content changes and removals. The
-# lowercase 'd' filter means "everything except deletions".
-mapfile -t changed_files < <(git diff --name-only --diff-filter=d)
+# lowercase 'd' filter means "everything except deletions". git diff only ever
+# reports tracked paths, so brand new files are collected separately -
+# otherwise they would be dropped from the commit without any warning.
+mapfile -t changed_files < <(
+  {
+    git diff --name-only --diff-filter=d
+    git ls-files --others --exclude-standard
+  } | sort -u
+)
 mapfile -t deleted_files < <(git diff --name-only --diff-filter=D)
 
 if [ ${#changed_files[@]} -eq 0 ] && [ ${#deleted_files[@]} -eq 0 ]; then
@@ -46,19 +53,31 @@ fi
 echo "Changed: ${changed_files[*]:-none}"
 echo "Deleted: ${deleted_files[*]:-none}"
 
-additions='[]'
+# File contents must never travel through argv. Linux caps a single argument
+# at 128 KiB (MAX_ARG_STRLEN), and go.sum alone is well past that once base64
+# encoded, so `jq --arg contents "$(base64 ...)"` dies with E2BIG. Everything
+# that can grow is handed to jq through files instead: --rawfile to read the
+# encoded blob, --slurpfile to read the assembled arrays.
+work=$(mktemp -d)
+trap 'rm -rf "${work}"' EXIT
+
+additions="${work}/additions.json"
+echo '[]' > "${additions}"
 if [ ${#changed_files[@]} -gt 0 ]; then
-  additions=$(
-    for f in "${changed_files[@]}"; do
-      jq -n --arg path "$f" --arg contents "$(base64 -w0 "$f")" \
-        '{path: $path, contents: $contents}'
-    done | jq -s '.'
-  )
+  : > "${work}/additions.ndjson"
+  for f in "${changed_files[@]}"; do
+    base64 -w0 "$f" > "${work}/content.b64"
+    # base64 -w0 still terminates with a newline; GitHub wants the bare blob.
+    jq -n --arg path "$f" --rawfile contents "${work}/content.b64" \
+      '{path: $path, contents: ($contents | rtrimstr("\n"))}' >> "${work}/additions.ndjson"
+  done
+  jq -s '.' "${work}/additions.ndjson" > "${additions}"
 fi
 
-deletions='[]'
+deletions="${work}/deletions.json"
+echo '[]' > "${deletions}"
 if [ ${#deleted_files[@]} -gt 0 ]; then
-  deletions=$(printf '%s\n' "${deleted_files[@]}" | jq -R '{path: .}' | jq -s '.')
+  printf '%s\n' "${deleted_files[@]}" | jq -R '{path: .}' | jq -s '.' > "${deletions}"
 fi
 
 # Point the working branch at the commit we built from. Creating the commit
@@ -74,16 +93,15 @@ else
     -f ref="refs/heads/${HEAD_BRANCH}" -F sha="${BASE_SHA}" >/dev/null
 fi
 
-payload=$(mktemp)
-trap 'rm -f "${payload}"' EXIT
+payload="${work}/payload.json"
 
 jq -n \
   --arg repo "${GH_REPO}" \
   --arg branch "${HEAD_BRANCH}" \
   --arg message "${COMMIT_MESSAGE}" \
   --arg oid "${BASE_SHA}" \
-  --argjson additions "${additions}" \
-  --argjson deletions "${deletions}" \
+  --slurpfile additions "${additions}" \
+  --slurpfile deletions "${deletions}" \
   '{
      query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid url } } }",
      variables: {
@@ -95,8 +113,8 @@ jq -n \
          message: { headline: $message },
          expectedHeadOid: $oid,
          fileChanges: {
-           additions: $additions,
-           deletions: $deletions
+           additions: $additions[0],
+           deletions: $deletions[0]
          }
        }
      }

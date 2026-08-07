@@ -2,7 +2,6 @@ name: Update Datadog upstream dependency
 
 on:
   schedule:
-    # Every day at 09:15 UTC
     - cron: '15 9 * * *'
   workflow_dispatch:
     inputs:
@@ -12,14 +11,9 @@ on:
         default: 'stackstate-7.62.2'
 
 permissions:
-  # All write auth below uses a short-lived GitHub App installation token.
-  # The default GITHUB_TOKEN stays read-only on purpose: events raised with it
-  # are subject to GitHub's recursion-prevention rule, so a PR it opened would
-  # never trigger the required "Process-agent CI" check and could not merge.
   contents: read
 
 concurrency:
-  # Two scheduled/dispatched runs must not race on the same working branch.
   group: update-datadog-dependency
   cancel-in-progress: false
 
@@ -41,14 +35,11 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
-          # Nothing here pushes over git: the branch, the commit and the PR are
-          # all created through the API using the App token.
           persist-credentials: false
 
       - name: Setup Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          # Use the Go version from go.mod
           go-version-file: go.mod
           cache: true
 
@@ -64,7 +55,6 @@ jobs:
         id: update
         shell: bash
         env:
-          # Passed via env rather than interpolated into the script (template injection)
           UPSTREAM_BRANCH: ${{ github.event.inputs.upstream_branch }}
         run: |
           set -euo pipefail

@@ -44,9 +44,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # A general-purpose BCI builder cannot generate DataDog's eBPF artifacts.
-      # This repository-owned, architecture-specific builder is the existing
-      # supported toolchain and is also used to build the upstream agent fork.
       - name: Generate DataDog eBPF and Go artifacts
         env:
           LLVM_ARCH: ${{ matrix.llvm-arch }}
@@ -65,9 +62,6 @@ jobs:
               ./prebuild-datadog-agent.sh --generate-no-docker
             '
 
-      # The DataDog builder carries the matching compiler, Ruby, conda, LLVM,
-      # and native libraries needed by the fork. There is no equivalent BCI
-      # image that can compile this legacy eBPF dependency graph.
       - name: Verify generated code, build, and test
         env:
           BUILDER_IMAGE: ${{ matrix.builder-image }}
@@ -336,10 +330,6 @@ jobs:
           fi
           echo "All required process-agent jobs passed."
 
-  # Terminal job, master only. ci-success aggregates every other job, so hanging
-  # the notification off it means one funnel for all failures rather than a
-  # notify job per pipeline job. Replaces `notify-on-master-fail` from the
-  # retired .gitlab-ci.yml (STAC-25519).
   cerberus-notify:
     name: Report failure to Slack (Cerberus)
     needs: ci-success

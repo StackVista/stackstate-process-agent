@@ -53,7 +53,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/sys v0.46.0
+	golang.org/x/sys v0.47.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -107,7 +107,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mdlayher/netlink v1.7.2 // indirect
-	github.com/mdlayher/socket v0.5.0 // indirect
+	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c // indirect
 	github.com/mkrautz/goar v0.0.0-20150919110319-282caa8bd9da // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -128,13 +128,13 @@ require (
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/sassoftware/go-rpmutils v0.4.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/smira/go-ftp-protocol v0.0.0-20140829150050-066b75c2b70d // indirect
 	github.com/smira/go-xz v0.1.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tinylib/msgp v1.2.4 // indirect
@@ -150,7 +150,7 @@ require (
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
@@ -199,7 +199,7 @@ require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20230306123547-8075edf89bb0 // indirect
-	github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c // indirect
+	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/CycloneDX/cyclonedx-go v0.9.1 // indirect
 	github.com/DataDog/aptly v1.5.3 // indirect
 	github.com/DataDog/datadog-agent/comp/api/api/def v0.62.2 // indirect
@@ -261,7 +261,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/winutil v0.62.2 // indirect
 	github.com/DataDog/datadog-agent/pkg/version v0.62.2 // indirect
 	github.com/DataDog/datadog-go/v5 v5.6.0 // indirect
-	github.com/DataDog/ebpf-manager v0.7.6 // indirect
+	github.com/DataDog/ebpf-manager v0.8.2 // indirect
 	github.com/DataDog/go-sqllexer v0.0.17 // indirect
 	github.com/DataDog/viper v1.14.0 // indirect
 	github.com/DataDog/zstd_0 v0.0.0-20210310093942-586c1286621f // indirect
@@ -318,7 +318,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cheggaaa/pb/v3 v3.1.5 // indirect
-	github.com/cilium/ebpf v0.20.0 // indirect
+	github.com/cilium/ebpf v0.22.0 // indirect
 	github.com/cloudflare/cbpfc v0.0.0-20240920015331-ff978e94500b // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cloudfoundry-community/go-cfclient/v2 v2.0.1-0.20230503155151-3d15366c5820 // indirect
@@ -328,7 +328,7 @@ require (
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
-	github.com/containerd/stargz-snapshotter/estargz v0.15.1 // indirect
+	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/containerd/typeurl/v2 v2.2.3 // indirect
 	github.com/containernetworking/cni v1.2.3 // indirect
 	github.com/containernetworking/plugins v1.4.1 // indirect
@@ -341,9 +341,9 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v27.4.0+incompatible // indirect
-	github.com/docker/docker v27.4.0+incompatible // indirect
-	github.com/docker/docker-credential-helpers v0.8.2 // indirect
+	github.com/docker/cli v29.2.0+incompatible // indirect
+	github.com/docker/docker v28.2.2+incompatible // indirect
+	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -380,7 +380,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/google/certificate-transparency-go v1.1.8 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
-	github.com/google/go-containerregistry v0.20.2 // indirect
+	github.com/google/go-containerregistry v0.20.6 // indirect
 	github.com/google/go-github/v62 v62.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/wire v0.6.0 // indirect
@@ -434,12 +434,14 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/buildkit v0.16.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
+	github.com/moby/go-archive v0.3.3 // indirect
 	github.com/moby/locker v1.0.1 // indirect
+	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/spdystream v0.5.1 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
-	github.com/moby/sys/sequential v0.6.0 // indirect
+	github.com/moby/sys/sequential v0.7.0 // indirect
 	github.com/moby/sys/signal v0.7.1 // indirect
-	github.com/moby/sys/user v0.4.0 // indirect
+	github.com/moby/sys/user v0.4.1 // indirect
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
@@ -474,7 +476,7 @@ require (
 	github.com/skeema/knownhosts v1.3.0 // indirect
 	github.com/skydive-project/go-debouncer v1.0.0 // indirect
 	github.com/spdx/tools-golang v0.5.5 // indirect
-	github.com/spf13/cobra v1.10.0 // indirect
+	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/streadway/amqp v1.1.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
@@ -494,7 +496,7 @@ require (
 	github.com/uptrace/bun v1.2.5 // indirect
 	github.com/uptrace/bun/dialect/pgdialect v1.2.5 // indirect
 	github.com/uptrace/bun/driver/pgdriver v1.2.5 // indirect
-	github.com/vbatts/tar-split v0.11.5 // indirect
+	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/vito/go-sse v1.0.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
@@ -530,10 +532,9 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20231121144256-b99613f794b6 // indirect
 	golang.org/x/arch v0.26.0 // indirect
 	golang.org/x/exp v0.0.0-20241210194714-1829a127f884 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20240314144324-c7f7c6466f7f // indirect
+	golang.org/x/exp/typeparams v0.0.0-20260209203927-2842357ff358 // indirect
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067 // indirect
 	golang.org/x/term v0.44.0 // indirect
-	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
@@ -543,7 +544,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/zorkian/go-datadog-api.v2 v2.30.0 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
-	honnef.co/go/tools v0.5.1 // indirect
+	honnef.co/go/tools v0.7.0 // indirect
 	k8s.io/apiextensions-apiserver v0.35.0 // indirect
 	k8s.io/apiserver v0.35.0 // indirect
 	k8s.io/component-base v0.35.0 // indirect
@@ -565,9 +566,6 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
-
-// OBI tries to update the version, but the datadog ebpf manager needs `v0.16.0`.
-replace github.com/cilium/ebpf v0.20.0 => github.com/cilium/ebpf v0.16.0
 
 // OBI updates go-connections, but docker/docker v27 still expects the older DialPipe API.
 replace github.com/docker/go-connections v0.7.0 => github.com/docker/go-connections v0.5.0

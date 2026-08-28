@@ -14,9 +14,6 @@ AGENT_SOURCE_MOUNT = /stackstate-process-agent-mount
 PROJECT_DIR        = /go/src/github.com/StackVista/stackstate-process-agent
 
 DOCKER_ENV		   = --env PROJECT_DIR=${PROJECT_DIR} \
-                     --env artifactory_user=${ARTIFACTORY_USER} \
-                     --env artifactory_password=${ARTIFACTORY_PASSWORD} \
-                     --env ARTIFACTORY_PYPI_URL="artifactory.tooling.stackstate.io/artifactory/api/pypi/pypi-local/simple" \
                      --env PYTHON_RUNTIME=2
 
 

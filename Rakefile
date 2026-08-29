@@ -144,8 +144,13 @@ task :protobuf => [:deps] do
   sh "protoc proto/agent.proto --proto_path=#{gogo_path} --proto_path=#{sketched_path} -I proto --gogofaster_out model/"
 end
 
+desc "Fail while golang.org/x/crypto/openpgp is reachable (GO-2026-5932 control)"
+task :verify_openpgp_absent do
+  sh "./scripts/verify-openpgp-absent.sh"
+end
+
 desc "Process Agent CI script (imports, vet, etc)"
-task :ci => [:deps, :imports, :vet, :lint, :test, :build]
+task :ci => [:deps, :imports, :vet, :lint, :test, :build, :verify_openpgp_absent]
 
 desc "Process Agent local build"
 task :local_build => [:prebuild, :build]

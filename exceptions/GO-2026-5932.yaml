@@ -6,7 +6,7 @@ product:
   consumer: stackstate-process-agent
   image: quay.io/stackstate/stackstate-k8s-process-agent
 component:
-  purl: pkg:golang/golang.org/x/crypto@v0.53.0
+  purl: pkg:golang/golang.org/x/crypto@v0.55.0
   paths:
     - opt/stackstate-agent/bin/agent/process-agent
 status: accepted_with_compensating_control
@@ -26,10 +26,10 @@ statement: |
   Renewed 2026-08-27. No compatible patch exists: the advisory covers all
   versions (introduced 0, no fixed release) because the openpgp packages are
   permanently unmaintained, so upgrading golang.org/x/crypto cannot clear it.
-  Absence re-verified against this commit with `go list -deps ./cmd/...`, which
-  resolves 1335 packages and no openpgp package; the only linked x/crypto
-  packages are pbkdf2, scrypt and ocsp, which are also why the indirect module
-  cannot simply be dropped.
+  Absence re-verified against this commit with the same kubelet, kubeapiserver,
+  linux, cri, containerd and linux_bpf tags used by the release build. The graph
+  contains no openpgp package; pbkdf2, scrypt and ocsp remain reachable, which
+  is why the indirect module cannot simply be dropped.
 
   The compensating control is `scripts/verify-openpgp-absent.sh`, wired into
   `rake ci` and so run on each architecture by the build job. The evaluator

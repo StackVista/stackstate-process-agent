@@ -4,7 +4,7 @@
 # importing openpgp would stay suppressed and otherwise reach a release unseen.
 set -euo pipefail
 
-packages="$(go list -deps ./cmd/...)"
+packages="$(GOOS=linux CGO_ENABLED=1 go list -deps "$@" ./cmd/...)"
 
 if [ -z "${packages}" ]; then
   echo "go list -deps ./cmd/... resolved no packages" >&2

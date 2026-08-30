@@ -146,7 +146,7 @@ end
 
 desc "Fail while golang.org/x/crypto/openpgp is reachable (GO-2026-5932 control)"
 task :verify_openpgp_absent do
-  sh "./scripts/verify-openpgp-absent.sh"
+  sh "./scripts/verify-openpgp-absent.sh#{get_tag_set(:bpf => true)}"
 end
 
 desc "Process Agent CI script (imports, vet, etc)"

@@ -6,29 +6,43 @@ product:
   consumer: stackstate-process-agent
   image: quay.io/stackstate/stackstate-k8s-process-agent
 component:
-  purl: pkg:golang/golang.org/x/crypto@v0.53.0
+  purl: pkg:golang/golang.org/x/crypto@v0.55.0
   paths:
     - opt/stackstate-agent/bin/agent/process-agent
 status: accepted_with_compensating_control
 reason: unpublished_image_vex_identity_bridge
-expires: 2026-08-26
+expires: 2026-09-10
 owner: "@StackVista/observability-team"
 upstream_owner: golang
 upstream_reference: https://pkg.go.dev/vuln/GO-2026-5932
 statement: |
   The affected openpgp and openpgp/clearsign packages are absent from the
   process-agent command dependency graph. StackVista/vexhub contains the
-  reviewed image-scoped not_affected statement, but Grype and Trivy require an
-  exact image digest or tag to match an image product. This pre-publication
-  scan uses a newly built commit image whose identity cannot be present in the
-  VEX hub in advance. Keep this bridge only until the scan pipeline can apply
-  the reviewed statement to unpublished images without broadening it to every
-  consumer of golang.org/x/crypto.
+  reviewed image-scoped not_affected statement, but it does not apply to the
+  pre-publication commit image this pipeline scans. Keep this bridge only until
+  the scan pipeline can apply the reviewed statement to unpublished images
+  without broadening it to every consumer of golang.org/x/crypto.
 
-  Renewed 2026-08-12. No compatible patch exists: the advisory covers all
+  Renewed 2026-08-27. No compatible patch exists: the advisory covers all
   versions (introduced 0, no fixed release) because the openpgp packages are
   permanently unmaintained, so upgrading golang.org/x/crypto cannot clear it.
-  Absence re-verified against this commit with `go list -deps ./cmd/...`, which
-  resolves 1329 packages and no openpgp package; the only linked x/crypto
-  packages are cryptobyte, chacha20, chacha20poly1305, pbkdf2, scrypt and ocsp,
-  which are also why the indirect module cannot simply be dropped.
+  Absence re-verified against this commit with the same kubelet, kubeapiserver,
+  linux, cri, containerd and linux_bpf tags used by the release build. The graph
+  contains no openpgp package; pbkdf2, scrypt and ocsp remain reachable, which
+  is why the indirect module cannot simply be dropped.
+
+  The compensating control is `scripts/verify-openpgp-absent.sh`, wired into
+  `rake ci` and so run on each architecture by the build job. The evaluator
+  matches this exception on image and vulnerability id alone, so without that
+  check a later import of openpgp would be suppressed by this file rather than
+  reported.
+
+  Deleting this file was tried on this branch and reverted: run 33075037844
+  reported the advisory as unmanaged on both architectures, while the containerd
+  statements in the same vexhub document kept matching. A local rebuild using the
+  same vexhub repository and the same pinned scanner versions did suppress it, so
+  the divergence is environmental rather than a change in the statement. One lead
+  worth checking first: the locally loaded image carries a RepoDigest and Trivy
+  derives its OCI product purl from that digest, whereas the CI image is built
+  with load: true and never pushed. Reproduce against a digest-less image before
+  attempting deletion again.

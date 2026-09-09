@@ -11,13 +11,11 @@ then
   echo "$WORKDIR is a symlink to a directory. It is your responsibility to ensure that the directory has the up-to-date code."
 else
 
-  if ! type "rsync" > /dev/null; then
-    apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends rsync
-  fi
-
+  # coreutils cp, not rsync: the prebuild images are Debian bullseye, which is
+  # EOL, so apt-get update exits 100 on the expired bullseye-security Release
+  # file and installing rsync is no longer possible. cp -au needs no network.
   mkdir -p $WORKDIR
-  rsync -au "$SOURCEDIR"/. $WORKDIR
+  cp -au "$SOURCEDIR"/. $WORKDIR
   chown -R root:root $WORKDIR
 fi
 

@@ -11,13 +11,58 @@ then
   echo "$WORKDIR is a symlink to a directory. It is your responsibility to ensure that the directory has the up-to-date code."
 else
 
-  if ! type "rsync" > /dev/null; then
-    apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends rsync
-  fi
-
+  # coreutils cp, not rsync: the prebuild images are Debian bullseye, which is
+  # EOL, so apt-get update exits 100 on the expired bullseye-security Release
+  # file and installing rsync is no longer possible. cp -au needs no network.
   mkdir -p $WORKDIR
-  rsync -au "$SOURCEDIR"/. $WORKDIR
+
+  # WORKDIR is reused across dependency versions while SOURCEDIR is
+  # version-scoped, so a path can change type between runs. cp then either fails
+  # outright (it cannot overwrite a non-directory with a directory) or, when -u
+  # finds the destination no older, silently keeps the wrong type. rsync
+  # replaced the destination in both cases, so unlink it first.
+  #
+  # Only non-directories are ever unlinked, using rm -f so that a directory
+  # would fail rather than be removed: paths absent from SOURCEDIR must survive
+  # to keep cp -au's non-delete behaviour, which the generated ebpf artifacts
+  # rely on.
+  #
+  # xtrace off for the loop: it runs once per path in the dependency, which is
+  # about 14 trace lines each and would bury the rest of the build log.
+  set +x
+  ( cd "$SOURCEDIR" && find . -mindepth 1 -print0 ) |
+    while IFS= read -r -d '' rel; do
+      rel=${rel#./}
+      src="$SOURCEDIR/$rel"
+      dst="$WORKDIR/$rel"
+
+      if [ -L "$dst" ]; then dst_type=l
+      elif [ -d "$dst" ]; then dst_type=d
+      elif [ -e "$dst" ]; then dst_type=f
+      else continue
+      fi
+
+      if [ -L "$src" ]; then src_type=l
+      elif [ -d "$src" ]; then src_type=d
+      else src_type=f
+      fi
+
+      if [ "$src_type" = "$dst_type" ]; then
+        continue
+      fi
+
+      if [ "$dst_type" = d ]; then
+        # rsync refused this too, rather than deleting a directory that may hold
+        # generated output. Stop instead of building against a stale tree.
+        echo "$rel is a directory in $WORKDIR but not in $SOURCEDIR: delete $WORKDIR and re-run" >&2
+        exit 1
+      fi
+
+      rm -f "$dst"
+    done
+  set -x
+
+  cp -au "$SOURCEDIR"/. $WORKDIR
   chown -R root:root $WORKDIR
 fi
 

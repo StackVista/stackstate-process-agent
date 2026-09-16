@@ -5,7 +5,7 @@ ARG EBPF_SUBFOLDER="x86_64"
 RUN : # No-op command to create an explicit layer - this fixes a weird buildkit/buildx bug on macos arm
 
 # Temporary build stage image
-FROM registry.suse.com/bci/bci-base:latest AS chroot-builder
+FROM registry.suse.com/bci/bci-base:15.7 AS chroot-builder
 # Install system packages using builder image that has zypper
 COPY --from=final / /chroot/
 
@@ -24,7 +24,8 @@ ENV DOCKER_STS_AGENT=true \
 
 RUN zypper -n --gpg-auto-import-keys --installroot /chroot refresh && \
     zypper -n --gpg-auto-import-keys --installroot /chroot update && \
-    zypper -n --installroot /chroot install util-linux libudev1 ca-certificates curl wget xz iproute2 conntrack-tools && \
+    zypper -n --installroot /chroot install util-linux libudev1 ca-certificates curl wget xz iproute2 conntrack-tools \
+      'libacl1>=2.4.0-150000.4.6.1' 'libattr1>=2.6.0-150000.4.3.1' && \
     zypper -n --root /chroot clean --all
 
 RUN mkdir -p /chroot/opt/stackstate-agent/bin/agent \

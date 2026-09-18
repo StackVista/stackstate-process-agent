@@ -1,0 +1,202 @@
+{
+  "amd64": {
+    "provenance": {
+      "source": "c4840469c675351ab1075f8a8469027828635e51",
+      "workflow_sha": "9bbed017450fff18f1f4de7ec232742a21490d5f",
+      "run": "35318514627",
+      "arch": "amd64",
+      "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:5054522d33aff34692393328edaf992417f46d76644cd26e14bf51b0d4fa2a17"
+    },
+    "image_id": "sha256:fe483ad583145db48ee7087fa5c669aa2624fa7833cc8e75e5c9322eb6e35828",
+    "binary_sha256": "436fba8192a1b5be6caa885dcfaaf2d09ad98d26b2dfa16a47e48dfb7c226d95",
+    "vex_sha256": "b30ad305d42a3ddbeeed6526ed2a7ceac96337a071bf044a305d8ee6b4d1f2ac",
+    "trivy": [
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/exporters/otlp/otlptrace",
+        "version": "v1.44.0",
+        "severity": "LOW"
+      },
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
+        "version": "v1.44.0",
+        "severity": "LOW"
+      },
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/sdk",
+        "version": "v1.44.0",
+        "severity": "LOW"
+      },
+      {
+        "id": "GO-2026-5932",
+        "package": "golang.org/x/crypto",
+        "version": "v0.56.0",
+        "severity": "UNKNOWN"
+      }
+    ],
+    "grype": [
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/exporters/otlp/otlptrace",
+        "version": "v1.44.0",
+        "severity": "Low"
+      },
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
+        "version": "v1.44.0",
+        "severity": "Low"
+      },
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/sdk",
+        "version": "v1.44.0",
+        "severity": "Low"
+      },
+      {
+        "id": "GO-2026-5932",
+        "package": "golang.org/x/crypto",
+        "version": "v0.56.0",
+        "severity": "Unknown"
+      }
+    ],
+    "vex_ignored": [
+      {
+        "id": "CVE-2026-50195",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      },
+      {
+        "id": "CVE-2026-53489",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      },
+      {
+        "id": "CVE-2026-53492",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      }
+    ],
+    "secrets": 0,
+    "inventory_components": 433,
+    "rpm_packages": 125,
+    "evaluator": "image-pipeline evaluator (mode: inform)\n  total in-scope findings:  4\n  suppressed by exception:  0\n  expired:                  1\n  unmanaged:                3\n  unused exceptions:        0\n\nUnmanaged findings:\n  - CVE-2026-81870 [LOW] pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc@v1.44.0 [grype,trivy]\n  - CVE-2026-81870 [LOW] pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace@v1.44.0 [grype,trivy]\n  - CVE-2026-81870 [LOW] pkg:golang/go.opentelemetry.io/otel/sdk@v1.44.0 [grype,trivy]\n\nExpired exceptions:\n  - GO-2026-5932 [UNKNOWN] pkg:golang/golang.org/x/crypto@v0.56.0 \u2014 exception exceptions/GO-2026-5932.yaml expired 2026-09-10\n\n"
+  },
+  "arm64": {
+    "provenance": {
+      "source": "c4840469c675351ab1075f8a8469027828635e51",
+      "workflow_sha": "9bbed017450fff18f1f4de7ec232742a21490d5f",
+      "run": "35318514627",
+      "arch": "arm64",
+      "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:27a2367de7e8f46d050a3026481f36c83bf0777d67ecaf93e92cf7918369c426"
+    },
+    "image_id": "sha256:c415222a2c97612d3ef6e3671f57cfe518beb411ab89c2de9cd72f222e127723",
+    "binary_sha256": "96dec5fba9789f2c1db0614fe73953a8326ba32e30993074c78446788881ecfd",
+    "vex_sha256": "b30ad305d42a3ddbeeed6526ed2a7ceac96337a071bf044a305d8ee6b4d1f2ac",
+    "trivy": [
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/exporters/otlp/otlptrace",
+        "version": "v1.44.0",
+        "severity": "LOW"
+      },
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
+        "version": "v1.44.0",
+        "severity": "LOW"
+      },
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/sdk",
+        "version": "v1.44.0",
+        "severity": "LOW"
+      },
+      {
+        "id": "GO-2026-5932",
+        "package": "golang.org/x/crypto",
+        "version": "v0.56.0",
+        "severity": "UNKNOWN"
+      }
+    ],
+    "grype": [
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/exporters/otlp/otlptrace",
+        "version": "v1.44.0",
+        "severity": "Low"
+      },
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
+        "version": "v1.44.0",
+        "severity": "Low"
+      },
+      {
+        "id": "CVE-2026-81870",
+        "package": "go.opentelemetry.io/otel/sdk",
+        "version": "v1.44.0",
+        "severity": "Low"
+      },
+      {
+        "id": "GO-2026-5932",
+        "package": "golang.org/x/crypto",
+        "version": "v0.56.0",
+        "severity": "Unknown"
+      }
+    ],
+    "vex_ignored": [
+      {
+        "id": "CVE-2026-50195",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      },
+      {
+        "id": "CVE-2026-53489",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      },
+      {
+        "id": "CVE-2026-53492",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      }
+    ],
+    "secrets": 0,
+    "inventory_components": 433,
+    "rpm_packages": 125,
+    "evaluator": "image-pipeline evaluator (mode: inform)\n  total in-scope findings:  4\n  suppressed by exception:  0\n  expired:                  1\n  unmanaged:                3\n  unused exceptions:        0\n\nUnmanaged findings:\n  - CVE-2026-81870 [LOW] pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc@v1.44.0 [grype,trivy]\n  - CVE-2026-81870 [LOW] pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace@v1.44.0 [grype,trivy]\n  - CVE-2026-81870 [LOW] pkg:golang/go.opentelemetry.io/otel/sdk@v1.44.0 [grype,trivy]\n\nExpired exceptions:\n  - GO-2026-5932 [UNKNOWN] pkg:golang/golang.org/x/crypto@v0.56.0 \u2014 exception exceptions/GO-2026-5932.yaml expired 2026-09-10\n\n"
+  }
+}

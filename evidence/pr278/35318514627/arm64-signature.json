@@ -1,0 +1,2 @@
+
+[{"critical":{"identity":{"docker-reference":"quay.io/stackstate/stackstate-k8s-process-agent@sha256:27a2367de7e8f46d050a3026481f36c83bf0777d67ecaf93e92cf7918369c426"},"image":{"docker-manifest-digest":"sha256:27a2367de7e8f46d050a3026481f36c83bf0777d67ecaf93e92cf7918369c426"},"type":"https://sigstore.dev/cosign/sign/v1"},"optional":{}}]

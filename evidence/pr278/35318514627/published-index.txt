@@ -1,0 +1,26 @@
+Name:      quay.io/stackstate/stackstate-k8s-process-agent:c4840469-evidence-35318514627
+MediaType: application/vnd.oci.image.index.v1+json
+Digest:    sha256:68cfa5c411b96d7620c577a5ebc8f4975d277c7fd787db67e93347cb66fe541f
+           
+Manifests: 
+  Name:        quay.io/stackstate/stackstate-k8s-process-agent:c4840469-evidence-35318514627@sha256:77a4944ae82361b8126ed27ce24290881958672a5289e7fdbf23a9dc0133a14a
+  MediaType:   application/vnd.oci.image.manifest.v1+json
+  Platform:    linux/amd64
+               
+  Name:        quay.io/stackstate/stackstate-k8s-process-agent:c4840469-evidence-35318514627@sha256:009d27f61f8b315c7418d45dc5f19a5878fbc8fc410353a8d800891b2b207a45
+  MediaType:   application/vnd.oci.image.manifest.v1+json
+  Platform:    unknown/unknown
+  Annotations: 
+    vnd.docker.reference.digest: sha256:77a4944ae82361b8126ed27ce24290881958672a5289e7fdbf23a9dc0133a14a
+    vnd.docker.reference.type:   attestation-manifest
+               
+  Name:        quay.io/stackstate/stackstate-k8s-process-agent:c4840469-evidence-35318514627@sha256:3bcccb4a577775864f93c0086087ab404c89080dbcc3455011639cd44e0e08af
+  MediaType:   application/vnd.oci.image.manifest.v1+json
+  Platform:    linux/arm64
+               
+  Name:        quay.io/stackstate/stackstate-k8s-process-agent:c4840469-evidence-35318514627@sha256:45ec3f58f0a227015cce7dec596fe222a1098c24ceff5dba6ddffade339a1e72
+  MediaType:   application/vnd.oci.image.manifest.v1+json
+  Platform:    unknown/unknown
+  Annotations: 
+    vnd.docker.reference.type:   attestation-manifest
+    vnd.docker.reference.digest: sha256:3bcccb4a577775864f93c0086087ab404c89080dbcc3455011639cd44e0e08af

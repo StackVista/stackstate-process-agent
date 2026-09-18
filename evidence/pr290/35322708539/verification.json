@@ -1,0 +1,130 @@
+{
+  "amd64": {
+    "provenance": {
+      "source": "fe7d17e97be17d62ac0ae1cf0760826cc6303f43",
+      "workflow_sha": "e8f264ac321dff9bc439662ae0598911aca67998",
+      "run": "35322708539",
+      "arch": "amd64",
+      "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:271e7ac612adc3b89c10aa1bdbc463e4f62d7645c59f3938f27aa2c5500dcc8b"
+    },
+    "image_id": "sha256:d482512c4890e9646ef8191c9c572413c34b783891b74b29e0ece2b5bcc10d38",
+    "binary_sha256": "7ef8fb4948f69933c4d0666ac6d0a68a9164635e2405ddd044f700ca786d6b76",
+    "vex_sha256": "b30ad305d42a3ddbeeed6526ed2a7ceac96337a071bf044a305d8ee6b4d1f2ac",
+    "trivy": [
+      {
+        "id": "GO-2026-5932",
+        "package": "golang.org/x/crypto",
+        "version": "v0.56.0",
+        "severity": "UNKNOWN"
+      }
+    ],
+    "grype": [
+      {
+        "id": "GO-2026-5932",
+        "package": "golang.org/x/crypto",
+        "version": "v0.56.0",
+        "severity": "Unknown"
+      }
+    ],
+    "vex_ignored": [
+      {
+        "id": "CVE-2026-50195",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      },
+      {
+        "id": "CVE-2026-53489",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      },
+      {
+        "id": "CVE-2026-53492",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      }
+    ],
+    "secrets": 0,
+    "inventory_components": 433,
+    "rpm_packages": 125,
+    "evaluator": "image-pipeline evaluator (mode: inform)\n  total in-scope findings:  1\n  suppressed by exception:  0\n  expired:                  1\n  unmanaged:                0\n  unused exceptions:        0\n\nExpired exceptions:\n  - GO-2026-5932 [UNKNOWN] pkg:golang/golang.org/x/crypto@v0.56.0 \u2014 exception exceptions/GO-2026-5932.yaml expired 2026-09-10\n\n"
+  },
+  "arm64": {
+    "provenance": {
+      "source": "fe7d17e97be17d62ac0ae1cf0760826cc6303f43",
+      "workflow_sha": "e8f264ac321dff9bc439662ae0598911aca67998",
+      "run": "35322708539",
+      "arch": "arm64",
+      "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:c5deb88549c25db1f42568f7d6bed7f6b5ae1bac1b6785540e97425ef48135de"
+    },
+    "image_id": "sha256:b5ddd5ddbdfc024147df0d2d38a14ed713012a7f35ab505663a0a0ee952ea1c3",
+    "binary_sha256": "96b7397a7657873556c2216e3d2fb3daf2fb78f1b24e48e6e8892fd4d14a30d5",
+    "vex_sha256": "b30ad305d42a3ddbeeed6526ed2a7ceac96337a071bf044a305d8ee6b4d1f2ac",
+    "trivy": [
+      {
+        "id": "GO-2026-5932",
+        "package": "golang.org/x/crypto",
+        "version": "v0.56.0",
+        "severity": "UNKNOWN"
+      }
+    ],
+    "grype": [
+      {
+        "id": "GO-2026-5932",
+        "package": "golang.org/x/crypto",
+        "version": "v0.56.0",
+        "severity": "Unknown"
+      }
+    ],
+    "vex_ignored": [
+      {
+        "id": "CVE-2026-50195",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      },
+      {
+        "id": "CVE-2026-53489",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      },
+      {
+        "id": "CVE-2026-53492",
+        "version": "v1.7.35",
+        "rules": [
+          {
+            "namespace": "vex",
+            "vex-status": "not_affected"
+          }
+        ]
+      }
+    ],
+    "secrets": 0,
+    "inventory_components": 433,
+    "rpm_packages": 125,
+    "evaluator": "image-pipeline evaluator (mode: inform)\n  total in-scope findings:  1\n  suppressed by exception:  0\n  expired:                  1\n  unmanaged:                0\n  unused exceptions:        0\n\nExpired exceptions:\n  - GO-2026-5932 [UNKNOWN] pkg:golang/golang.org/x/crypto@v0.56.0 \u2014 exception exceptions/GO-2026-5932.yaml expired 2026-09-10\n\n"
+  }
+}

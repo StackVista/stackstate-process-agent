@@ -67,7 +67,7 @@ require (
 	github.com/Microsoft/hcsshim v0.12.9 // indirect
 	github.com/awalterschulze/gographviz v2.0.3+incompatible // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/containerd/containerd v1.7.33 // indirect
+	github.com/containerd/containerd v1.7.35 // indirect
 	github.com/containerd/continuity v0.4.4 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/ttrpc v1.2.7 // indirect
@@ -148,7 +148,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/mod v0.38.0 // indirect
-	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
@@ -156,7 +156,7 @@ require (
 	golang.org/x/tools v0.48.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/grpc v1.83.1
+	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

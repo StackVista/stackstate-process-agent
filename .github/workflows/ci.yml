@@ -1,10 +1,6 @@
-name: Process-agent CI
+name: PR278 exact-source image evidence
 
 on:
-  pull_request:
-  push:
-    branches:
-      - master
   workflow_dispatch:
 
 permissions: {}
@@ -40,7 +36,7 @@ jobs:
       - name: Check out source commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: c4840469c675351ab1075f8a8469027828635e51
           fetch-depth: 0
           persist-credentials: false
 
@@ -65,7 +61,7 @@ jobs:
       - name: Verify generated code, build, and test
         env:
           BUILDER_IMAGE: ${{ matrix.builder-image }}
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_SHA: c4840469c675351ab1075f8a8469027828635e51
         run: |
           set -euo pipefail
           short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
@@ -104,7 +100,7 @@ jobs:
             process-agent
             ebpf-object-files
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 90
 
   image-smoke-and-scan:
     name: BCI image smoke test, Trivy secrets/CVEs, and Grype (${{ matrix.arch }})
@@ -128,7 +124,7 @@ jobs:
       - name: Check out source commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: c4840469c675351ab1075f8a8469027828635e51
           persist-credentials: false
 
       - name: Download process-agent image inputs
@@ -143,11 +139,11 @@ jobs:
       - name: Resolve image metadata
         id: image
         env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_SHA: c4840469c675351ab1075f8a8469027828635e51
         run: |
           set -euo pipefail
           short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
-          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${short_sha}-evidence-${GITHUB_RUN_ID}" >> "${GITHUB_OUTPUT}"
 
       - name: Build local BCI runtime image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
@@ -176,7 +172,7 @@ jobs:
             --entrypoint /opt/stackstate-agent/bin/agent/process-agent \
             "${image}" -version)"
           printf '%s\n' "${output}"
-          grep -F "Version: ${TAG}" <<< "${output}"
+          grep -F "Version: c4840469" <<< "${output}"
 
           healthcheck="$(docker image inspect --format '{{json .Config.Healthcheck.Test}}' "${image}")"
           grep -F '/probe.sh' <<< "${healthcheck}"
@@ -192,14 +188,18 @@ jobs:
           upload-sarif: false
           sarif-category: process-agent-${{ matrix.arch }}
 
+      - name: Retain local-image scan reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr278-local-scan-${{ matrix.arch }}
+          path: reports/
+          retention-days: 90
+
   publish-image:
     name: Publish and sign commit image (${{ matrix.arch }})
     needs: image-smoke-and-scan
-    if: >-
-      (github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository) ||
-      ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/master')
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/evidence/pr278-full-image'
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -220,7 +220,7 @@ jobs:
       - name: Check out source commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: c4840469c675351ab1075f8a8469027828635e51
           persist-credentials: false
 
       - name: Download process-agent image inputs
@@ -235,11 +235,11 @@ jobs:
       - name: Resolve image tag
         id: image
         env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_SHA: c4840469c675351ab1075f8a8469027828635e51
         run: |
           set -euo pipefail
           short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
-          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${short_sha}-evidence-${GITHUB_RUN_ID}" >> "${GITHUB_OUTPUT}"
 
       - name: Resolve canonical OCI labels
         id: oci
@@ -262,7 +262,7 @@ jobs:
           dockerfile: BCI.dockerfile
           labels: |
             ${{ steps.oci.outputs.labels }}
-            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
+            org.opencontainers.image.revision=c4840469c675351ab1075f8a8469027828635e51
           build-args: |
             EBPF_SUBFOLDER=${{ matrix.llvm-arch }}
             LONG_ARCH=${{ matrix.long-arch }}
@@ -274,11 +274,7 @@ jobs:
   merge-multiarch-manifest:
     name: Publish and sign multi-architecture commit image
     needs: publish-image
-    if: >-
-      (github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository) ||
-      ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/master')
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/evidence/pr278-full-image'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -287,11 +283,11 @@ jobs:
       - name: Resolve image tag
         id: image
         env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_SHA: c4840469c675351ab1075f8a8469027828635e51
         run: |
           set -euo pipefail
           short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
-          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${short_sha}-evidence-${GITHUB_RUN_ID}" >> "${GITHUB_OUTPUT}"
 
       - name: Merge and sign multi-architecture manifest
         uses: StackVista/image-pipeline/.github/actions/merge-multiarch@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
@@ -309,6 +305,7 @@ jobs:
       - image-smoke-and-scan
       - publish-image
       - merge-multiarch-manifest
+      - published-image-evidence
     if: always()
     runs-on: ubuntu-24.04
     permissions: {}
@@ -330,16 +327,87 @@ jobs:
           fi
           echo "All required process-agent jobs passed."
 
-  cerberus-notify:
-    name: Report failure to Slack (Cerberus)
-    needs: ci-success
-    if: >-
-      failure() &&
-      github.ref == 'refs/heads/master' &&
-      github.event_name == 'push'
-    uses: ./.github/workflows/cerberus-notify.yml
-    with:
-      suite: build
-    secrets:
-      CERBERUS_LAMBDA_URL: ${{ secrets.CERBERUS_LAMBDA_URL }}
-      CERBERUS_API_TOKEN: ${{ secrets.CERBERUS_API_TOKEN }}
+  published-image-evidence:
+    name: Published full-image evidence (${{ matrix.arch }})
+    needs: merge-multiarch-manifest
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Check out reviewed source and exceptions
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: c4840469c675351ab1075f8a8469027828635e51
+          persist-credentials: false
+
+      - name: Resolve and inspect published architecture image
+        id: published
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          tag="${IMAGE}:c4840469-evidence-${GITHUB_RUN_ID}-${ARCH}"
+          docker pull --platform "linux/${ARCH}" "${tag}"
+          digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "${tag}")"
+          echo "image=${digest}" >> "${GITHUB_OUTPUT}"
+          docker image inspect "${digest}" > reports/image-inspect.json
+          printf '%s\n' "${digest}" > reports/image-digest.txt
+          test "$(docker image inspect --format '{{.Architecture}}' "${digest}")" = "${ARCH}"
+          test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "${digest}")" = c4840469c675351ab1075f8a8469027828635e51
+          docker run --rm --entrypoint /opt/stackstate-agent/bin/agent/process-agent "${digest}" -version | tee reports/version.txt
+          grep -F 'Version: c4840469' reports/version.txt
+          docker run --rm --entrypoint rpm "${digest}" -qa --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n' | sort > reports/rpm-inventory.txt
+          container="$(docker create "${digest}")"
+          docker cp "${container}:/opt/stackstate-agent/bin/agent/process-agent" /tmp/pr278-process-agent
+          docker rm "${container}"
+          sha256sum /tmp/pr278-process-agent > reports/binary-sha256.txt
+
+      - name: Scan published digest with current VEX and separate secrets
+        uses: StackVista/image-pipeline/.github/actions/scan-image@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
+        with:
+          image: ${{ steps.published.outputs.image }}
+          mode: inform
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          with-grype: true
+          exceptions-path: exceptions
+          upload-sarif: false
+          sarif-category: pr278-published-${{ matrix.arch }}
+
+      - name: Record inventory, consumed VEX, and evaluator output
+        env:
+          SCANNED_IMAGE: ${{ steps.published.outputs.image }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          go version -m /tmp/pr278-process-agent > reports/binary-modules.txt
+          trivy image --format cyclonedx --output reports/inventory.cdx.json "${SCANNED_IMAGE}"
+          cp exceptions/GO-2026-5932.yaml reports/GO-2026-5932.yaml
+          mkdir reports/consumed-vex
+          while IFS= read -r document; do
+            if [[ "${document}" == */pkg/golang/github.com/containerd/containerd/scan.openvex.json ]]; then
+              cp "${document}" reports/consumed-vex/containerd.openvex.json
+            fi
+          done < reports/grype-vex-documents.txt
+          test -s reports/consumed-vex/containerd.openvex.json
+          sha256sum reports/consumed-vex/containerd.openvex.json > reports/consumed-vex/SHA256SUMS
+          image-pipeline-evaluate --image "${SCANNED_IMAGE}" --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --mode inform --trivy-json reports/trivy.json --grype-json reports/grype.json --exceptions exceptions --sarif reports/image-pipeline.sarif 2>&1 | tee reports/evaluator.txt
+          jq -n --arg source c4840469c675351ab1075f8a8469027828635e51 --arg workflow_sha "${GITHUB_SHA}" --arg run "${GITHUB_RUN_ID}" --arg arch "${ARCH}" --arg image "${SCANNED_IMAGE}" '{source:$source,workflow_sha:$workflow_sha,run:$run,arch:$arch,image:$image}' > reports/provenance.json
+          (cd reports && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > reports/SHA256SUMS
+
+      - name: Retain published full-image evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr278-published-evidence-${{ matrix.arch }}
+          path: reports/
+          retention-days: 90
+          if-no-files-found: error

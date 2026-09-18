@@ -1,0 +1,6 @@
+
+Verification for quay.io/stackstate/stackstate-k8s-process-agent@sha256:68cfa5c411b96d7620c577a5ebc8f4975d277c7fd787db67e93347cb66fe541f --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The code-signing certificate was verified using trusted certificate authority certificates

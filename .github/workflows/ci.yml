@@ -365,7 +365,6 @@ jobs:
           test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "${digest}")" = c4840469c675351ab1075f8a8469027828635e51
           docker run --rm --entrypoint /opt/stackstate-agent/bin/agent/process-agent "${digest}" -version | tee reports/version.txt
           grep -F 'Version: c4840469' reports/version.txt
-          docker run --rm --entrypoint rpm "${digest}" -qa --qf '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n' | sort > reports/rpm-inventory.txt
           container="$(docker create "${digest}")"
           docker cp "${container}:/opt/stackstate-agent/bin/agent/process-agent" /tmp/pr278-process-agent
           docker rm "${container}"
@@ -390,6 +389,8 @@ jobs:
           set -euo pipefail
           go version -m /tmp/pr278-process-agent > reports/binary-modules.txt
           trivy image --format cyclonedx --output reports/inventory.cdx.json "${SCANNED_IMAGE}"
+          jq -r '.components[]? | select(.purl // "" | startswith("pkg:rpm/")) | [.name, .version, .purl] | @tsv' reports/inventory.cdx.json | sort > reports/rpm-inventory.txt
+          test -s reports/rpm-inventory.txt
           cp exceptions/GO-2026-5932.yaml reports/GO-2026-5932.yaml
           mkdir reports/consumed-vex
           while IFS= read -r document; do

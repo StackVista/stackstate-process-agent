@@ -1,24 +1,15 @@
-name: Process-agent CI
-
+name: PR292 published-digest evidence
 on:
-  pull_request:
-  push:
-    branches:
-      - master
   workflow_dispatch:
-
 permissions: {}
-
 concurrency:
-  group: process-agent-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
+  group: pr292-published-evidence
+  cancel-in-progress: false
 env:
   IMAGE: quay.io/stackstate/stackstate-k8s-process-agent
-
 jobs:
-  build-and-test:
-    name: Prebuild, generated-code check, build, and unit tests (${{ matrix.arch }})
+  published-image-evidence:
+    name: Published full-image evidence (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -28,327 +19,100 @@ jobs:
         include:
           - arch: amd64
             runner: ubuntu-24.04
-            llvm-arch: x86_64
-            prebuild-image: quay.io/stackstate/datadog_build_system-probe_x64:61b4ad67
-            builder-image: quay.io/stackstate/datadog_build_deb_x64:61b4ad67
+            digest: sha256:e0eeb7d5196e8d1121313aa6e6145c957a6e91687b3a1c045f0a5649b6b5eb65
           - arch: arm64
             runner: ubuntu-24.04-arm
-            llvm-arch: arm64
-            prebuild-image: quay.io/stackstate/datadog_build_system-probe_arm64:61b4ad67
-            builder-image: quay.io/stackstate/datadog_build_deb_arm64:61b4ad67
+            digest: sha256:ff8c855b04a56bf430adbb54de24f0274f5f51cb919cc2fa2ec8d92505172312
     steps:
-      - name: Check out source commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Check out reviewed source and exceptions
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
+          ref: c86d936d5833e97b6e6daccb3d1e7beec3e3b2c1
           persist-credentials: false
 
-      - name: Generate DataDog eBPF and Go artifacts
-        env:
-          LLVM_ARCH: ${{ matrix.llvm-arch }}
-          PREBUILD_IMAGE: ${{ matrix.prebuild-image }}
-        run: |
-          set -euo pipefail
-          docker run --rm \
-            --volume "${GITHUB_WORKSPACE}:/workspace" \
-            --workdir /workspace \
-            --env LLVM_ARCH="${LLVM_ARCH}" \
-            --env OUTPUT_USER_ID="$(id -u)" \
-            --env OUTPUT_GROUP_ID="$(id -g)" \
-            "${PREBUILD_IMAGE}" \
-            bash -c '
-              set -euo pipefail
-              ./prebuild-datadog-agent.sh --generate-no-docker
-            '
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
 
-      - name: Verify generated code, build, and test
-        env:
-          BUILDER_IMAGE: ${{ matrix.builder-image }}
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
-
-          docker run --rm \
-            --volume "${GITHUB_WORKSPACE}:/workspace" \
-            --workdir /workspace \
-            --env CI=true \
-            --env GO111MODULE=on \
-            --env GOPATH=/workspace/.go \
-            --env PROCESS_AGENT_VERSION="${short_sha}" \
-            "${BUILDER_IMAGE}" \
-            bash -c '
-              source /root/.bashrc
-              conda activate ddpy3
-              # The RVM directory hook reads an unset rvm_saved_env variable.
-              # Keep fail-fast/pipefail without nounset in this legacy builder.
-              set -eo pipefail
-              export PATH="${GOPATH}/bin:${PATH}"
-
-              go mod verify
-              gogo_version="$(go list -m -f "{{.Version}}" github.com/gogo/protobuf)"
-              go install "github.com/gogo/protobuf/protoc-gen-gogofaster@${gogo_version}"
-              rake protobuf
-              git diff --exit-code -- model
-              rake ci
-              ./prebuild-datadog-agent.sh --install-ebpf
-              git diff --exit-code
-            '
-
-      - name: Upload process-agent image inputs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: process-agent-${{ matrix.arch }}
-          path: |
-            process-agent
-            ebpf-object-files
-          if-no-files-found: error
-          retention-days: 1
-
-  image-smoke-and-scan:
-    name: BCI image smoke test, Trivy secrets/CVEs, and Grype (${{ matrix.arch }})
-    needs: build-and-test
-    runs-on: ${{ matrix.runner }}
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-24.04
-            long-arch: x86_64
-            llvm-arch: x86_64
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-            long-arch: aarch64
-            llvm-arch: arm64
-    steps:
-      - name: Check out source commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-
-      - name: Download process-agent image inputs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: process-agent-${{ matrix.arch }}
-          path: .
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-
-      - name: Resolve image metadata
-        id: image
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
-          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
-
-      - name: Build local BCI runtime image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        with:
-          context: .
-          file: BCI.dockerfile
-          platforms: linux/${{ matrix.arch }}
-          load: true
-          push: false
-          provenance: false
-          sbom: false
-          build-args: |
-            EBPF_SUBFOLDER=${{ matrix.llvm-arch }}
-            LONG_ARCH=${{ matrix.long-arch }}
-            SHORT_ARCH=${{ matrix.arch }}
-          tags: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
-
-      - name: Smoke test packaged process-agent binary
+      - name: Verify original signed index and runtime membership
         env:
           ARCH: ${{ matrix.arch }}
-          TAG: ${{ steps.image.outputs.tag }}
+          PLATFORM_DIGEST: ${{ matrix.digest }}
         run: |
           set -euo pipefail
-          image="${IMAGE}:${TAG}-${ARCH}"
-          output="$(docker run --rm \
-            --entrypoint /opt/stackstate-agent/bin/agent/process-agent \
-            "${image}" -version)"
-          printf '%s\n' "${output}"
-          grep -F "Version: ${TAG}" <<< "${output}"
+          mkdir -p reports
+          index="${IMAGE}@sha256:1a45e3280e97fa2e463349d54142b3ca9737d934998b1b1df0c0d93666606ae4"
+          docker buildx imagetools inspect --raw "${index}" > reports/published-index.json
+          jq -e --arg arch "${ARCH}" --arg digest "${PLATFORM_DIGEST}" '.manifests[] | select(.platform.architecture == $arch and .platform.os == "linux" and .digest == $digest)' reports/published-index.json > reports/platform-descriptor.json
+          cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com --certificate-identity=https://github.com/StackVista/stackstate-process-agent/.github/workflows/ci.yml@refs/pull/292/merge "${index}" > reports/index-signature.json 2> reports/index-signature-verification.log
 
-          healthcheck="$(docker image inspect --format '{{json .Config.Healthcheck.Test}}' "${image}")"
-          grep -F '/probe.sh' <<< "${healthcheck}"
+      - name: Resolve and inspect published architecture image
+        id: published
+        env:
+          ARCH: ${{ matrix.arch }}
+          PLATFORM_DIGEST: ${{ matrix.digest }}
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          digest="${IMAGE}@${PLATFORM_DIGEST}"
+          docker pull --platform "linux/${ARCH}" "${digest}"
+          echo "image=${digest}" >> "${GITHUB_OUTPUT}"
+          docker image inspect "${digest}" > reports/image-inspect.json
+          printf '%s\n' "${digest}" > reports/image-digest.txt
+          test "$(docker image inspect --format '{{.Architecture}}' "${digest}")" = "${ARCH}"
+          test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "${digest}")" = c86d936d5833e97b6e6daccb3d1e7beec3e3b2c1
+          docker run --rm --entrypoint /opt/stackstate-agent/bin/agent/process-agent "${digest}" -version | tee reports/version.txt
+          grep -F 'Version: c86d936d' reports/version.txt
+          container="$(docker create "${digest}")"
+          docker cp "${container}:/opt/stackstate-agent/bin/agent/process-agent" /tmp/pr292-process-agent
+          docker rm "${container}"
+          sha256sum /tmp/pr292-process-agent > reports/binary-sha256.txt
 
-      - name: Scan image with VEX-aware Trivy and Grype
+      - name: Scan published digest with current VEX and separate secrets
         uses: StackVista/image-pipeline/.github/actions/scan-image@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
         with:
-          image: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
+          image: ${{ steps.published.outputs.image }}
           mode: inform
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
           with-grype: true
           exceptions-path: exceptions
           upload-sarif: false
-          sarif-category: process-agent-${{ matrix.arch }}
+          sarif-category: pr292-published-${{ matrix.arch }}
 
-      - name: Upload image scan evidence
+      - name: Record inventory, consumed VEX, and evaluator output
+        env:
+          SCANNED_IMAGE: ${{ steps.published.outputs.image }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          go version -m /tmp/pr292-process-agent > reports/binary-modules.txt
+          grep -F 'vcs.revision=c86d936d5833e97b6e6daccb3d1e7beec3e3b2c1' reports/binary-modules.txt
+          grep -F 'vcs.modified=false' reports/binary-modules.txt
+          trivy image --format cyclonedx --output reports/inventory.cdx.json "${SCANNED_IMAGE}"
+          jq -r '.components[]? | select(.purl // "" | startswith("pkg:rpm/")) | [.name, .version, .purl] | @tsv' reports/inventory.cdx.json | sort > reports/rpm-inventory.txt
+          test -s reports/rpm-inventory.txt
+          jq -e '.components[] | select(.name == "libpcre2-8-0" and .version == "10.42-150600.3.3.1")' reports/inventory.cdx.json > reports/pcre2-package.json
+          jq -e '.components[] | select(.name == "glibc" and .version == "2.38-150600.14.58.1")' reports/inventory.cdx.json > reports/glibc-package.json
+          trivy --version > reports/trivy-version.txt
+          grype version > reports/grype-version.txt
+          grype db status > reports/grype-db-status.txt
+          cp exceptions/GO-2026-5932.yaml reports/GO-2026-5932.yaml
+          mkdir reports/consumed-vex
+          while IFS= read -r document; do
+            if [[ "${document}" == */stackvista/*/pkg/golang/github.com/containerd/containerd/scan.openvex.json ]]; then
+              cp "${document}" reports/consumed-vex/containerd.openvex.json
+            fi
+          done < reports/grype-vex-documents.txt
+          test -s reports/consumed-vex/containerd.openvex.json
+          sha256sum reports/consumed-vex/containerd.openvex.json > reports/consumed-vex/SHA256SUMS
+          image-pipeline-evaluate --image "${SCANNED_IMAGE}" --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --mode inform --trivy-json reports/trivy.json --grype-json reports/grype.json --exceptions exceptions --sarif reports/image-pipeline.sarif 2>&1 | tee reports/evaluator.txt
+          jq -n --arg source c86d936d5833e97b6e6daccb3d1e7beec3e3b2c1 --arg workflow_sha "${GITHUB_SHA}" --arg run "${GITHUB_RUN_ID}" --arg arch "${ARCH}" --arg image "${SCANNED_IMAGE}" '{source:$source,workflow_sha:$workflow_sha,run:$run,arch:$arch,image:$image}' > reports/provenance.json
+          (cd reports && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum) > reports/SHA256SUMS
+
+      - name: Retain published full-image evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: process-agent-scan-${{ matrix.arch }}
+          name: pr292-published-evidence-${{ matrix.arch }}
           path: reports/
-          if-no-files-found: warn
-          retention-days: 14
-
-  publish-image:
-    name: Publish and sign commit image (${{ matrix.arch }})
-    needs: image-smoke-and-scan
-    if: >-
-      (github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository) ||
-      ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/master')
-    runs-on: ${{ matrix.runner }}
-    permissions:
-      contents: read
-      id-token: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-24.04
-            long-arch: x86_64
-            llvm-arch: x86_64
-          - arch: arm64
-            runner: ubuntu-24.04-arm
-            long-arch: aarch64
-            llvm-arch: arm64
-    steps:
-      - name: Check out source commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-
-      - name: Download process-agent image inputs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: process-agent-${{ matrix.arch }}
-          path: .
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-
-      - name: Resolve image tag
-        id: image
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
-          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
-
-      - name: Resolve canonical OCI labels
-        id: oci
-        uses: StackVista/image-pipeline/.github/actions/apply-oci-labels@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
-        with:
-          image-name: stackstate-k8s-process-agent
-          tag: ${{ steps.image.outputs.tag }}
-          title: SUSE Observability Process Agent
-          description: Process agent collecting per-process and per-container telemetry for SUSE Observability.
-          component: stackstate-k8s-process-agent
-          dockerfile: BCI.dockerfile
-          base-name: registry.suse.com/bci/bci-micro:15.7
-
-      - name: Build, publish, and sign architecture image
-        uses: StackVista/image-pipeline/.github/actions/push-single-arch@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
-        with:
-          image: ${{ env.IMAGE }}
-          tag: ${{ steps.image.outputs.tag }}
-          arch: ${{ matrix.arch }}
-          dockerfile: BCI.dockerfile
-          labels: |
-            ${{ steps.oci.outputs.labels }}
-            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
-          build-args: |
-            EBPF_SUBFOLDER=${{ matrix.llvm-arch }}
-            LONG_ARCH=${{ matrix.long-arch }}
-            SHORT_ARCH=${{ matrix.arch }}
-          target-registry: quay.io
-          target-registry-user: ${{ vars.QUAY_USER }}
-          target-registry-password: ${{ secrets.QUAY_PASSWORD }}
-
-  merge-multiarch-manifest:
-    name: Publish and sign multi-architecture commit image
-    needs: publish-image
-    if: >-
-      (github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository) ||
-      ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/master')
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Resolve image tag
-        id: image
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          short_sha="$(printf '%s' "${SOURCE_SHA}" | cut -c1-8)"
-          echo "tag=${short_sha}" >> "${GITHUB_OUTPUT}"
-
-      - name: Merge and sign multi-architecture manifest
-        uses: StackVista/image-pipeline/.github/actions/merge-multiarch@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
-        with:
-          image: ${{ env.IMAGE }}
-          tag: ${{ steps.image.outputs.tag }}
-          target-registry: quay.io
-          target-registry-user: ${{ vars.QUAY_USER }}
-          target-registry-password: ${{ secrets.QUAY_PASSWORD }}
-
-  ci-success:
-    name: Process-agent CI
-    needs:
-      - build-and-test
-      - image-smoke-and-scan
-      - publish-image
-      - merge-multiarch-manifest
-    if: always()
-    runs-on: ubuntu-24.04
-    permissions: {}
-    steps:
-      - name: Verify all required jobs succeeded
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-        run: |
-          set -euo pipefail
-          failed="$(jq -r '
-            to_entries[] |
-            select(.value.result != "success" and .value.result != "skipped") |
-            .key
-          ' <<< "${NEEDS}")"
-          if [ -n "${failed}" ]; then
-            echo "Required process-agent jobs failed:"
-            printf '%s\n' "${failed}"
-            exit 1
-          fi
-          echo "All required process-agent jobs passed."
-
-  cerberus-notify:
-    name: Report failure to Slack (Cerberus)
-    needs: ci-success
-    if: >-
-      failure() &&
-      github.ref == 'refs/heads/master' &&
-      github.event_name == 'push'
-    uses: ./.github/workflows/cerberus-notify.yml
-    with:
-      suite: build
-    secrets:
-      CERBERUS_LAMBDA_URL: ${{ secrets.CERBERUS_LAMBDA_URL }}
-      CERBERUS_API_TOKEN: ${{ secrets.CERBERUS_API_TOKEN }}
+          retention-days: 90
+          if-no-files-found: error

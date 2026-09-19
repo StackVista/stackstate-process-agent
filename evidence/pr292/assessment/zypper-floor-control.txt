@@ -1,0 +1,22 @@
+Refreshing service 'container-suseconnect-zypp'.
+Retrieving repository 'SLE_BCI' metadata [...
+Looking for gpg keys in repository SLE_BCI.
+  gpgkey=file:/usr/lib/rpm/gnupg/keys/gpg-pubkey-3fa1d6ce-67c856ee.asc
+.......done]
+Building repository 'SLE_BCI' cache [....done]
+All repositories have been refreshed.
+Refreshing service 'container-suseconnect-zypp'.
+Loading repository data...
+Reading installed packages...
+'glibc >= 2.38-150600.14.58.1' is already installed.
+No update candidate for 'glibc-2.38-150600.14.58.1.x86_64'. The highest available version is already installed.
+'libpcre2-8-0 >= 10.42-150600.3.3.1' is already installed.
+No update candidate for 'libpcre2-8-0-10.42-150600.3.3.1.x86_64'. The highest available version is already installed.
+Resolving package dependencies...
+Nothing to do.
+Refreshing service 'container-suseconnect-zypp'.
+Loading repository data...
+Reading installed packages...
+'libpcre2-8-0>=999' not found in package names. Trying capabilities.
+No provider of 'libpcre2-8-0>=999' found.
+Unavailable version constraint exit: 104

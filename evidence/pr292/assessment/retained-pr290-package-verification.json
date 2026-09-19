@@ -1,0 +1,212 @@
+{
+  "amd64": {
+    "source": "fe7d17e97be17d62ac0ae1cf0760826cc6303f43",
+    "evidence_commit": "786a1afae831eb5a714f5f744882b7a282f8dfb7",
+    "run": 35322708539,
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:271e7ac612adc3b89c10aa1bdbc463e4f62d7645c59f3938f27aa2c5500dcc8b",
+    "packages": [
+      {
+        "bom-ref": "pkg:rpm/suse/glibc@2.38-150600.14.58.1?arch=x86_64&distro=sles-15.7",
+        "type": "library",
+        "supplier": {
+          "name": "SUSE LLC <https://www.suse.com/>"
+        },
+        "name": "glibc",
+        "version": "2.38-150600.14.58.1",
+        "hashes": [
+          {
+            "alg": "MD5",
+            "content": "415dd3b58347a0394e0c9ac4dee98675"
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "GPL-2.0-or-later AND LGPL-2.1-or-later AND LGPL-2.1-or-later WITH GCC-exception-2.0"
+          }
+        ],
+        "purl": "pkg:rpm/suse/glibc@2.38-150600.14.58.1?arch=x86_64&distro=sles-15.7",
+        "properties": [
+          {
+            "name": "aquasecurity:trivy:LayerDiffID",
+            "value": "sha256:0804d23d2133c4d06a0fc24a398cc93ea3da6af66df74275ecda909d82a4e05f"
+          },
+          {
+            "name": "aquasecurity:trivy:PkgID",
+            "value": "glibc@2.38-150600.14.58.1.x86_64"
+          },
+          {
+            "name": "aquasecurity:trivy:PkgType",
+            "value": "sles"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcName",
+            "value": "glibc"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcRelease",
+            "value": "150600.14.58.1"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcVersion",
+            "value": "2.38"
+          }
+        ]
+      },
+      {
+        "bom-ref": "pkg:rpm/suse/libpcre2-8-0@10.42-150600.3.3.1?arch=x86_64&distro=sles-15.7",
+        "type": "library",
+        "supplier": {
+          "name": "SUSE LLC <https://www.suse.com/>"
+        },
+        "name": "libpcre2-8-0",
+        "version": "10.42-150600.3.3.1",
+        "hashes": [
+          {
+            "alg": "MD5",
+            "content": "4098828848ab4a73a2ae515c5dcb133b"
+          }
+        ],
+        "licenses": [
+          {
+            "license": {
+              "id": "BSD-3-Clause"
+            }
+          }
+        ],
+        "purl": "pkg:rpm/suse/libpcre2-8-0@10.42-150600.3.3.1?arch=x86_64&distro=sles-15.7",
+        "properties": [
+          {
+            "name": "aquasecurity:trivy:LayerDiffID",
+            "value": "sha256:0804d23d2133c4d06a0fc24a398cc93ea3da6af66df74275ecda909d82a4e05f"
+          },
+          {
+            "name": "aquasecurity:trivy:PkgID",
+            "value": "libpcre2-8-0@10.42-150600.3.3.1.x86_64"
+          },
+          {
+            "name": "aquasecurity:trivy:PkgType",
+            "value": "sles"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcName",
+            "value": "pcre2"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcRelease",
+            "value": "150600.3.3.1"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcVersion",
+            "value": "10.42"
+          }
+        ]
+      }
+    ],
+    "inventory_sha256": "4dec4ca72e6cbb223610ec3546628728b6d86654626be9d6c68c5c84ea49fbdd"
+  },
+  "arm64": {
+    "source": "fe7d17e97be17d62ac0ae1cf0760826cc6303f43",
+    "evidence_commit": "786a1afae831eb5a714f5f744882b7a282f8dfb7",
+    "run": 35322708539,
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:c5deb88549c25db1f42568f7d6bed7f6b5ae1bac1b6785540e97425ef48135de",
+    "packages": [
+      {
+        "bom-ref": "pkg:rpm/suse/glibc@2.38-150600.14.58.1?arch=aarch64&distro=sles-15.7",
+        "type": "library",
+        "supplier": {
+          "name": "SUSE LLC <https://www.suse.com/>"
+        },
+        "name": "glibc",
+        "version": "2.38-150600.14.58.1",
+        "hashes": [
+          {
+            "alg": "MD5",
+            "content": "7f7379b2abcc1314a66c78acfc0f14b2"
+          }
+        ],
+        "licenses": [
+          {
+            "expression": "GPL-2.0-or-later AND LGPL-2.1-or-later AND LGPL-2.1-or-later WITH GCC-exception-2.0"
+          }
+        ],
+        "purl": "pkg:rpm/suse/glibc@2.38-150600.14.58.1?arch=aarch64&distro=sles-15.7",
+        "properties": [
+          {
+            "name": "aquasecurity:trivy:LayerDiffID",
+            "value": "sha256:b4be083ae0b905979b832bd5d09255bbc680984bf7124d845543973660723df6"
+          },
+          {
+            "name": "aquasecurity:trivy:PkgID",
+            "value": "glibc@2.38-150600.14.58.1.aarch64"
+          },
+          {
+            "name": "aquasecurity:trivy:PkgType",
+            "value": "sles"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcName",
+            "value": "glibc"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcRelease",
+            "value": "150600.14.58.1"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcVersion",
+            "value": "2.38"
+          }
+        ]
+      },
+      {
+        "bom-ref": "pkg:rpm/suse/libpcre2-8-0@10.42-150600.3.3.1?arch=aarch64&distro=sles-15.7",
+        "type": "library",
+        "supplier": {
+          "name": "SUSE LLC <https://www.suse.com/>"
+        },
+        "name": "libpcre2-8-0",
+        "version": "10.42-150600.3.3.1",
+        "hashes": [
+          {
+            "alg": "MD5",
+            "content": "c2dfb5c621050ddc2883a84f2091bbea"
+          }
+        ],
+        "licenses": [
+          {
+            "license": {
+              "id": "BSD-3-Clause"
+            }
+          }
+        ],
+        "purl": "pkg:rpm/suse/libpcre2-8-0@10.42-150600.3.3.1?arch=aarch64&distro=sles-15.7",
+        "properties": [
+          {
+            "name": "aquasecurity:trivy:LayerDiffID",
+            "value": "sha256:b4be083ae0b905979b832bd5d09255bbc680984bf7124d845543973660723df6"
+          },
+          {
+            "name": "aquasecurity:trivy:PkgID",
+            "value": "libpcre2-8-0@10.42-150600.3.3.1.aarch64"
+          },
+          {
+            "name": "aquasecurity:trivy:PkgType",
+            "value": "sles"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcName",
+            "value": "pcre2"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcRelease",
+            "value": "150600.3.3.1"
+          },
+          {
+            "name": "aquasecurity:trivy:SrcVersion",
+            "value": "10.42"
+          }
+        ]
+      }
+    ],
+    "inventory_sha256": "895712181e6b0b310a677d4b718a0fae76635417e3a5d12f72a6651245cc0def"
+  }
+}

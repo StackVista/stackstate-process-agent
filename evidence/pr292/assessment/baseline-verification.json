@@ -1,0 +1,50 @@
+{
+  "run": 35425413598,
+  "attempt": 1,
+  "aggregate_sha256": "c0649a1c1eb0ebac5d1effd19bab4126d62636dad009777f96f4d10c118ce6fe",
+  "target_artifact_id": 10578499554,
+  "target_archive_sha256": "edefef8ad9d3d1eeeb39fde59442495c2b30adc65ba5fa4a397338baacdb1128",
+  "metadata": {
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent:af40af2b",
+    "target_type": "image",
+    "scan_image": "quay.io/stackstate/stackstate-k8s-process-agent:af40af2b",
+    "image_name": "quay.io/stackstate/stackstate-k8s-process-agent",
+    "image_tag": "af40af2b",
+    "display_name": "stackstate-k8s-process-agent:af40af2b [e18e3e16]",
+    "image_slug": "quay.io-stackstate-stackstate-k8s-process-agent-af40af2b-e18e3e16b960",
+    "charts": [
+      "stackstate-internal/suse-observability-agent"
+    ],
+    "distribution_types": [
+      "helm-chart"
+    ],
+    "platforms": [],
+    "release_targets": [],
+    "profile": "dev",
+    "severity": "CRITICAL,HIGH,MEDIUM,LOW",
+    "mode": "gate",
+    "with_grype": "true",
+    "source_repo": "https://github.com/StackVista/stackstate-process-agent",
+    "image_digest": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:1bc29974f799306ea8594251a9f63ed0ca944437faea903bca78310d82f96ca4",
+    "decision": "failed",
+    "scan_outcome": "success",
+    "action_outcome": "failure"
+  },
+  "trivy_target_findings": [
+    {
+      "VulnerabilityID": "SUSE-SU-2026:4250-1",
+      "PkgName": "glibc",
+      "InstalledVersion": "2.38-150600.14.55.1",
+      "FixedVersion": "2.38-150600.14.58.1",
+      "Severity": "MEDIUM"
+    },
+    {
+      "VulnerabilityID": "SUSE-SU-2026:4241-1",
+      "PkgName": "libpcre2-8-0",
+      "InstalledVersion": "10.42-150600.1.26",
+      "FixedVersion": "10.42-150600.3.3.1",
+      "Severity": "HIGH"
+    }
+  ],
+  "grype_target_findings": []
+}

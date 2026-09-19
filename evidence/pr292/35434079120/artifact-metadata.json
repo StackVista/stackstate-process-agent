@@ -1,0 +1,45 @@
+{
+  "total_count": 2,
+  "artifacts": [
+    {
+      "id": 10581657606,
+      "node_id": "MDg6QXJ0aWZhY3QxMDU4MTY1NzYwNg==",
+      "name": "pr292-published-evidence-arm64",
+      "size_in_bytes": 216817,
+      "url": "https://api.github.com/repos/StackVista/stackstate-process-agent/actions/artifacts/10581657606",
+      "archive_download_url": "https://api.github.com/repos/StackVista/stackstate-process-agent/actions/artifacts/10581657606/zip",
+      "expired": false,
+      "digest": "sha256:9af13e68302f92ca9ecf360bd006dc5204642bb0fb9cc832847939c1a9b0d078",
+      "created_at": "2026-09-19T09:14:50Z",
+      "updated_at": "2026-09-19T09:14:50Z",
+      "expires_at": "2026-12-18T09:12:55Z",
+      "workflow_run": {
+        "id": 35434079120,
+        "repository_id": 142174239,
+        "head_repository_id": 142174239,
+        "head_branch": "evidence/pr292-published",
+        "head_sha": "d74bbdd78f7dffbcf398e19cb0dfc5980f29c37b"
+      }
+    },
+    {
+      "id": 10581496916,
+      "node_id": "MDg6QXJ0aWZhY3QxMDU4MTQ5NjkxNg==",
+      "name": "pr292-published-evidence-amd64",
+      "size_in_bytes": 217181,
+      "url": "https://api.github.com/repos/StackVista/stackstate-process-agent/actions/artifacts/10581496916",
+      "archive_download_url": "https://api.github.com/repos/StackVista/stackstate-process-agent/actions/artifacts/10581496916/zip",
+      "expired": false,
+      "digest": "sha256:a7413fbeda39f608034f81b4168ba64756bcd4b39e4d467954d2dc7c13173443",
+      "created_at": "2026-09-19T09:15:23Z",
+      "updated_at": "2026-09-19T09:15:23Z",
+      "expires_at": "2026-12-18T09:12:55Z",
+      "workflow_run": {
+        "id": 35434079120,
+        "repository_id": 142174239,
+        "head_repository_id": 142174239,
+        "head_branch": "evidence/pr292-published",
+        "head_sha": "d74bbdd78f7dffbcf398e19cb0dfc5980f29c37b"
+      }
+    }
+  ]
+}

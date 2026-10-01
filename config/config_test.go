@@ -10,7 +10,7 @@ import (
 
 	"github.com/DataDog/gopsutil/process"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 	"k8s.io/utils/strings/slices"
 )
 

@@ -9,7 +9,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/util/filesystem"
 
 	log "github.com/cihub/seelog"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v2"
 )
 
 // YamlAgentConfig is a structure used for marshaling the datadog.yaml configuration

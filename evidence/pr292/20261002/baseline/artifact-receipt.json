@@ -1,0 +1,15 @@
+{
+  "run_id": 36983036771,
+  "run_attempt": 1,
+  "aggregate": {
+    "artifact_id": 11216955398,
+    "sha256": "600d791947fc21560ab206d820e80af13dab87d0de836377c73cda6046e96345"
+  },
+  "process_agent": {
+    "artifact_id": 11215918659,
+    "sha256": "9cf5284394a679923f1a5f28c935c1d9353af5f5d4c33f0b3143196da1e2cbec"
+  },
+  "image": "quay.io/stackstate/stackstate-k8s-process-agent:0294bfee",
+  "filter": "owner_repo == \"stackstate-process-agent\" and scanners == [\"Trivy\"]",
+  "finding_count": 6
+}

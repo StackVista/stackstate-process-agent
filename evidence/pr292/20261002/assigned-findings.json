@@ -1,0 +1,292 @@
+[
+  {
+    "attribution_reasons": [],
+    "attribution_statuses": [
+      "distribution-owner"
+    ],
+    "cve": "CVE-2026-53493",
+    "distribution_owners": [
+      {
+        "repo": "stackstate-process-agent",
+        "url": "https://github.com/StackVista/stackstate-process-agent"
+      }
+    ],
+    "finding_key": "sha256:4bbc5e7618bf223e38cf96a5bd67db93ee0166a8dc3c3dd8134f02c093125074",
+    "fixed": [
+      "1.7.36"
+    ],
+    "images": [
+      "quay.io/stackstate/stackstate-k8s-process-agent:0294bfee"
+    ],
+    "installed": "v1.7.35",
+    "layer_diff_ids": [
+      "sha256:46b65e57847faeb671478991d937a5e5cfdbe953ff620feeb7af8d4bee69015a"
+    ],
+    "origin_artifact": "",
+    "origin_reference": "",
+    "owner_repo": "stackstate-process-agent",
+    "owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "package": "github.com/containerd/containerd",
+    "paths": [],
+    "purls": [
+      "pkg:golang/github.com/containerd/containerd@v1.7.35"
+    ],
+    "remediation": "Upgrade Go dependency/binary github.com/containerd/containerd to 1.7.36 or newer, then rebuild affected images.",
+    "remediation_owner_repo": "stackstate-process-agent",
+    "remediation_owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "scanners": [
+      "Trivy"
+    ],
+    "severity": "MEDIUM",
+    "source_path": "",
+    "sources": [
+      {
+        "name": "golang:github.com/containerd/containerd",
+        "url": ""
+      }
+    ],
+    "urls": [
+      "https://avd.aquasec.com/nvd/cve-2026-53493"
+    ]
+  },
+  {
+    "attribution_reasons": [],
+    "attribution_statuses": [
+      "distribution-owner"
+    ],
+    "cve": "SUSE-SU-2026:4367-1",
+    "distribution_owners": [
+      {
+        "repo": "stackstate-process-agent",
+        "url": "https://github.com/StackVista/stackstate-process-agent"
+      }
+    ],
+    "finding_key": "sha256:d518848dfca1f7d5db6dbbbd1b1be19c2ac40de5fb992da5dbaed1c4336c94ec",
+    "fixed": [
+      "2.78.6-150600.4.41.1"
+    ],
+    "images": [
+      "quay.io/stackstate/stackstate-k8s-process-agent:0294bfee"
+    ],
+    "installed": "2.78.6-150600.4.38.1",
+    "layer_diff_ids": [
+      "sha256:46b65e57847faeb671478991d937a5e5cfdbe953ff620feeb7af8d4bee69015a"
+    ],
+    "origin_artifact": "",
+    "origin_reference": "",
+    "owner_repo": "stackstate-process-agent",
+    "owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "package": "glib2-tools",
+    "paths": [],
+    "purls": [
+      "pkg:rpm/suse/glib2-tools@2.78.6-150600.4.38.1?arch=x86_64&distro=sles-15.7"
+    ],
+    "remediation": "Update OS package glib2-tools to 2.78.6-150600.4.41.1 or newer in the image build, then rebuild affected images.",
+    "remediation_owner_repo": "stackstate-process-agent",
+    "remediation_owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "scanners": [
+      "Trivy"
+    ],
+    "severity": "MEDIUM",
+    "source_path": "",
+    "sources": [
+      {
+        "name": "registry.suse.com/bci/bci-micro:15.7",
+        "url": "https://sources.suse.com/SUSE:SLE-15-SP7:Update:CR/micro-image/3dc30747facf3e23b453da60158ce18f/"
+      }
+    ],
+    "urls": []
+  },
+  {
+    "attribution_reasons": [],
+    "attribution_statuses": [
+      "distribution-owner"
+    ],
+    "cve": "SUSE-SU-2026:4367-1",
+    "distribution_owners": [
+      {
+        "repo": "stackstate-process-agent",
+        "url": "https://github.com/StackVista/stackstate-process-agent"
+      }
+    ],
+    "finding_key": "sha256:590fa81cb3eae2d381120f4238f3c981fd249df55bbee7180d1cbf3350a474b1",
+    "fixed": [
+      "2.78.6-150600.4.41.1"
+    ],
+    "images": [
+      "quay.io/stackstate/stackstate-k8s-process-agent:0294bfee"
+    ],
+    "installed": "2.78.6-150600.4.38.1",
+    "layer_diff_ids": [
+      "sha256:46b65e57847faeb671478991d937a5e5cfdbe953ff620feeb7af8d4bee69015a"
+    ],
+    "origin_artifact": "",
+    "origin_reference": "",
+    "owner_repo": "stackstate-process-agent",
+    "owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "package": "libgio-2_0-0",
+    "paths": [],
+    "purls": [
+      "pkg:rpm/suse/libgio-2_0-0@2.78.6-150600.4.38.1?arch=x86_64&distro=sles-15.7"
+    ],
+    "remediation": "Update OS package libgio-2_0-0 to 2.78.6-150600.4.41.1 or newer in the image build, then rebuild affected images.",
+    "remediation_owner_repo": "stackstate-process-agent",
+    "remediation_owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "scanners": [
+      "Trivy"
+    ],
+    "severity": "MEDIUM",
+    "source_path": "",
+    "sources": [
+      {
+        "name": "registry.suse.com/bci/bci-micro:15.7",
+        "url": "https://sources.suse.com/SUSE:SLE-15-SP7:Update:CR/micro-image/3dc30747facf3e23b453da60158ce18f/"
+      }
+    ],
+    "urls": []
+  },
+  {
+    "attribution_reasons": [],
+    "attribution_statuses": [
+      "distribution-owner"
+    ],
+    "cve": "SUSE-SU-2026:4367-1",
+    "distribution_owners": [
+      {
+        "repo": "stackstate-process-agent",
+        "url": "https://github.com/StackVista/stackstate-process-agent"
+      }
+    ],
+    "finding_key": "sha256:1443c4cec042fd8f3e9fd4f46d8fb739d53689617436d5520e28982806be925e",
+    "fixed": [
+      "2.78.6-150600.4.41.1"
+    ],
+    "images": [
+      "quay.io/stackstate/stackstate-k8s-process-agent:0294bfee"
+    ],
+    "installed": "2.78.6-150600.4.38.1",
+    "layer_diff_ids": [
+      "sha256:46b65e57847faeb671478991d937a5e5cfdbe953ff620feeb7af8d4bee69015a"
+    ],
+    "origin_artifact": "",
+    "origin_reference": "",
+    "owner_repo": "stackstate-process-agent",
+    "owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "package": "libglib-2_0-0",
+    "paths": [],
+    "purls": [
+      "pkg:rpm/suse/libglib-2_0-0@2.78.6-150600.4.38.1?arch=x86_64&distro=sles-15.7"
+    ],
+    "remediation": "Update OS package libglib-2_0-0 to 2.78.6-150600.4.41.1 or newer in the image build, then rebuild affected images.",
+    "remediation_owner_repo": "stackstate-process-agent",
+    "remediation_owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "scanners": [
+      "Trivy"
+    ],
+    "severity": "MEDIUM",
+    "source_path": "",
+    "sources": [
+      {
+        "name": "registry.suse.com/bci/bci-micro:15.7",
+        "url": "https://sources.suse.com/SUSE:SLE-15-SP7:Update:CR/micro-image/3dc30747facf3e23b453da60158ce18f/"
+      }
+    ],
+    "urls": []
+  },
+  {
+    "attribution_reasons": [],
+    "attribution_statuses": [
+      "distribution-owner"
+    ],
+    "cve": "SUSE-SU-2026:4367-1",
+    "distribution_owners": [
+      {
+        "repo": "stackstate-process-agent",
+        "url": "https://github.com/StackVista/stackstate-process-agent"
+      }
+    ],
+    "finding_key": "sha256:4940b3c240fa661b9072b094dca5ede56342d803813234901769707f5423d2a9",
+    "fixed": [
+      "2.78.6-150600.4.41.1"
+    ],
+    "images": [
+      "quay.io/stackstate/stackstate-k8s-process-agent:0294bfee"
+    ],
+    "installed": "2.78.6-150600.4.38.1",
+    "layer_diff_ids": [
+      "sha256:46b65e57847faeb671478991d937a5e5cfdbe953ff620feeb7af8d4bee69015a"
+    ],
+    "origin_artifact": "",
+    "origin_reference": "",
+    "owner_repo": "stackstate-process-agent",
+    "owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "package": "libgmodule-2_0-0",
+    "paths": [],
+    "purls": [
+      "pkg:rpm/suse/libgmodule-2_0-0@2.78.6-150600.4.38.1?arch=x86_64&distro=sles-15.7"
+    ],
+    "remediation": "Update OS package libgmodule-2_0-0 to 2.78.6-150600.4.41.1 or newer in the image build, then rebuild affected images.",
+    "remediation_owner_repo": "stackstate-process-agent",
+    "remediation_owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "scanners": [
+      "Trivy"
+    ],
+    "severity": "MEDIUM",
+    "source_path": "",
+    "sources": [
+      {
+        "name": "registry.suse.com/bci/bci-micro:15.7",
+        "url": "https://sources.suse.com/SUSE:SLE-15-SP7:Update:CR/micro-image/3dc30747facf3e23b453da60158ce18f/"
+      }
+    ],
+    "urls": []
+  },
+  {
+    "attribution_reasons": [],
+    "attribution_statuses": [
+      "distribution-owner"
+    ],
+    "cve": "SUSE-SU-2026:4367-1",
+    "distribution_owners": [
+      {
+        "repo": "stackstate-process-agent",
+        "url": "https://github.com/StackVista/stackstate-process-agent"
+      }
+    ],
+    "finding_key": "sha256:3b38fe145cb5d1b3f1639c19e744a1def4a34f3d1186d13bb481cbfe7b8a4447",
+    "fixed": [
+      "2.78.6-150600.4.41.1"
+    ],
+    "images": [
+      "quay.io/stackstate/stackstate-k8s-process-agent:0294bfee"
+    ],
+    "installed": "2.78.6-150600.4.38.1",
+    "layer_diff_ids": [
+      "sha256:46b65e57847faeb671478991d937a5e5cfdbe953ff620feeb7af8d4bee69015a"
+    ],
+    "origin_artifact": "",
+    "origin_reference": "",
+    "owner_repo": "stackstate-process-agent",
+    "owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "package": "libgobject-2_0-0",
+    "paths": [],
+    "purls": [
+      "pkg:rpm/suse/libgobject-2_0-0@2.78.6-150600.4.38.1?arch=x86_64&distro=sles-15.7"
+    ],
+    "remediation": "Update OS package libgobject-2_0-0 to 2.78.6-150600.4.41.1 or newer in the image build, then rebuild affected images.",
+    "remediation_owner_repo": "stackstate-process-agent",
+    "remediation_owner_url": "https://github.com/StackVista/stackstate-process-agent",
+    "scanners": [
+      "Trivy"
+    ],
+    "severity": "MEDIUM",
+    "source_path": "",
+    "sources": [
+      {
+        "name": "registry.suse.com/bci/bci-micro:15.7",
+        "url": "https://sources.suse.com/SUSE:SLE-15-SP7:Update:CR/micro-image/3dc30747facf3e23b453da60158ce18f/"
+      }
+    ],
+    "urls": []
+  }
+]

@@ -1,4 +1,4 @@
-d9d9f029bd5fdbf07e83519c305379a53d57986e7cb7b4235c9a77e4b9b1d7fe  ./README.md
+c92a3f280e26ce022b8e413977b7506662156485041111e2be340b9e42139885  ./README.md
 38be6a991f11990b471eee9618a8a5020fe33ec8e7763f53446737537eb36ab8  ./assigned-findings.json
 33d5c3622e8987310bcc85e9050dd9b3420c2cd5df4a7489a1df64ebbbe26e84  ./baseline/artifact-receipt.json
 9cf5284394a679923f1a5f28c935c1d9353af5f5d4c33f0b3143196da1e2cbec  ./baseline/baseline-image.zip
@@ -13,6 +13,11 @@ a1252e588a48edbd273c5f9aa19a5abf1151791509a48aa2c51ca47302b2edae  ./candidate-ci
 b4c5be3e586eac901261965fd0e749d10374a7a3d15543f20a955ccbce7454b5  ./containerd-upstream-tests.txt
 8166c28c459c3480d7983d42c3bee4f0e5ad7f8633e55a8b25519aadc98b43f9  ./glib-floor-dry-run.txt
 b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd  ./go-mod-verify.txt
+5587f3a6f374d0304c92276d70ac3287019f42e55a1c275371a4c6f12c8b34d4  ./keep-grype/amd64-reports.zip
+d8b36d33f2f5b34ff38ecdc08ba7190e250460281935c059a6e68ff3deb084e0  ./keep-grype/arm64-reports.zip
+3623eb1877ac18703537ae313cdee9087e3425a8e2b2711238741557fbc392ba  ./keep-grype/artifact-metadata.json
+7c6448ed5a8cdbf3c9818595275bb2e82c3dc66fb1165825c16de19e47b8f7d2  ./keep-grype/ci.json
+30da7a794c3a3c1ff72aefb4e123da4a373628e52b69edb2bbd03a9a5427149b  ./keep-grype/verification.json
 780fae5e24bc63459b7b875946a5d4f0fc92bb7591b0144924e3f2a401f0a5e5  ./publication-artifacts.json
 71fe00a12bc4756886c85ff902a546ea91cf3b6f3b6fa7ce4142bc6abedf7d40  ./publication-ci.json
 c94d3fb15f57cd46114424c1055f896116ec5a092af789870c7f84bbc4b41e6d  ./published-amd64-reports.zip

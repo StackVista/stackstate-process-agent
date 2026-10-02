@@ -1,0 +1,54 @@
+[
+  {
+    "arch": "amd64",
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:fb6e9f8546674f06a165c7668d45b6d57b9bd62b4edeafd29934da081bcb76fd",
+    "artifact": {
+      "digest": "sha256:5587f3a6f374d0304c92276d70ac3287019f42e55a1c275371a4c6f12c8b34d4",
+      "expired": false,
+      "id": 11221202149,
+      "name": "pr292-trivy-20261002-evidence-amd64",
+      "size_in_bytes": 247777
+    },
+    "trivy_findings": 0,
+    "secrets": 0,
+    "grype_match_count": 78,
+    "grype_severity_counts": {
+      "High": 24,
+      "Medium": 48,
+      "Critical": 2,
+      "Low": 4
+    },
+    "binary_matches_tested_artifact": true,
+    "source_head": "a0a3d2fb0a224fcf0e93de1aec3295fde7913e3a",
+    "product_ci_changed": false,
+    "product_exceptions_changed": false,
+    "scanner_mode": "inform (unchanged)",
+    "new_suppressions_or_exceptions": 0
+  },
+  {
+    "arch": "arm64",
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:9dc61c6e59fe8f97dc69b377fa74416920a7fd6623e1374de4917543450b1296",
+    "artifact": {
+      "digest": "sha256:d8b36d33f2f5b34ff38ecdc08ba7190e250460281935c059a6e68ff3deb084e0",
+      "expired": false,
+      "id": 11221251458,
+      "name": "pr292-trivy-20261002-evidence-arm64",
+      "size_in_bytes": 247421
+    },
+    "trivy_findings": 0,
+    "secrets": 0,
+    "grype_match_count": 78,
+    "grype_severity_counts": {
+      "High": 24,
+      "Medium": 48,
+      "Critical": 2,
+      "Low": 4
+    },
+    "binary_matches_tested_artifact": true,
+    "source_head": "a0a3d2fb0a224fcf0e93de1aec3295fde7913e3a",
+    "product_ci_changed": false,
+    "product_exceptions_changed": false,
+    "scanner_mode": "inform (unchanged)",
+    "new_suppressions_or_exceptions": 0
+  }
+]

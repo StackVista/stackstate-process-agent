@@ -1,0 +1,93 @@
+{
+    "Name": "quay.io/stackstate/stackstate-k8s-process-agent",
+    "Digest": "sha256:a4919324549fe040eee1b66f83b885ed511ada6b2a6b7ec50cde01a172cc9d92",
+    "RepoTags": [],
+    "Created": "2026-10-02T11:20:44.000092215Z",
+    "DockerVersion": "",
+    "Labels": {
+        "com.suse.bci.micro.authors": "https://github.com/SUSE/bci/discussions",
+        "com.suse.bci.micro.created": "2026-09-17T19:27:58.429666291Z",
+        "com.suse.bci.micro.description": "A micro environment for containers based on the SUSE Linux Enterprise Base Container Image.",
+        "com.suse.bci.micro.disturl": "obs://build.suse.de/SUSE:SLE-15-SP7:Update:CR/containers/3dc30747facf3e23b453da60158ce18f-micro-image",
+        "com.suse.bci.micro.eula": "sle-bci",
+        "com.suse.bci.micro.lifecycle-url": "https://www.suse.com/lifecycle#suse-linux-enterprise-server-15",
+        "com.suse.bci.micro.name": "15.7-61.11",
+        "com.suse.bci.micro.reference": "registry.suse.com/bci/bci-micro:15.7-61.11",
+        "com.suse.bci.micro.release-stage": "released",
+        "com.suse.bci.micro.source": "https://sources.suse.com/SUSE:SLE-15-SP7:Update:CR/micro-image/3dc30747facf3e23b453da60158ce18f/",
+        "com.suse.bci.micro.supportlevel": "l3",
+        "com.suse.bci.micro.title": "SLE BCI 15 SP7 Micro",
+        "com.suse.bci.micro.until": "2031-07-31",
+        "com.suse.bci.micro.url": "https://www.suse.com/products/base-container-images/",
+        "com.suse.bci.micro.vendor": "SUSE LLC",
+        "com.suse.bci.micro.version": "15.7-61.11",
+        "com.suse.eula": "sle-bci",
+        "com.suse.lifecycle-url": "https://www.suse.com/lifecycle#suse-linux-enterprise-server-15",
+        "com.suse.observability.component": "stackstate-k8s-process-agent",
+        "com.suse.observability.product": "suse-observability",
+        "com.suse.release-stage": "released",
+        "com.suse.supportlevel": "l3",
+        "com.suse.supportlevel.until": "2031-07-31",
+        "io.artifacthub.package.logo-url": "https://opensource.suse.com/bci/SLE_BCI_logomark_green.svg",
+        "io.artifacthub.package.readme-url": "https://sources.suse.com/SUSE:SLE-15-SP7:Update:CR/micro-image/3dc30747facf3e23b453da60158ce18f/README.md",
+        "org.openbuildservice.disturl": "obs://build.suse.de/SUSE:SLE-15-SP7:Update:CR/containers/3dc30747facf3e23b453da60158ce18f-micro-image",
+        "org.opencontainers.image.authors": "suse-observability-ops@suse.com",
+        "org.opencontainers.image.base.digest": "sha256:e3a512199e98075db7d74ef9be486aea9ca6c841046330e5dc8c80d77c68df2b",
+        "org.opencontainers.image.base.name": "registry.suse.com/bci/bci-micro:15.7",
+        "org.opencontainers.image.created": "2026-10-02T11:20:16Z",
+        "org.opencontainers.image.description": "Process agent collecting per-process and per-container telemetry for SUSE Observability.",
+        "org.opencontainers.image.documentation": "https://documentation.suse.com/cloudnative/suse-observability/latest/en/classic.html",
+        "org.opencontainers.image.licenses": "Apache-2.0",
+        "org.opencontainers.image.ref.name": "registry.rancher.com/suse-observability/stackstate-k8s-process-agent:00f55972",
+        "org.opencontainers.image.revision": "00f55972777a43e1281461cb5696e9ec09bdef34",
+        "org.opencontainers.image.source": "https://github.com/StackVista/stackstate-process-agent",
+        "org.opencontainers.image.title": "SUSE Observability Process Agent",
+        "org.opencontainers.image.url": "https://documentation.suse.com/cloudnative/suse-observability/latest/en/classic.html",
+        "org.opencontainers.image.vendor": "SUSE LLC",
+        "org.opencontainers.image.version": "00f55972",
+        "org.opensuse.reference": "registry.suse.com/bci/bci-micro:15.7-61.11",
+        "published-by": "https://github.com/StackVista/stackstate-process-agent/actions/runs/36998783077"
+    },
+    "Architecture": "amd64",
+    "Os": "linux",
+    "Layers": [
+        "sha256:217dab811ac067dfa860fe8281001f22fe70a6666b463719f960e48f2708594a",
+        "sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1",
+        "sha256:0e6bb36a9b0f1bcc16d6f31c917a52491c1f3d620474db225f4b615fb519a5f5",
+        "sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1"
+    ],
+    "LayersData": [
+        {
+            "MIMEType": "application/vnd.oci.image.layer.v1.tar+gzip",
+            "Digest": "sha256:217dab811ac067dfa860fe8281001f22fe70a6666b463719f960e48f2708594a",
+            "Size": 10477299,
+            "Annotations": null
+        },
+        {
+            "MIMEType": "application/vnd.oci.image.layer.v1.tar+gzip",
+            "Digest": "sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1",
+            "Size": 32,
+            "Annotations": null
+        },
+        {
+            "MIMEType": "application/vnd.oci.image.layer.v1.tar+gzip",
+            "Digest": "sha256:0e6bb36a9b0f1bcc16d6f31c917a52491c1f3d620474db225f4b615fb519a5f5",
+            "Size": 174625543,
+            "Annotations": null
+        },
+        {
+            "MIMEType": "application/vnd.oci.image.layer.v1.tar+gzip",
+            "Digest": "sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1",
+            "Size": 32,
+            "Annotations": null
+        }
+    ],
+    "Env": [
+        "PATH=/opt/stackstate-agent/bin/agent/:/opt/stackstate-agent/embedded/bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "DOCKER_STS_AGENT=true",
+        "DOCKER_DD_AGENT=true",
+        "CURL_CA_BUNDLE=/opt/stackstate-agent/embedded/ssl/certs/cacert.pem",
+        "STS_SYSTEM_PROBE_BPF_DIR=/opt/stackstate-agent/ebpf",
+        "DD_SYSTEM_PROBE_BPF_DIR=/opt/stackstate-agent/ebpf"
+    ]
+}

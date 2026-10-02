@@ -1,0 +1,72 @@
+[
+  {
+    "arch": "amd64",
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:ab817bda6c5e53b65a5c804eb0c30cbe6b06b4ba771285f94eb89b5e91f7cff1",
+    "image_config": "sha256:ac50df41bfac136da56a00adbd16416c9daabc9db16dd1ea205b8a78d5ef9e97",
+    "source_head": "00f55972777a43e1281461cb5696e9ec09bdef34",
+    "artifact": {
+      "digest": "sha256:d9d97391bee382ab71bd8f65f7af36c9d87d8067aa49bef09492f10ef76213a4",
+      "expired": false,
+      "id": 11223802394,
+      "name": "pr292-merged-00f55972-evidence-amd64",
+      "size_in_bytes": 247789
+    },
+    "binary_sha256": "f2470380160d9a873c58efeaab23a780da7921633e73669a36bfef8ce1f7147d",
+    "binary_matches_merge_tested_artifact": true,
+    "containerd": "v1.7.36",
+    "glib": {
+      "glib2-tools": "2.78.6-150600.4.41.1",
+      "libgio-2_0-0": "2.78.6-150600.4.41.1",
+      "libglib-2_0-0": "2.78.6-150600.4.41.1",
+      "libgmodule-2_0-0": "2.78.6-150600.4.41.1",
+      "libgobject-2_0-0": "2.78.6-150600.4.41.1"
+    },
+    "rpm_count": 125,
+    "component_count": 433,
+    "assigned_trivy_findings": 0,
+    "trivy_findings": [],
+    "secrets": 0,
+    "grype_matches": 78,
+    "grype_severity_counts": {
+      "High": 24,
+      "Medium": 48,
+      "Critical": 2,
+      "Low": 4
+    }
+  },
+  {
+    "arch": "arm64",
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:b4f431ac216e0e111eab70937749b49d5a6ae05cad68ca87904e40316a0523a5",
+    "image_config": "sha256:a6115c1029978e42003277bb0bbc210b7d0be19191066c96c7a888a498f25f1c",
+    "source_head": "00f55972777a43e1281461cb5696e9ec09bdef34",
+    "artifact": {
+      "digest": "sha256:b53c3cbffabf4748c026ffe375f197f3de7f0bb3d5bbb6fd958cdc8e8a7ceb74",
+      "expired": false,
+      "id": 11224150460,
+      "name": "pr292-merged-00f55972-evidence-arm64",
+      "size_in_bytes": 247385
+    },
+    "binary_sha256": "ba4f9fe2503c8f8c33e330bcafed1350b90064617bc9194787cc7d8825469cb4",
+    "binary_matches_merge_tested_artifact": true,
+    "containerd": "v1.7.36",
+    "glib": {
+      "glib2-tools": "2.78.6-150600.4.41.1",
+      "libgio-2_0-0": "2.78.6-150600.4.41.1",
+      "libglib-2_0-0": "2.78.6-150600.4.41.1",
+      "libgmodule-2_0-0": "2.78.6-150600.4.41.1",
+      "libgobject-2_0-0": "2.78.6-150600.4.41.1"
+    },
+    "rpm_count": 125,
+    "component_count": 433,
+    "assigned_trivy_findings": 0,
+    "trivy_findings": [],
+    "secrets": 0,
+    "grype_matches": 78,
+    "grype_severity_counts": {
+      "High": 24,
+      "Medium": 48,
+      "Critical": 2,
+      "Low": 4
+    }
+  }
+]

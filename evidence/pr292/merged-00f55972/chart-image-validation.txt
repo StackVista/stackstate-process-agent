@@ -1,0 +1,18 @@
+
+Enumerating images from stable/suse-observability-agent via stable/suse-observability-agent/installation/o11y-agent-get-images.sh...
+Found 12 unique image(s). Checking each with 'skopeo inspect' (anonymous)...
+
+[0;32mOK[0m	quay.io/stackstate/container-tools:1.8.6-so27
+[0;32mOK[0m	quay.io/stackstate/generic-sidecar-injector:0978b47b-1040-release
+[0;32mOK[0m	quay.io/stackstate/http-header-injector-proxy-init:1.0.0-so7
+[0;32mOK[0m	quay.io/stackstate/http-header-injector-proxy:1.38.3-so5
+[0;32mOK[0m	quay.io/stackstate/kubernetes-rbac-agent:4dbfd257-1045-release
+[0;32mOK[0m	quay.io/stackstate/opentelemetry-target-allocator:0.160.0-so1
+[0;32mOK[0m	quay.io/stackstate/promtail:3.6.11-so19
+[0;32mOK[0m	quay.io/stackstate/stackstate-k8s-agent:dd1cba03
+[0;32mOK[0m	quay.io/stackstate/stackstate-k8s-cluster-agent:dd1cba03
+[0;32mOK[0m	quay.io/stackstate/stackstate-k8s-process-agent:00f55972
+[0;32mOK[0m	quay.io/stackstate/sts-opentelemetry-collector:v0.0.60-agent
+[0;32mOK[0m	quay.io/stackstate/sts-opentelemetry-collector:v0.0.63-agent
+
+[0;32mOK[0m: all 12 image(s) resolved.

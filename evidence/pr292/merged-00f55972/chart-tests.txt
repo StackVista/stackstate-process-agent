@@ -1,0 +1,1 @@
+ok  	gitlab.com/StackVista/DevOps/helm-charts/stable/suse-observability-agent/test	1.019s

@@ -1,0 +1,14 @@
+{
+  "chart": "suse-observability-agent",
+  "chart_version": "1.7.8",
+  "package_sha256": "ecb82ccddfdba66608bf48888fa6b070c3cee6843e623089d346e56a6e7c04b1",
+  "values_image": {
+    "registry": null,
+    "repository": "stackstate/stackstate-k8s-process-agent",
+    "tag": "00f55972",
+    "pullPolicy": "IfNotPresent"
+  },
+  "rendered_images": [
+    "quay.io/stackstate/stackstate-k8s-process-agent:00f55972"
+  ]
+}

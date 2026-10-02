@@ -1,0 +1,10 @@
+Application:         grype
+Version:             0.117.0
+BuildDate:           2026-08-10T16:48:30Z
+GitCommit:           b5fa92bbcbef655497e3be840a2f718380e2cdd3
+GitDescription:      v0.117.0
+Platform:            linux/amd64
+GoVersion:           go1.26.3
+Compiler:            gc
+Syft Version:        v1.51.0
+Supported DB Schema: 6

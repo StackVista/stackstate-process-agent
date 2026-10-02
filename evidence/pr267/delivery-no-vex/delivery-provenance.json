@@ -1,0 +1,26 @@
+{
+  "scope": "The six Trivy-only process-agent finding rows assigned by dev scan 36983036771/1",
+  "source_scan_run": "https://github.com/StackVista/cve-reporter/actions/runs/36983036771",
+  "source_scan_attempt": 1,
+  "source_scan_artifact_id": 11216955398,
+  "source_scan_aggregate_sha256": "600d791947fc21560ab206d820e80af13dab87d0de836377c73cda6046e96345",
+  "chart_merge": {
+    "headRefOid": "0547ee4c4620e0a9a4f8fbfd4aa8855a0e13937f",
+    "mergeCommit": {
+      "oid": "8acf7a1596c1e84a2e521a32618e9d95ef609da7"
+    },
+    "mergedAt": "2026-10-02T13:08:34Z",
+    "state": "MERGED",
+    "url": "https://github.com/StackVista/helm-charts-internal/pull/267"
+  },
+  "chart_publication_run": "https://github.com/StackVista/helm-charts-internal/actions/runs/37011044156",
+  "chart_source_sync_run": "https://github.com/StackVista/helm-charts-internal/actions/runs/37011044212",
+  "chart_repository": "https://helm-internal.stackstate.io",
+  "chart_package_url": "https://helm-internal.stackstate.io/charts/suse-observability-agent-1.7.8.tgz",
+  "chart_package_sha256": "ecb82ccddfdba66608bf48888fa6b070c3cee6843e623089d346e56a6e7c04b1",
+  "published_chart_values_match_merge_values": true,
+  "vex_used": false,
+  "new_vex_ignores_suppressions_exceptions": 0,
+  "production_release_or_promotion": false,
+  "new_cve_workflow_run": false
+}

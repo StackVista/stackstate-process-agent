@@ -1,0 +1,6 @@
+{
+  "repository": "https://helm.stackstate.io",
+  "chart": "suse-observability-agent",
+  "versions_1_7_8": [],
+  "note": "Normal merge CI publishes to internal; public chart publication is a separate manual workflow, not invoked."
+}

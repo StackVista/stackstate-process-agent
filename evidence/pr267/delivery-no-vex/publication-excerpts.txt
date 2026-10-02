@@ -1,0 +1,3 @@
+push_to_internal (suse-observability-agent)	cm-push to internal	2026-10-02T13:13:53.9784550Z Pushing suse-observability-agent-1.7.8.tgz to ***...
+push_to_internal (suse-observability-agent)	cm-push to internal	2026-10-02T13:13:54.1059247Z Done.
+push_to_internal (suse-observability-agent)	Verify chart version in internal chartmuseum	2026-10-02T13:13:54.3452711Z ##[notice]suse-observability-agent 1.7.8 visible in internal chartmuseum

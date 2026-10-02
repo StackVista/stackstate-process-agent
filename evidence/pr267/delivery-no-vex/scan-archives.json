@@ -1,0 +1,12 @@
+[
+  {
+    "arch": "amd64",
+    "file": "amd64-reports.zip",
+    "sha256": "05dcbff6ca2ba067866027f38163b8cd8ca86989fcf750197462c9170fe2f757"
+  },
+  {
+    "arch": "arm64",
+    "file": "arm64-reports.zip",
+    "sha256": "4d782ea43e15e8fa876d8fd24e1a92e16093378aab3e6db27d1c48098b5b4ecb"
+  }
+]

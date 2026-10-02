@@ -1,0 +1,166 @@
+{
+  "chart_merge": "8acf7a1596c1e84a2e521a32618e9d95ef609da7",
+  "published_chart": {
+    "chart": "suse-observability-agent",
+    "chart_version": "1.7.8",
+    "package_sha256": "ecb82ccddfdba66608bf48888fa6b070c3cee6843e623089d346e56a6e7c04b1",
+    "values_image": {
+      "registry": null,
+      "repository": "stackstate/stackstate-k8s-process-agent",
+      "tag": "00f55972",
+      "pullPolicy": "IfNotPresent"
+    },
+    "rendered_images": [
+      "quay.io/stackstate/stackstate-k8s-process-agent:00f55972"
+    ]
+  },
+  "image_index_digest": "sha256:a4919324549fe040eee1b66f83b885ed511ada6b2a6b7ec50cde01a172cc9d92",
+  "reports": [
+    {
+      "arch": "amd64",
+      "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:ab817bda6c5e53b65a5c804eb0c30cbe6b06b4ba771285f94eb89b5e91f7cff1",
+      "image_config_digest": "sha256:ac50df41bfac136da56a00adbd16416c9daabc9db16dd1ea205b8a78d5ef9e97",
+      "source_revision": "00f55972777a43e1281461cb5696e9ec09bdef34",
+      "vex_used": false,
+      "assigned_trivy_rows_remaining": 0,
+      "assignment_coverage": [
+        {
+          "finding_key": "sha256:4bbc5e7618bf223e38cf96a5bd67db93ee0166a8dc3c3dd8134f02c093125074",
+          "advisory": "CVE-2026-53493",
+          "package": "github.com/containerd/containerd",
+          "installed_version": "v1.7.36",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:d518848dfca1f7d5db6dbbbd1b1be19c2ac40de5fb992da5dbaed1c4336c94ec",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "glib2-tools",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:590fa81cb3eae2d381120f4238f3c981fd249df55bbee7180d1cbf3350a474b1",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "libgio-2_0-0",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:1443c4cec042fd8f3e9fd4f46d8fb739d53689617436d5520e28982806be925e",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "libglib-2_0-0",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:4940b3c240fa661b9072b094dca5ede56342d803813234901769707f5423d2a9",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "libgmodule-2_0-0",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:3b38fe145cb5d1b3f1639c19e744a1def4a34f3d1186d13bb481cbfe7b8a4447",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "libgobject-2_0-0",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        }
+      ],
+      "raw_trivy_findings": [
+        {
+          "id": "GO-2026-5932",
+          "package": "golang.org/x/crypto",
+          "version": "v0.56.0",
+          "severity": "UNKNOWN"
+        }
+      ],
+      "secrets": 0,
+      "grype_matches": 78,
+      "grype_severity_counts": {
+        "High": 24,
+        "Medium": 48,
+        "Critical": 2,
+        "Low": 4
+      },
+      "grype_ignored_matches": 0
+    },
+    {
+      "arch": "arm64",
+      "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:b4f431ac216e0e111eab70937749b49d5a6ae05cad68ca87904e40316a0523a5",
+      "image_config_digest": "sha256:a6115c1029978e42003277bb0bbc210b7d0be19191066c96c7a888a498f25f1c",
+      "source_revision": "00f55972777a43e1281461cb5696e9ec09bdef34",
+      "vex_used": false,
+      "assigned_trivy_rows_remaining": 0,
+      "assignment_coverage": [
+        {
+          "finding_key": "sha256:4bbc5e7618bf223e38cf96a5bd67db93ee0166a8dc3c3dd8134f02c093125074",
+          "advisory": "CVE-2026-53493",
+          "package": "github.com/containerd/containerd",
+          "installed_version": "v1.7.36",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:d518848dfca1f7d5db6dbbbd1b1be19c2ac40de5fb992da5dbaed1c4336c94ec",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "glib2-tools",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:590fa81cb3eae2d381120f4238f3c981fd249df55bbee7180d1cbf3350a474b1",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "libgio-2_0-0",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:1443c4cec042fd8f3e9fd4f46d8fb739d53689617436d5520e28982806be925e",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "libglib-2_0-0",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:4940b3c240fa661b9072b094dca5ede56342d803813234901769707f5423d2a9",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "libgmodule-2_0-0",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        },
+        {
+          "finding_key": "sha256:3b38fe145cb5d1b3f1639c19e744a1def4a34f3d1186d13bb481cbfe7b8a4447",
+          "advisory": "SUSE-SU-2026:4367-1",
+          "package": "libgobject-2_0-0",
+          "installed_version": "2.78.6-150600.4.41.1",
+          "reported_by_trivy": false
+        }
+      ],
+      "raw_trivy_findings": [
+        {
+          "id": "GO-2026-5932",
+          "package": "golang.org/x/crypto",
+          "version": "v0.56.0",
+          "severity": "UNKNOWN"
+        }
+      ],
+      "secrets": 0,
+      "grype_matches": 78,
+      "grype_severity_counts": {
+        "High": 24,
+        "Medium": 48,
+        "Critical": 2,
+        "Low": 4
+      },
+      "grype_ignored_matches": 0
+    }
+  ],
+  "human_merge_confirmed": true,
+  "normal_internal_chart_publication_confirmed": true,
+  "assigned_six_findings_delivery_criteria_met": true,
+  "raw_all_severity_trivy_zero_findings": false,
+  "residual_unknown": "GO-2026-5932 is outside the six assigned Trivy rows. No VEX applied.",
+  "public_chart_release_confirmed": false,
+  "closure_scope": "Complete for the six assigned process-agent findings in the dev/internal chart delivery. This is not an all-estate scan, public/Rancher promotion claim, or zero-all-severity-Trivy claim.",
+  "ticket_updated_or_closed": false
+}

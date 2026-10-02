@@ -1,0 +1,44 @@
+{
+  "annotations": {
+    "catalog.cattle.io/display-name": "SUSE Observability Agent",
+    "catalog.cattle.io/release-name": "suse-observability-agent"
+  },
+  "apiVersion": "v2",
+  "appVersion": "3.78.2",
+  "created": "2026-10-02T13:13:54.090988582Z",
+  "dependencies": [
+    {
+      "alias": "httpHeaderInjectorWebhook",
+      "condition": "httpHeaderInjectorWebhook.enabled",
+      "name": "http-header-injector",
+      "repository": "file://../../local/http-header-injector/",
+      "version": "*"
+    },
+    {
+      "condition": "kubernetes-rbac-agent.enabled",
+      "name": "kubernetes-rbac-agent",
+      "repository": "file://../../local/kubernetes-rbac-agent/",
+      "version": "*"
+    }
+  ],
+  "description": "Helm chart for the SUSE observability Agent.",
+  "digest": "ecb82ccddfdba66608bf48888fa6b070c3cee6843e623089d346e56a6e7c04b1",
+  "home": "https://github.com/StackVista/suse-observability-agent",
+  "icon": "https://raw.githubusercontent.com/StackVista/helm-charts/master/stable/suse-observability-agent/logo.svg",
+  "keywords": [
+    "monitoring",
+    "observability",
+    "SUSE"
+  ],
+  "maintainers": [
+    {
+      "email": "suse-observability-ops@suse.com",
+      "name": "SUSE"
+    }
+  ],
+  "name": "suse-observability-agent",
+  "urls": [
+    "charts/suse-observability-agent-1.7.8.tgz"
+  ],
+  "version": "1.7.8"
+}

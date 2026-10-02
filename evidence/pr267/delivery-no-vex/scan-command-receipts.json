@@ -1,0 +1,236 @@
+[
+  {
+    "argv": [
+      "trivy",
+      "image",
+      "--config",
+      "/tmp/process-agent-delivery-267/empty-scanner-config.yaml",
+      "--cache-dir",
+      "/tmp/process-agent-delivery-267/trivy-cache",
+      "--download-db-only",
+      "--no-progress"
+    ],
+    "started_at": "2026-10-02T13:16:26.156655+00:00",
+    "completed_at": "2026-10-02T13:16:32.360100+00:00",
+    "exit_code": 0,
+    "log": "trivy-db-update.log"
+  },
+  {
+    "argv": [
+      "grype",
+      "db",
+      "update"
+    ],
+    "started_at": "2026-10-02T13:16:26.156973+00:00",
+    "completed_at": "2026-10-02T13:18:56.097761+00:00",
+    "exit_code": 0,
+    "log": "grype-db-update.log"
+  },
+  {
+    "argv": [
+      "trivy",
+      "--version"
+    ],
+    "started_at": "2026-10-02T13:18:56.098254+00:00",
+    "completed_at": "2026-10-02T13:18:56.164761+00:00",
+    "exit_code": 0,
+    "log": "trivy-version.txt"
+  },
+  {
+    "argv": [
+      "grype",
+      "version"
+    ],
+    "started_at": "2026-10-02T13:18:56.165074+00:00",
+    "completed_at": "2026-10-02T13:18:56.204462+00:00",
+    "exit_code": 0,
+    "log": "grype-version.txt"
+  },
+  {
+    "argv": [
+      "grype",
+      "db",
+      "status",
+      "-o",
+      "json"
+    ],
+    "started_at": "2026-10-02T13:18:56.204707+00:00",
+    "completed_at": "2026-10-02T13:18:56.985295+00:00",
+    "exit_code": 0,
+    "log": "grype-db-status.json"
+  },
+  {
+    "argv": [
+      "trivy",
+      "image",
+      "--config",
+      "/tmp/process-agent-delivery-267/empty-scanner-config.yaml",
+      "--cache-dir",
+      "/tmp/process-agent-delivery-267/trivy-cache-arm64",
+      "--skip-db-update",
+      "--ignorefile",
+      "/dev/null",
+      "--vex",
+      "",
+      "--image-src",
+      "remote",
+      "--platform",
+      "linux/arm64",
+      "--severity",
+      "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+      "--format",
+      "json",
+      "--no-progress",
+      "--timeout",
+      "10m",
+      "--scanners",
+      "vuln",
+      "--output",
+      "/tmp/process-agent-delivery-267/arm64/trivy.json",
+      "quay.io/stackstate/stackstate-k8s-process-agent@sha256:b4f431ac216e0e111eab70937749b49d5a6ae05cad68ca87904e40316a0523a5"
+    ],
+    "started_at": "2026-10-02T13:18:56.986559+00:00",
+    "completed_at": "2026-10-02T13:19:10.039980+00:00",
+    "exit_code": 0,
+    "log": "arm64/trivy.log"
+  },
+  {
+    "argv": [
+      "trivy",
+      "image",
+      "--config",
+      "/tmp/process-agent-delivery-267/empty-scanner-config.yaml",
+      "--cache-dir",
+      "/tmp/process-agent-delivery-267/trivy-cache-amd64",
+      "--skip-db-update",
+      "--ignorefile",
+      "/dev/null",
+      "--vex",
+      "",
+      "--image-src",
+      "remote",
+      "--platform",
+      "linux/amd64",
+      "--severity",
+      "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+      "--format",
+      "json",
+      "--no-progress",
+      "--timeout",
+      "10m",
+      "--scanners",
+      "vuln",
+      "--output",
+      "/tmp/process-agent-delivery-267/amd64/trivy.json",
+      "quay.io/stackstate/stackstate-k8s-process-agent@sha256:ab817bda6c5e53b65a5c804eb0c30cbe6b06b4ba771285f94eb89b5e91f7cff1"
+    ],
+    "started_at": "2026-10-02T13:18:56.986364+00:00",
+    "completed_at": "2026-10-02T13:19:15.198948+00:00",
+    "exit_code": 0,
+    "log": "amd64/trivy.log"
+  },
+  {
+    "argv": [
+      "trivy",
+      "image",
+      "--config",
+      "/tmp/process-agent-delivery-267/empty-scanner-config.yaml",
+      "--cache-dir",
+      "/tmp/process-agent-delivery-267/trivy-cache-arm64",
+      "--skip-db-update",
+      "--ignorefile",
+      "/dev/null",
+      "--vex",
+      "",
+      "--image-src",
+      "remote",
+      "--platform",
+      "linux/arm64",
+      "--severity",
+      "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+      "--format",
+      "json",
+      "--no-progress",
+      "--timeout",
+      "10m",
+      "--scanners",
+      "secret",
+      "--output",
+      "/tmp/process-agent-delivery-267/arm64/trivy-secrets.json",
+      "quay.io/stackstate/stackstate-k8s-process-agent@sha256:b4f431ac216e0e111eab70937749b49d5a6ae05cad68ca87904e40316a0523a5"
+    ],
+    "started_at": "2026-10-02T13:19:10.040420+00:00",
+    "completed_at": "2026-10-02T13:19:15.301946+00:00",
+    "exit_code": 0,
+    "log": "arm64/trivy-secrets.log"
+  },
+  {
+    "argv": [
+      "trivy",
+      "image",
+      "--config",
+      "/tmp/process-agent-delivery-267/empty-scanner-config.yaml",
+      "--cache-dir",
+      "/tmp/process-agent-delivery-267/trivy-cache-amd64",
+      "--skip-db-update",
+      "--ignorefile",
+      "/dev/null",
+      "--vex",
+      "",
+      "--image-src",
+      "remote",
+      "--platform",
+      "linux/amd64",
+      "--severity",
+      "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+      "--format",
+      "json",
+      "--no-progress",
+      "--timeout",
+      "10m",
+      "--scanners",
+      "secret",
+      "--output",
+      "/tmp/process-agent-delivery-267/amd64/trivy-secrets.json",
+      "quay.io/stackstate/stackstate-k8s-process-agent@sha256:ab817bda6c5e53b65a5c804eb0c30cbe6b06b4ba771285f94eb89b5e91f7cff1"
+    ],
+    "started_at": "2026-10-02T13:19:15.199316+00:00",
+    "completed_at": "2026-10-02T13:19:21.216153+00:00",
+    "exit_code": 0,
+    "log": "amd64/trivy-secrets.log"
+  },
+  {
+    "argv": [
+      "grype",
+      "--config",
+      "/tmp/process-agent-delivery-267/empty-scanner-config.yaml",
+      "--platform",
+      "linux/arm64",
+      "--by-cve",
+      "-o",
+      "json=/tmp/process-agent-delivery-267/arm64/grype.json",
+      "registry:quay.io/stackstate/stackstate-k8s-process-agent@sha256:b4f431ac216e0e111eab70937749b49d5a6ae05cad68ca87904e40316a0523a5"
+    ],
+    "started_at": "2026-10-02T13:19:15.302312+00:00",
+    "completed_at": "2026-10-02T13:19:25.749558+00:00",
+    "exit_code": 0,
+    "log": "arm64/grype.log"
+  },
+  {
+    "argv": [
+      "grype",
+      "--config",
+      "/tmp/process-agent-delivery-267/empty-scanner-config.yaml",
+      "--platform",
+      "linux/amd64",
+      "--by-cve",
+      "-o",
+      "json=/tmp/process-agent-delivery-267/amd64/grype.json",
+      "registry:quay.io/stackstate/stackstate-k8s-process-agent@sha256:ab817bda6c5e53b65a5c804eb0c30cbe6b06b4ba771285f94eb89b5e91f7cff1"
+    ],
+    "started_at": "2026-10-02T13:19:21.216538+00:00",
+    "completed_at": "2026-10-02T13:19:37.234145+00:00",
+    "exit_code": 0,
+    "log": "amd64/grype.log"
+  }
+]

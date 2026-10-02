@@ -1,0 +1,56 @@
+[
+  {
+    "arch": "amd64",
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:fb6e9f8546674f06a165c7668d45b6d57b9bd62b4edeafd29934da081bcb76fd",
+    "image_config": "sha256:0d3d22034d827fdcd2e3973d1864f5e4ee29bef5b7d0a03e595866e9d10fe090",
+    "artifact": {
+      "digest": "sha256:c94d3fb15f57cd46114424c1055f896116ec5a092af789870c7f84bbc4b41e6d",
+      "expired": false,
+      "id": 11221062070,
+      "name": "pr292-trivy-20261002-evidence-amd64",
+      "size_in_bytes": 194650
+    },
+    "binary_sha256": "7a0d6f9085d4890e8a5f11a4de6fa1c780f2a08b5900d41b90c72c76558b6803",
+    "binary_matches_tested_artifact": true,
+    "containerd": "v1.7.36",
+    "glib": {
+      "glib2-tools": "2.78.6-150600.4.41.1",
+      "libgio-2_0-0": "2.78.6-150600.4.41.1",
+      "libglib-2_0-0": "2.78.6-150600.4.41.1",
+      "libgmodule-2_0-0": "2.78.6-150600.4.41.1",
+      "libgobject-2_0-0": "2.78.6-150600.4.41.1"
+    },
+    "rpm_count": 125,
+    "component_count": 433,
+    "target_findings": 0,
+    "secrets": 0,
+    "remaining_trivy": []
+  },
+  {
+    "arch": "arm64",
+    "image": "quay.io/stackstate/stackstate-k8s-process-agent@sha256:9dc61c6e59fe8f97dc69b377fa74416920a7fd6623e1374de4917543450b1296",
+    "image_config": "sha256:99ed9aaa2fe1bd9d1f0baadb3b7376c57d3f89b6024e93ec97860316de6068a8",
+    "artifact": {
+      "digest": "sha256:240a230e4373ff4e3621a8e5ce66d1c248c25ee4f0cca1584b8bb9ba549ed6f0",
+      "expired": false,
+      "id": 11221255072,
+      "name": "pr292-trivy-20261002-evidence-arm64",
+      "size_in_bytes": 194531
+    },
+    "binary_sha256": "e5d8829685661abd08f3b94fa4795335ae49d9b4146cda9c43308e3ccbd494ad",
+    "binary_matches_tested_artifact": true,
+    "containerd": "v1.7.36",
+    "glib": {
+      "glib2-tools": "2.78.6-150600.4.41.1",
+      "libgio-2_0-0": "2.78.6-150600.4.41.1",
+      "libglib-2_0-0": "2.78.6-150600.4.41.1",
+      "libgmodule-2_0-0": "2.78.6-150600.4.41.1",
+      "libgobject-2_0-0": "2.78.6-150600.4.41.1"
+    },
+    "rpm_count": 125,
+    "component_count": 433,
+    "target_findings": 0,
+    "secrets": 0,
+    "remaining_trivy": []
+  }
+]

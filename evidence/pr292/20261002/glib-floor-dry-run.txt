@@ -1,0 +1,45 @@
+Unable to find image 'registry.suse.com/bci/bci-base:15.7' locally
+15.7: Pulling from bci/bci-base
+6ebf96a5a3a2: Pulling fs layer
+6ebf96a5a3a2: Download complete
+6ebf96a5a3a2: Pull complete
+Digest: sha256:a1bff75c7ab3d66c8423e3f2370838d5dbed077a4133e9f38a98d7525a630958
+Status: Downloaded newer image for registry.suse.com/bci/bci-base:15.7
+Refreshing service 'container-suseconnect-zypp'.
+Retrieving repository 'SLE_BCI' metadata [...
+Looking for gpg keys in repository SLE_BCI.
+  gpgkey=file:/usr/lib/rpm/gnupg/keys/gpg-pubkey-3fa1d6ce-67c856ee.asc
+.....done]
+Building repository 'SLE_BCI' cache [....done]
+All repositories have been refreshed.
+Refreshing service 'container-suseconnect-zypp'.
+Loading repository data...
+Reading installed packages...
+Resolving package dependencies...
+
+The following package is going to be upgraded:
+  libglib-2_0-0
+
+The following 6 NEW packages are going to be installed:
+  gio-branding-SLE glib2-tools libgio-2_0-0 libgmodule-2_0-0 libgobject-2_0-0 shared-mime-info
+
+The following 7 packages are not supported by their vendor:
+  gio-branding-SLE glib2-tools libgio-2_0-0 libglib-2_0-0 libgmodule-2_0-0 libgobject-2_0-0 shared-mime-info
+
+1 package to upgrade, 6 new.
+
+Package download size:     2.5 MiB
+
+Package install size change:
+              |       7.2 MiB  required by packages that will be installed
+     5.2 MiB  |  -    1.9 MiB  released by packages that will be removed
+
+Backend:  classic_rpmtrans --dry-run
+Continue? [y/n/v/...? shows all options] (y): y
+
+Checking for file conflicts: [...done]
+Warning: 7 packages had to be excluded from file conflicts check because they are not yet downloaded.
+
+    Note: Checking for file conflicts requires not installed packages to be downloaded in advance in
+    order to access their file lists. See option '--download-in-advance / --dry-run --download-only'
+    in the zypper manual page for details.

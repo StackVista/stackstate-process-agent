@@ -19,3 +19,17 @@ PR: https://github.com/StackVista/stackstate-process-agent/pull/292.
 Tracking: https://github.com/StackVista/cve-reporter/issues/69 and https://github.com/StackVista/stackstate-process-agent/issues/260.
 
 Human merge/release decisions and later chart adoption/delivery validation remain separate. The supervisor owns ticket/Project updates. Previous signed source/evidence checkpoints are preserved.
+
+## Final publication result
+
+[Publication CI 36994022044](https://github.com/StackVista/stackstate-process-agent/actions/runs/36994022044) passed on native amd64 and arm64. The signed index is `sha256:ea384c3380fc56d809133e1b26680f29488137a58e9abab4efd1155be7464a0c`. Runtime digests are `sha256:fb6e9f8546674f06a165c7668d45b6d57b9bd62b4edeafd29934da081bcb76fd` (amd64) and `sha256:9dc61c6e59fe8f97dc69b377fa74416920a7fd6623e1374de4917543450b1296` (arm64).
+
+Each published binary matches its tested CI artifact byte-for-byte and reports source revision a0a3d2fb with vcs.modified=false. Each complete inventory has 433 components and 125 RPMs. Containerd is v1.7.36; all five targeted GLib RPMs are 2.78.6-150600.4.41.1. Both published reports contain zero Trivy vulnerabilities at all severities after applying the existing approved VEX, and zero secrets. No VEX or exception was changed.
+
+Locally built candidate reports retain the known UNKNOWN GO-2026-5932 and the unchanged September 10-expired bridge exception. Actual published-image reports clear that finding through the existing VEX path; the maintained OpenPGP-absence source control passed in both native build jobs. Grype-only reports are outside remediation scope, and original required CI continues to run Grype in inform mode. Workflow success alone is not merge authorization.
+
+The published report ZIPs are byte-identical to artifacts 11221062070 (amd64, sha256:c94d3fb15f57cd46114424c1055f896116ec5a092af789870c7f84bbc4b41e6d) and 11221255072 (arm64, sha256:240a230e4373ff4e3621a8e5ce66d1c248c25ee4f0cca1584b8bb9ba549ed6f0). All internal report SHA256SUMS checks pass. `published-verification.json` records the image/config/binary identities, versions and remaining findings. `candidate-artifacts.json` records the tested binary artifact identities.
+
+To check this bundle, run `sha256sum -c SHA256SUMS` in this directory. Extract each published report archive into its own directory and run `sha256sum -c SHA256SUMS` there to verify its contents.
+
+Outstanding: independent review of the new source/publication checkpoint, human merge/release/promotion approval, and later chart adoption/delivery verification. Supervisor retains ticket/Project ownership.

@@ -78,13 +78,13 @@ jobs:
           sha256sum tested/process-agent > reports/tested-binary-sha256.txt
           cmp tested/process-agent /tmp/pr292-process-agent
 
-      - name: Scan published digest with current VEX and separate secrets
+      - name: Scan published digest with Trivy, Grype and separate secrets
         uses: StackVista/image-pipeline/.github/actions/scan-image@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
         with:
           image: ${{ steps.published.outputs.image }}
           mode: inform
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
-          with-grype: false
+          with-grype: true
           exceptions-path: exceptions
           upload-sarif: false
           sarif-category: pr292-published-${{ matrix.arch }}
@@ -102,6 +102,9 @@ jobs:
           jq -r '.components[]? | select(.purl // "" | startswith("pkg:rpm/")) | [.name, .version, .purl] | @tsv' reports/inventory.cdx.json | sort > reports/rpm-inventory.txt
           test -s reports/rpm-inventory.txt
           trivy --version > reports/trivy-version.txt
+          grype version > reports/grype-version.txt
+          grype db status > reports/grype-db-status.txt
+          jq '[.matches[]? | {id:.vulnerability.id,package:.artifact.name,version:.artifact.version,severity:.vulnerability.severity}]' reports/grype.json > reports/grype-findings.json
           grep -E 'dep[[:space:]]+github.com/containerd/containerd[[:space:]]+v1\.7\.36([[:space:]]|$)' reports/binary-modules.txt
           for package in glib2-tools libgio-2_0-0 libglib-2_0-0 libgmodule-2_0-0 libgobject-2_0-0; do
             jq -e --arg package "${package}" '.components[] | select(.name == $package and .version == "2.78.6-150600.4.41.1")' reports/inventory.cdx.json > "reports/${package}.json"

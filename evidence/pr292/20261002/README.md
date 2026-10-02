@@ -4,7 +4,7 @@ Candidate: `a0a3d2fb0a224fcf0e93de1aec3295fde7913e3a` on `cve-pcre2-glibc-runtim
 
 This separate evidence branch carries a one-off workflow that checks the published candidate images; it is outside the product PR diff. It reuses the prior PR #292 publication-verification workflow and the pinned image-pipeline scan action. It does not build or publish images, change VEX or exceptions, or deploy anything.
 
-The workflow pins the source, candidate CI run, signed OCI index and both runtime digests. Native runners compare the extracted published binaries byte-for-byte with the tested CI artifacts, check source/version metadata, retain full RPM inventories, and assert that the six assigned Trivy rows and secrets are absent. This evidence run uses Trivy only; all original required product CI checks, including Grype in inform mode, remain intact on the candidate.
+The workflow pins the source, candidate CI run, signed OCI index and both runtime digests. Native runners compare the extracted published binaries byte-for-byte with the tested CI artifacts, check source/version metadata, retain full RPM inventories, and assert that the six assigned Trivy rows and secrets are absent. Current publication verification scans with both Trivy and Grype. The original Trivy-only publication run remains a historical checkpoint. Grype findings remain reported; remediation assertions cover only the assigned Trivy rows. All original required product CI checks, including Grype in its existing inform mode, remain intact on the candidate.
 
 Baseline: https://github.com/StackVista/cve-reporter/actions/runs/36983036771 (attempt 1).
 Verified aggregate: `sha256:600d791947fc21560ab206d820e80af13dab87d0de836377c73cda6046e96345`.
@@ -33,3 +33,7 @@ The published report ZIPs are byte-identical to artifacts 11221062070 (amd64, sh
 To check this bundle, run `sha256sum -c SHA256SUMS` in this directory. Extract each published report archive into its own directory and run `sha256sum -c SHA256SUMS` there to verify its contents.
 
 Outstanding: independent review of the new source/publication checkpoint, human merge/release/promotion approval, and later chart adoption/delivery verification. Supervisor retains ticket/Project ownership.
+
+## Human constraint: retain Grype scanning
+
+Remco's October 2 direction requires retaining Grype scanning and existing gates while remediating only Trivy findings. Product PR #292 never changed scanner configuration, gates, exceptions or VEX. The supplemental publication workflow now also has `with-grype: true`, and retains Grype findings and database metadata. Its original inform-mode evaluator and Trivy remediation assertions are unchanged. No ignore rules, suppressions, VEX statements or exceptions were added. A new run against the same published digests will supply dual-scanner publication reports.

@@ -1,0 +1,13 @@
+test_empty_clean_trivy_results_are_valid (__main__.ModeTests.test_empty_clean_trivy_results_are_valid) ... ok
+test_gate_control_blocks_vulnerabilities (__main__.ModeTests.test_gate_control_blocks_vulnerabilities) ... ok
+test_inform_keeps_all_scanner_findings_and_sarif (__main__.ModeTests.test_inform_keeps_all_scanner_findings_and_sarif) ... ok
+test_required_scanner_reports_fail_closed (__main__.ModeTests.test_required_scanner_reports_fail_closed) ... ok
+test_sarif_output_errors_block_in_inform (__main__.ModeTests.test_sarif_output_errors_block_in_inform) ... ok
+test_sarif_report_validation_blocks_invalid_or_missing (__main__.ModeTests.test_sarif_report_validation_blocks_invalid_or_missing) ... ok
+test_scanner_execution_and_conversion_errors_block (__main__.ModeTests.test_scanner_execution_and_conversion_errors_block) ... ok
+test_secrets_block_at_every_severity (__main__.ModeTests.test_secrets_block_at_every_severity) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 3.116s
+
+OK

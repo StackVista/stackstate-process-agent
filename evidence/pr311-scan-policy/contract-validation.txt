@@ -1,0 +1,2 @@
+PASS: Pinned Trivy 0.70.0 detects UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL synthetic secrets with the workflow severity environment.
+PASS: build/test/publish/sign/aggregate job contracts unchanged.

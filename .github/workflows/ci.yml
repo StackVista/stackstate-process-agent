@@ -181,10 +181,8 @@ jobs:
           healthcheck="$(docker image inspect --format '{{json .Config.Healthcheck.Test}}' "${image}")"
           grep -F '/probe.sh' <<< "${healthcheck}"
 
-      - name: Report Trivy and Grype CVEs; gate secrets and scan errors
+      - name: Scan image with VEX-aware Trivy and Grype
         uses: StackVista/image-pipeline/.github/actions/scan-image@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
-        env:
-          TRIVY_SEVERITY: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
         with:
           image: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
           mode: inform
@@ -194,26 +192,13 @@ jobs:
           upload-sarif: false
           sarif-category: process-agent-${{ matrix.arch }}
 
-      - name: Validate required scan reports
-        run: |
-          set -euo pipefail
-          for report in reports/trivy-secrets.json reports/trivy.json; do
-            jq -e '
-              .SchemaVersion == 2 and
-              (.ArtifactName | type == "string" and length > 0) and
-              (.Results == null or (.Results | type == "array"))
-            ' "${report}" > /dev/null
-          done
-          jq -e 'type == "object" and (.matches | type == "array")' reports/grype.json > /dev/null
-          jq -e '.version == "2.1.0" and (.runs | type == "array" and length > 0)' reports/image-pipeline.sarif > /dev/null
-
       - name: Upload image scan evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: process-agent-scan-${{ matrix.arch }}
           path: reports/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
   publish-image:

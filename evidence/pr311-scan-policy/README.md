@@ -12,9 +12,9 @@ The base already uses `scan-image` mode `inform`. The one-file product follow-up
 - `actionlint`: pass; `zizmor --offline`: zero findings, matching baseline.
 - Pinned image-pipeline evaluator `go test ./...`: pass.
 - Eight action/evaluator mode test groups: pass. Synthetic findings from both scanners at UNKNOWN/LOW/MEDIUM/HIGH/CRITICAL remain in SARIF with exit 0 in inform mode; gate control exits 1. Secrets at all five severities, scanner execution/conversion failures, missing/invalid/empty scanner reports and SARIF write/validation failures remain fatal.
-- Real pinned Trivy 0.70.0 filesystem secret scan, no VEX: five synthetic secrets detected, one at each severity. This verifies the severity environment separately from mocked scanner execution. Custom secret patterns exist only in this isolated fixture, not product configuration.
+- Real pinned Trivy 0.70.0 filesystem secret scan, no VEX: five synthetic secrets detected, one at each severity. A HIGH/CRITICAL-only control detected two secrets, proving that the explicit all-severity environment preserves UNKNOWN/LOW/MEDIUM coverage. This verifies the severity environment separately from mocked scanner execution. Custom secret patterns exist only in this isolated fixture, not product configuration.
 - Existing pinned-action CI: https://github.com/StackVista/image-pipeline/actions/runs/29080688464 (Action unit tests SUCCESS) and https://github.com/StackVista/image-pipeline/actions/runs/29080688435 (Evaluator CI SUCCESS).
-- Exact-head process-agent CI: https://github.com/StackVista/stackstate-process-agent/actions/runs/37281856722. See the final PR description for the latest CI state.
+- Exact-head process-agent CI: https://github.com/StackVista/stackstate-process-agent/actions/runs/37281856722. SUCCESS at the exact signed head: both builds/tests, BCI smoke/scans/report validation, architecture image signing, multi-architecture manifest signing and aggregate CI succeeded. Each architecture retained 3 Trivy findings (2 HIGH, 1 UNKNOWN), 101 Grype findings (2 Critical, 26 High, 68 Medium, 4 Low, 1 Unknown), zero secrets and 103 SARIF results. Live findings remained reporting-only. Raw CI reports and checksum receipts are retained in `ci-reports/` and `ci-report-checksums.json`.
 
 Repository API reports `has_wiki: false`; no AGENTS files exist in the repository or ancestor directories. README, PR conventions, workflow history and the pinned action/evaluator source were inspected. The only open unrelated PR was updater #309.
 
@@ -27,3 +27,5 @@ Download StackVista/image-pipeline at `6284a6fc006a7cc46a7f00d02c50d5f21b117b63`
 ## Independent-review handoff
 
 Target existing planner `d79c6920f8cb46c3a8f9a76eb54286c3` for independent review. Dispatch is unavailable in this session: multi-agent send reports agent not found; no session-send tool is advertised; the CLI API read returns HTTP 401; the browser has no connected renderer. No access or infrastructure changes were made. The exact head, PR, intake, tests and CI above form the handoff; independent review is still required.
+
+Scan artifacts: [amd64](https://github.com/StackVista/stackstate-process-agent/actions/runs/37281856722/artifacts/11333310807), [arm64](https://github.com/StackVista/stackstate-process-agent/actions/runs/37281856722/artifacts/11333004345).

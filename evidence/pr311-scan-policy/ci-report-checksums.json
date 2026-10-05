@@ -1,0 +1,52 @@
+[
+  {
+    "path": "amd64/grype-vex-documents.txt",
+    "sha256": "011e0d3b7ed1e312d4fd63e21cc4da063bfe6954341cc1d1d6f622f16206fd7b",
+    "bytes": 161604
+  },
+  {
+    "path": "amd64/grype.json",
+    "sha256": "b8b67587de9f5fba19d5781300877e31277a96d77f209ad6c98f8a59d7f351c7",
+    "bytes": 658765
+  },
+  {
+    "path": "amd64/image-pipeline.sarif",
+    "sha256": "aaffdcfeff8901129396b9f8cf7b0e71deb9e43ed8fd070c9aa850d71ed80174",
+    "bytes": 147170
+  },
+  {
+    "path": "amd64/trivy-secrets.json",
+    "sha256": "5218006903ab19484823e13b0158bf42376306ea9a51cae12d664ccd3d50bbee",
+    "bytes": 594781
+  },
+  {
+    "path": "amd64/trivy.json",
+    "sha256": "606789914fd69f5929899a3400d4ac6b9ce23c7071f5f31b68884ac2f5e730b4",
+    "bytes": 603889
+  },
+  {
+    "path": "arm64/grype-vex-documents.txt",
+    "sha256": "011e0d3b7ed1e312d4fd63e21cc4da063bfe6954341cc1d1d6f622f16206fd7b",
+    "bytes": 161604
+  },
+  {
+    "path": "arm64/grype.json",
+    "sha256": "bb34a74e4b9108b59b6882e37439465a92f2aa063464dd26fb8c3e8e7352134f",
+    "bytes": 658858
+  },
+  {
+    "path": "arm64/image-pipeline.sarif",
+    "sha256": "5ed2dd3d165be14c438ef2468fe94fa93f12f9babde008d773090c839a0395dc",
+    "bytes": 147269
+  },
+  {
+    "path": "arm64/trivy-secrets.json",
+    "sha256": "5e60ac40c17586108d60c00935fb5d1d170ad0cf05750f262de4796491c96b9d",
+    "bytes": 595345
+  },
+  {
+    "path": "arm64/trivy.json",
+    "sha256": "20d0c442e68a12428deaed656cc6c0696182c9ff430cccc968e0a7ebf0d5034c",
+    "bytes": 604457
+  }
+]

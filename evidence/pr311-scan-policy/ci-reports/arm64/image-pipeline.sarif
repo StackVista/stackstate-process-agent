@@ -1,0 +1,4552 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "image-pipeline-evaluator",
+          "version": "dev",
+          "informationUri": "https://github.com/StackVista/image-pipeline",
+          "rules": [
+            {
+              "id": "CVE-2025-66382",
+              "name": "CVE-2025-66382",
+              "shortDescription": {
+                "text": "CVE-2025-66382 — see https://www.suse.com/security/cve/CVE-2025-66382"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2025-66382",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2025-68972",
+              "name": "CVE-2025-68972",
+              "shortDescription": {
+                "text": "CVE-2025-68972 — see https://www.suse.com/security/cve/CVE-2025-68972"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2025-68972",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-102010",
+              "name": "CVE-2026-102010",
+              "shortDescription": {
+                "text": "CVE-2026-102010 — see https://www.suse.com/security/cve/CVE-2026-102010"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-102010",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-102633",
+              "name": "CVE-2026-102633",
+              "shortDescription": {
+                "text": "CVE-2026-102633 — see https://www.suse.com/security/cve/CVE-2026-102633"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-102633",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-103111",
+              "name": "CVE-2026-103111",
+              "shortDescription": {
+                "text": "CVE-2026-103111 — see https://www.suse.com/security/cve/CVE-2026-103111"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-103111",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-11856",
+              "name": "CVE-2026-11856",
+              "shortDescription": {
+                "text": "CVE-2026-11856 — see https://www.suse.com/security/cve/CVE-2026-11856"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-11856",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-12216",
+              "name": "CVE-2026-12216",
+              "shortDescription": {
+                "text": "CVE-2026-12216 — see https://www.suse.com/security/cve/CVE-2026-12216"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-12216",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-13757",
+              "name": "CVE-2026-13757",
+              "shortDescription": {
+                "text": "CVE-2026-13757 — see https://www.suse.com/security/cve/CVE-2026-13757"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-13757",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-18924",
+              "name": "CVE-2026-18924",
+              "shortDescription": {
+                "text": "CVE-2026-18924 — see https://www.suse.com/security/cve/CVE-2026-18924"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-18924",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-19931",
+              "name": "CVE-2026-19931",
+              "shortDescription": {
+                "text": "CVE-2026-19931 — see https://www.suse.com/security/cve/CVE-2026-19931"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-19931",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-35189",
+              "name": "CVE-2026-35189",
+              "shortDescription": {
+                "text": "CVE-2026-35189 — see https://www.suse.com/security/cve/CVE-2026-35189"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-35189",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-35191",
+              "name": "CVE-2026-35191",
+              "shortDescription": {
+                "text": "CVE-2026-35191 — see https://www.suse.com/security/cve/CVE-2026-35191"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-35191",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-39113",
+              "name": "CVE-2026-39113",
+              "shortDescription": {
+                "text": "CVE-2026-39113 — see https://www.suse.com/security/cve/CVE-2026-39113"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-39113",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-41080",
+              "name": "CVE-2026-41080",
+              "shortDescription": {
+                "text": "CVE-2026-41080 — see https://www.suse.com/security/cve/CVE-2026-41080"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-41080",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-45186",
+              "name": "CVE-2026-45186",
+              "shortDescription": {
+                "text": "CVE-2026-45186 — see https://www.suse.com/security/cve/CVE-2026-45186"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-45186",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-47104",
+              "name": "CVE-2026-47104",
+              "shortDescription": {
+                "text": "CVE-2026-47104 — see https://www.suse.com/security/cve/CVE-2026-47104"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-47104",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-50195",
+              "name": "CVE-2026-50195",
+              "shortDescription": {
+                "text": "CVE-2026-50195 — see https://github.com/containerd/containerd/security/advisories/GHSA-cvxm-645q-p574"
+              },
+              "helpUri": "https://github.com/containerd/containerd/security/advisories/GHSA-cvxm-645q-p574",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-50219",
+              "name": "CVE-2026-50219",
+              "shortDescription": {
+                "text": "CVE-2026-50219 — see https://www.suse.com/security/cve/CVE-2026-50219"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-50219",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-50812",
+              "name": "CVE-2026-50812",
+              "shortDescription": {
+                "text": "CVE-2026-50812 — see https://www.suse.com/security/cve/CVE-2026-50812"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-50812",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-53489",
+              "name": "CVE-2026-53489",
+              "shortDescription": {
+                "text": "CVE-2026-53489 — see https://github.com/containerd/containerd/security/advisories/GHSA-rgh6-rfwx-v388"
+              },
+              "helpUri": "https://github.com/containerd/containerd/security/advisories/GHSA-rgh6-rfwx-v388",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-53492",
+              "name": "CVE-2026-53492",
+              "shortDescription": {
+                "text": "CVE-2026-53492 — see https://github.com/containerd/containerd/security/advisories/GHSA-33vj-92qq-66hc"
+              },
+              "helpUri": "https://github.com/containerd/containerd/security/advisories/GHSA-33vj-92qq-66hc",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-53910",
+              "name": "CVE-2026-53910",
+              "shortDescription": {
+                "text": "CVE-2026-53910 — see https://www.suse.com/security/cve/CVE-2026-53910"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-53910",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-54872",
+              "name": "CVE-2026-54872",
+              "shortDescription": {
+                "text": "CVE-2026-54872 — see https://www.suse.com/security/cve/CVE-2026-54872"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-54872",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-54875",
+              "name": "CVE-2026-54875",
+              "shortDescription": {
+                "text": "CVE-2026-54875 — see https://www.suse.com/security/cve/CVE-2026-54875"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-54875",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56131",
+              "name": "CVE-2026-56131",
+              "shortDescription": {
+                "text": "CVE-2026-56131 — see https://www.suse.com/security/cve/CVE-2026-56131"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56131",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56132",
+              "name": "CVE-2026-56132",
+              "shortDescription": {
+                "text": "CVE-2026-56132 — see https://www.suse.com/security/cve/CVE-2026-56132"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56132",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56403",
+              "name": "CVE-2026-56403",
+              "shortDescription": {
+                "text": "CVE-2026-56403 — see https://www.suse.com/security/cve/CVE-2026-56403"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56403",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56404",
+              "name": "CVE-2026-56404",
+              "shortDescription": {
+                "text": "CVE-2026-56404 — see https://www.suse.com/security/cve/CVE-2026-56404"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56404",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56405",
+              "name": "CVE-2026-56405",
+              "shortDescription": {
+                "text": "CVE-2026-56405 — see https://www.suse.com/security/cve/CVE-2026-56405"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56405",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56406",
+              "name": "CVE-2026-56406",
+              "shortDescription": {
+                "text": "CVE-2026-56406 — see https://www.suse.com/security/cve/CVE-2026-56406"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56406",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56407",
+              "name": "CVE-2026-56407",
+              "shortDescription": {
+                "text": "CVE-2026-56407 — see https://www.suse.com/security/cve/CVE-2026-56407"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56407",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56408",
+              "name": "CVE-2026-56408",
+              "shortDescription": {
+                "text": "CVE-2026-56408 — see https://www.suse.com/security/cve/CVE-2026-56408"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56408",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56409",
+              "name": "CVE-2026-56409",
+              "shortDescription": {
+                "text": "CVE-2026-56409 — see https://www.suse.com/security/cve/CVE-2026-56409"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56409",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56410",
+              "name": "CVE-2026-56410",
+              "shortDescription": {
+                "text": "CVE-2026-56410 — see https://www.suse.com/security/cve/CVE-2026-56410"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56410",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56411",
+              "name": "CVE-2026-56411",
+              "shortDescription": {
+                "text": "CVE-2026-56411 — see https://www.suse.com/security/cve/CVE-2026-56411"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56411",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-56412",
+              "name": "CVE-2026-56412",
+              "shortDescription": {
+                "text": "CVE-2026-56412 — see https://www.suse.com/security/cve/CVE-2026-56412"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-56412",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-66046",
+              "name": "CVE-2026-66046",
+              "shortDescription": {
+                "text": "CVE-2026-66046 — see https://www.suse.com/security/cve/CVE-2026-66046"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-66046",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-72522",
+              "name": "CVE-2026-72522",
+              "shortDescription": {
+                "text": "CVE-2026-72522 — see https://www.suse.com/security/cve/CVE-2026-72522"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-72522",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-72897",
+              "name": "CVE-2026-72897",
+              "shortDescription": {
+                "text": "CVE-2026-72897 — see https://www.suse.com/security/cve/CVE-2026-72897"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-72897",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-75804",
+              "name": "CVE-2026-75804",
+              "shortDescription": {
+                "text": "CVE-2026-75804 — see https://www.suse.com/security/cve/CVE-2026-75804"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-75804",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-75805",
+              "name": "CVE-2026-75805",
+              "shortDescription": {
+                "text": "CVE-2026-75805 — see https://www.suse.com/security/cve/CVE-2026-75805"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-75805",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-75806",
+              "name": "CVE-2026-75806",
+              "shortDescription": {
+                "text": "CVE-2026-75806 — see https://www.suse.com/security/cve/CVE-2026-75806"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-75806",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-76641",
+              "name": "CVE-2026-76641",
+              "shortDescription": {
+                "text": "CVE-2026-76641 — see https://www.suse.com/security/cve/CVE-2026-76641"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-76641",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-76642",
+              "name": "CVE-2026-76642",
+              "shortDescription": {
+                "text": "CVE-2026-76642 — see https://www.suse.com/security/cve/CVE-2026-76642"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-76642",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-76781",
+              "name": "CVE-2026-76781",
+              "shortDescription": {
+                "text": "CVE-2026-76781 — see https://www.suse.com/security/cve/CVE-2026-76781"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-76781",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-76956",
+              "name": "CVE-2026-76956",
+              "shortDescription": {
+                "text": "CVE-2026-76956 — see https://www.suse.com/security/cve/CVE-2026-76956"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-76956",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-76957",
+              "name": "CVE-2026-76957",
+              "shortDescription": {
+                "text": "CVE-2026-76957 — see https://www.suse.com/security/cve/CVE-2026-76957"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-76957",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-77696",
+              "name": "CVE-2026-77696",
+              "shortDescription": {
+                "text": "CVE-2026-77696 — see https://www.suse.com/security/cve/CVE-2026-77696"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-77696",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-78408",
+              "name": "CVE-2026-78408",
+              "shortDescription": {
+                "text": "CVE-2026-78408 — see https://www.suse.com/security/cve/CVE-2026-78408"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-78408",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-78410",
+              "name": "CVE-2026-78410",
+              "shortDescription": {
+                "text": "CVE-2026-78410 — see https://www.suse.com/security/cve/CVE-2026-78410"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-78410",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-80255",
+              "name": "CVE-2026-80255",
+              "shortDescription": {
+                "text": "CVE-2026-80255 — see https://www.suse.com/security/cve/CVE-2026-80255"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-80255",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-82209",
+              "name": "CVE-2026-82209",
+              "shortDescription": {
+                "text": "CVE-2026-82209 — see https://www.suse.com/security/cve/CVE-2026-82209"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-82209",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-84782",
+              "name": "CVE-2026-84782",
+              "shortDescription": {
+                "text": "CVE-2026-84782 — see https://www.suse.com/security/cve/CVE-2026-84782"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-84782",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-84784",
+              "name": "CVE-2026-84784",
+              "shortDescription": {
+                "text": "CVE-2026-84784 — see https://www.suse.com/security/cve/CVE-2026-84784"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-84784",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-86137",
+              "name": "CVE-2026-86137",
+              "shortDescription": {
+                "text": "CVE-2026-86137 — see https://www.suse.com/security/cve/CVE-2026-86137"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-86137",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-86138",
+              "name": "CVE-2026-86138",
+              "shortDescription": {
+                "text": "CVE-2026-86138 — see https://www.suse.com/security/cve/CVE-2026-86138"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-86138",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-86140",
+              "name": "CVE-2026-86140",
+              "shortDescription": {
+                "text": "CVE-2026-86140 — see https://www.suse.com/security/cve/CVE-2026-86140"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-86140",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-86142",
+              "name": "CVE-2026-86142",
+              "shortDescription": {
+                "text": "CVE-2026-86142 — see https://www.suse.com/security/cve/CVE-2026-86142"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-86142",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-8674",
+              "name": "CVE-2026-8674",
+              "shortDescription": {
+                "text": "CVE-2026-8674 — see https://www.suse.com/security/cve/CVE-2026-8674"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-8674",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-86805",
+              "name": "CVE-2026-86805",
+              "shortDescription": {
+                "text": "CVE-2026-86805 — see https://www.suse.com/security/cve/CVE-2026-86805"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-86805",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-89092",
+              "name": "CVE-2026-89092",
+              "shortDescription": {
+                "text": "CVE-2026-89092 — see https://www.suse.com/security/cve/CVE-2026-89092"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-89092",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-8932",
+              "name": "CVE-2026-8932",
+              "shortDescription": {
+                "text": "CVE-2026-8932 — see https://www.suse.com/security/cve/CVE-2026-8932"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-8932",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-93990",
+              "name": "CVE-2026-93990",
+              "shortDescription": {
+                "text": "CVE-2026-93990 — see https://www.suse.com/security/cve/CVE-2026-93990"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-93990",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-95818",
+              "name": "CVE-2026-95818",
+              "shortDescription": {
+                "text": "CVE-2026-95818 — see https://www.suse.com/security/cve/CVE-2026-95818"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-95818",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "CVE-2026-97399",
+              "name": "CVE-2026-97399",
+              "shortDescription": {
+                "text": "CVE-2026-97399 — see https://www.suse.com/security/cve/CVE-2026-97399"
+              },
+              "helpUri": "https://www.suse.com/security/cve/CVE-2026-97399",
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-5932",
+              "name": "GO-2026-5932",
+              "shortDescription": {
+                "text": "GO-2026-5932"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            },
+            {
+              "id": "SUSE-SU-2026:4414-1",
+              "name": "SUSE-SU-2026:4414-1",
+              "shortDescription": {
+                "text": "SUSE-SU-2026:4414-1"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "vulnerability"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CVE-2025-66382",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2025-66382 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "0e4280baf84abfb07a4b279218f2df2d225afe4f84afa41b84959192b0f550f6"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2025-68972",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2025-68972 in gpg2@2.4.4-150600.3.18.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/gpg2@2.4.4-150600.3.18.1?arch=aarch64&distro=sles-15.7&upstream=gpg2-2.4.4-150600.3.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "89aa0759d3154ed304b01496fd2bf85d5e1613e400a956a399850dd91efb1db5"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-102010",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-102010 in libgcc_s1@15.3.0+git11272-150000.1.12.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libgcc_s1@15.3.0%2Bgit11272-150000.1.12.1?arch=aarch64&distro=sles-15.7&upstream=gcc15-15.3.0%2Bgit11272-150000.1.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "bd1314ad91cede64d5ff083e0099d527b623be0e31879a86795982e26fc4c51b"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-102010",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-102010 in libstdc++6@15.3.0+git11272-150000.1.12.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libstdc%2B%2B6@15.3.0%2Bgit11272-150000.1.12.1?arch=aarch64&distro=sles-15.7&upstream=gcc15-15.3.0%2Bgit11272-150000.1.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "5275a3c4edb0ff3e9ec3bc4626c6c9e9c702d0ee156d94fbdcea0aa74f481eb4"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-102633",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-102633 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "60020bf74cad3acaac4ed2255cdcea77222868bfa6bc361248778effa5100f34"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-103111",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-103111 in libpcre2-8-0@10.42-150600.3.3.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libpcre2-8-0@10.42-150600.3.3.1?arch=aarch64&distro=sles-15.7&upstream=pcre2-10.42-150600.3.3.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "4ebfe2a4d7c89e9d6e520a798362f8c8c4af4a737327278597429684bb32d5bc"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-11856",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-11856 in curl@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/curl@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "62fa9cdf2d2457a16135b966eb68dd41b2b9e19af7956ca76050889e6e926dcb"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-11856",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-11856 in libcurl4@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libcurl4@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "51b4b52b9ac821cbdee18f23631e9b22aea8e94ddb6094867e14955ba3aa49e6"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-12216",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-12216 in libduktape206@2.6.0-150500.4.5.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libduktape206@2.6.0-150500.4.5.1?arch=aarch64&distro=sles-15.7&upstream=duktape-2.6.0-150500.4.5.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "f3965ad2acd1fdbde34c8d6f5369f1729e2c1264a9c780d6c41e7beebe38ff59"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-13757",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-13757 in libp11-kit0@0.23.22-150500.8.3.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libp11-kit0@0.23.22-150500.8.3.1?arch=aarch64&distro=sles-15.7&upstream=p11-kit-0.23.22-150500.8.3.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "c0d59c53b2245f37c4f55ff8204b235c6567406fd544e3b18654227f07999273"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-13757",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-13757 in p11-kit-tools@0.23.22-150500.8.3.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/p11-kit-tools@0.23.22-150500.8.3.1?arch=aarch64&distro=sles-15.7&upstream=p11-kit-0.23.22-150500.8.3.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "f6dd7ef3ab5ebcd35de9f65c9762bfc790c1f191c1c49f86dd104b2dce582915"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-13757",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-13757 in p11-kit@0.23.22-150500.8.3.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/p11-kit@0.23.22-150500.8.3.1?arch=aarch64&distro=sles-15.7&upstream=p11-kit-0.23.22-150500.8.3.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b8145c57e7d6a7a06d48fa669a2043edc7370dfb9cdd8717a16a82fcdf9192e3"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-18924",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-18924 in curl@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/curl@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "0ff81d761c94580c2f0119d9e99b17d2df805bb0725335a15f709a17bcbfe9ce"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-18924",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-18924 in libcurl4@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libcurl4@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3d983467ac136d5c49634b9121b9141be077ad0a7cb93a6881133a82076d1fa2"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-19931",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-19931 in curl@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/curl@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "bfe82cf8e41faa5db37e3bd126ef8e643ea336d2488549a2c808b5bdbe83dc5a"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-19931",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-19931 in libcurl4@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libcurl4@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "501ef57903a0d94a1f10e19a4f1b1f413203da22d58664545e41b3fd795e01cb"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-35189",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-35189 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "500cb9f07f409d6f660fe4590f1c5abc2298d5ba318c7b36c3cc31611d8e61ab"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-35189",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-35189 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "25331d5c7f669eeb2a678ff7fdcaf9fcd3590200f347c77c7d67f611a8b0c4e8"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-35191",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-35191 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "6f3301f0a2a78a3b6a7afc4d57ad7b676268153b0282f34fd0e901a899790820"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-35191",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-35191 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "54c984da04734e80136f8eed4943b79180aaef7cb10b63c29356484ef5cf92b7"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-39113",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-39113 in libsqlite3-0@3.53.2-150000.3.42.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libsqlite3-0@3.53.2-150000.3.42.1?arch=aarch64&distro=sles-15.7&upstream=sqlite3-3.53.2-150000.3.42.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3c6a6a205c789f6ae4531340c1ef02409f21802daeeaa514e78c398aeaac76ec"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-41080",
+          "level": "note",
+          "message": {
+            "text": "CVE-2026-41080 in libexpat1@2.7.1-150700.3.12.1 [LOW]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b080b76af37906ecb729b86117e00a95fdfe99ce142c1f1d8629cff53c409c3e"
+          },
+          "properties": {
+            "security-severity": "2.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-45186",
+          "level": "note",
+          "message": {
+            "text": "CVE-2026-45186 in libexpat1@2.7.1-150700.3.12.1 [LOW]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "1ecbc8a22519df5d731a0c193b225c7e8edb0721b3eded67c0f36d2be73b4c35"
+          },
+          "properties": {
+            "security-severity": "2.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-47104",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-47104 in libusb-1_0-0@1.0.24-150400.3.6.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libusb-1_0-0@1.0.24-150400.3.6.1?arch=aarch64&distro=sles-15.7&upstream=libusb-1_0-1.0.24-150400.3.6.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "f4f441c6db4f7eab43e864c14bb1daae38ffb530b30aa8dba064a1edad8c6b40"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-50195",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-50195 in github.com/containerd/containerd@v1.7.36 [CRITICAL]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/opt/stackstate-agent/bin/agent/process-agent"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:golang/github.com/containerd/containerd@v1.7.36",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "149226e3d6c9634bdede48a7219c6c20d6453ab6343f7639ebdff95ef0711538"
+          },
+          "properties": {
+            "security-severity": "9.5",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-50219",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-50219 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "4b7d68b5f7d1e71aa650182b0f5ae6d08443cd95007671dbbfcaa73f5d460740"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-50812",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-50812 in libsqlite3-0@3.53.2-150000.3.42.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libsqlite3-0@3.53.2-150000.3.42.1?arch=aarch64&distro=sles-15.7&upstream=sqlite3-3.53.2-150000.3.42.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b282df445fc6f784e2346b152636b0f8c1edc397b3241a8472e94503079d2f4e"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-53489",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-53489 in github.com/containerd/containerd@v1.7.36 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/opt/stackstate-agent/bin/agent/process-agent"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:golang/github.com/containerd/containerd@v1.7.36",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "57c063da5019a7696510d4652148169d0c5f9e162f13047ace09d5631e28b611"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-53492",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-53492 in github.com/containerd/containerd@v1.7.36 [CRITICAL]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/opt/stackstate-agent/bin/agent/process-agent"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:golang/github.com/containerd/containerd@v1.7.36",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "c292178392a07faaaaf94aac6ad7b25988392e9345a078ee06d5e0abcc313de3"
+          },
+          "properties": {
+            "security-severity": "9.5",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-53910",
+          "level": "note",
+          "message": {
+            "text": "CVE-2026-53910 in diffutils@3.6-4.3.1 [LOW]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/diffutils@3.6-4.3.1?arch=aarch64&distro=sles-15.7&upstream=diffutils-3.6-4.3.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "f54b71644aa74affb0a7655d7ea43133f9a55f37d116f69c042fed06b637c84a"
+          },
+          "properties": {
+            "security-severity": "2.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-54872",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-54872 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "79fabc25512f07568d18d85110b6ff914663705f5512a884a6402957bf0f15d7"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-54872",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-54872 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "78970e6c895ed681d58faba04d20f05764adac7405e1b0493ceb3490d6392950"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-54875",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-54875 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "5ee3d011ada3b3060f5c19786dd1d493ffd3ec6f5e594dd6482b7310c262c73c"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-54875",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-54875 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "c21e828bc2cf75686405ed6e7324b5dce9005caef0e51ff042bd40113953bbe6"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56131",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56131 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d56370d43e2ad639aa20f9d10351906a6992a2c557a36df9e1cb782b9cd94be8"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56132",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56132 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d624a1b6c7fba20abaad2f2fd5b8a6746b23b7c362824e1cfc22d9b56d64dfb7"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56403",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56403 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "9c91229283931728c1652dfaf96db0c370bbe2be66aac8d279cd2c9d56f88458"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56404",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56404 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "53c84832ff5f5bec11f21191c3b011920b26bf068d191f0e7c6d813ef5040dda"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56405",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56405 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "4a7bceb416f17b9d80be22d5e3ad96daf07f862e5e58c4df1e61969edd65eb0f"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56406",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56406 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "c8b5f0d184425134f16a6210503f8a5e802b3426373fe73b77d7851973c36d4b"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56407",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56407 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d793e64e489550923436da5f5a710f85f17d1587e9acbd738ccd85ee807d055f"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56408",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56408 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "7ba1a34371e3a10c6098add51218f313cb2a03e32a8653c8c23034b41d4bef94"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56409",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56409 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "5987f6013006f7e8d38a145b5c6a9a0aa458a69d271052919d2a4ca4f1d88bb9"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56410",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56410 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "60dfe363591251a81937416ac4316cdde3287d0a00f6fb05c5fe024e6064f122"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56411",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56411 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "9c1ec4e95a36e31add53e0864153157007a1f0b792fb24d607395d516962c39e"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-56412",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-56412 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "98a4e6d2ef5c0d128d83a19ba2f8149993e725b8d9cf7f4381dfacf86da1cf69"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-66046",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-66046 in libexpat1@2.7.1-150700.3.12.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "1ae95e8ebd11d3d7bc8677b428999404618d6850fcde0b0b2d5b1274850afb5b"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-72522",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-72522 in libexpat1@2.7.1-150700.3.12.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "a90e2821e76a4cf76d65cb0d287f77bdd064549abacc45ffed6b3589237568dc"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-72897",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-72897 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "3d8fb24e8d7d57d73bef13dbf473eaed3a1ca40a5aa0284c915e146c7e3d58d4"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-72897",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-72897 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "62e52a6b87545594af6406542deeda13431c9b888751802d64c3c90270d8df0c"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-75804",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-75804 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "0f140a3f5a8cd0a3bbce0d2baa43e5cdacf3232faf434698d2e8c98271d4709e"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-75804",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-75804 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "2ff2614598de19801070744bc13e3a56120f9ea59dea104e7ded3459d884100a"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-75805",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-75805 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "760aabd02584f581b17904103a35c4e106cced5b4570f783893c8ce5846066a4"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-75805",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-75805 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "86dd9b3f64a7e9a3ca26b0157218af0a5bba6b0ce6ae94bd6e9d8c5f5bb4276c"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-75806",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-75806 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "62847dd916287968d49865c3df4ffeddc2e22993b1051dca5eaa779505792d69"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-75806",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-75806 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "27e4b1b864103f09aac083b84a53add07a6acb20b4ebbb901d040db07c523563"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76641",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-76641 in libexpat1@2.7.1-150700.3.12.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "9d6a464f791a6993dccc8c78499a3a50487566c57f69f46e427e99f248bcfaed"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76642",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-76642 in libblkid1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libblkid1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "610bf292e4d7d4dac67fe42dc9224db9cb8341e8daa4ae8347d00a50c11f145c"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76642",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-76642 in libfdisk1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libfdisk1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "a08d6d135cc0308eb7d0c80f8c82127134a95fec9347c319b0a47b51107c1c87"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76642",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-76642 in libmount1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libmount1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "d31d127220b51e0ac02faec077a0c06ece606f5a27c2f1538f00edcd53265ccf"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76642",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-76642 in libsmartcols1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libsmartcols1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b653d2ab87568f09f0bbea3e2a0dcedc7ffd48d40a52aa5864f80b8289e92727"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76642",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-76642 in libuuid1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libuuid1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "cd6dcad23726e1ae2459d9903f5f9c4ebfcbb5fa729751c29c06fe719626d902"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76642",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-76642 in util-linux@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/util-linux@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "90cba0f7c270b3528d69c629b0750f807f83e70f7e48fbd3b050d0169e2723c7"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76781",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-76781 in libxml2-2@2.12.10-150700.4.14.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libxml2-2@2.12.10-150700.4.14.1?arch=aarch64&distro=sles-15.7&upstream=libxml2-2.12.10-150700.4.14.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "ac036f5897e9d5d6bd87622d58ea14845b5160e8445400b909a3b43803ef8f44"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76956",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-76956 in libexpat1@2.7.1-150700.3.12.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "044eae05b64d8cb93796c68ef057bbf58150dc28d4056eda08849c0f974da96c"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-76957",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-76957 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "de74f27c0fa72da80219369beca1672f354848ffbf957204aecd5e834b872dc8"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-77696",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-77696 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "49c95389e5e75e6c4f82e2a981b44845b5dbb83f0f8f1f88464fbe9e2a2b3409"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-77696",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-77696 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "fa478fc221f087181fbe176cde1ee31ac4416c41f94ab4ca64d8a5f795b245cd"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78408",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-78408 in libblkid1@2.40.4-150700.4.18.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libblkid1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "ad8437b9bf739efb00c6fb4066672afda14c101a33c4664337152ddc057764ac"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78408",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-78408 in libfdisk1@2.40.4-150700.4.18.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libfdisk1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "a679a6f16b55b41cd22971abcb1fcd02e182c66acc089611fc42a3da8e34e6b1"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78408",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-78408 in libmount1@2.40.4-150700.4.18.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libmount1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "99aefa77a1c99e9f3dc60835b5c3ecfe7e59de4ec858307fc73ef1ca14e7685a"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78408",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-78408 in libsmartcols1@2.40.4-150700.4.18.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libsmartcols1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "4f57d26dd4b743f0e36f059e39dabbb7e29afaab05b718dcec8ef2279444b242"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78408",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-78408 in libuuid1@2.40.4-150700.4.18.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libuuid1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "22fa934e44eb0c41eee70b1b5efcd8ab91822896be89b2d35f35e0338bb246bd"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78408",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-78408 in util-linux@2.40.4-150700.4.18.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/util-linux@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "bebeaddd0b7f497e9a56ea77b64530f71ed68e34cc9fe3f5e8111f4f1f934f6f"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78410",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-78410 in libblkid1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libblkid1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "c302c8d573cb579fd63d6a8b3ccf18663b53d4cc043c5767acf0f1b392837be0"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78410",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-78410 in libfdisk1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libfdisk1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "dab7132ed0f8b6b65e9872ec886d2de9f7e9b8c13a1b766c6d457af05b4a2cf5"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78410",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-78410 in libmount1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libmount1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "8dbbe8c347544a834d74d3e4caf0a48188c42a5e335f7ee2565edd856a6066e7"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78410",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-78410 in libsmartcols1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libsmartcols1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "0418bb336a08c089da2313c9907cc7760e64c79d4fbea2cf31f0746d1d4d51de"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78410",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-78410 in libuuid1@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libuuid1@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "2d98588b62910d8f57c2ea88c15c6947a485ab4e622c20baf0dcfcf157433ac8"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-78410",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-78410 in util-linux@2.40.4-150700.4.18.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/util-linux@2.40.4-150700.4.18.1?arch=aarch64&distro=sles-15.7&upstream=util-linux-2.40.4-150700.4.18.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b10310d584a1bb43e797e151a269eec12eacb11856d9ca6d008d53f62e2d1dae"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-80255",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-80255 in curl@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/curl@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "93384563364afb576b7126b649934e8f15368f2b075691c37b1cd09747844b44"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-80255",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-80255 in libcurl4@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libcurl4@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "a172bdf95e286e3453c1ce3c99899368f4e90d0da830d4fedc15a82648695f7d"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-82209",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-82209 in curl@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/curl@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "8f8c1b5164c1b0b40c2e0884b851d04b5a902f0169e390c549c07d739636d13a"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-82209",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-82209 in libcurl4@8.14.1-150700.7.26.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libcurl4@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b78d11613b197d97ee84932ae6649a78b43eeb09d18fda77a42d41f5e74182f4"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-84782",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-84782 in libopenssl3@3.5.0-150700.5.50.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "c65ccb081eb6269b9a74e7e7c83394024ca31ba208d9342741b5587f2a03917b"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-84782",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-84782 in openssl-3@3.5.0-150700.5.50.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b09b8ceb61363ad9e3992b8dbb22aa1ab919c1da9d5544f90123f93b0dcec6e5"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-84784",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-84784 in libopenssl3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "9560e648a350982332d27699ac8e55fda1eecc1de6aa644351bddfdf015a21d6"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-84784",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-84784 in openssl-3@3.5.0-150700.5.50.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7&upstream=openssl-3-3.5.0-150700.5.50.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "2336cb7daf5a30b0892b6b109cbc35fa0ff4eca2980987a95483302a8493329b"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-86137",
+          "level": "note",
+          "message": {
+            "text": "CVE-2026-86137 in libxml2-2@2.12.10-150700.4.14.1 [LOW]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libxml2-2@2.12.10-150700.4.14.1?arch=aarch64&distro=sles-15.7&upstream=libxml2-2.12.10-150700.4.14.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b2b5dad823647818690078b7f408256b2d4b5b80452bff8c095b7d5da83595c0"
+          },
+          "properties": {
+            "security-severity": "2.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-86138",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-86138 in libxml2-2@2.12.10-150700.4.14.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libxml2-2@2.12.10-150700.4.14.1?arch=aarch64&distro=sles-15.7&upstream=libxml2-2.12.10-150700.4.14.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "1100c5fd0bf429e942f9bd25dfaf60ee8a2db0432154de182e230ec60720b519"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-86140",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-86140 in libxml2-2@2.12.10-150700.4.14.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libxml2-2@2.12.10-150700.4.14.1?arch=aarch64&distro=sles-15.7&upstream=libxml2-2.12.10-150700.4.14.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "def725e505bf5385a448353185ae637681cfeab0bd4a0184c33f6ca50ee3e22e"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-86142",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-86142 in libxml2-2@2.12.10-150700.4.14.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libxml2-2@2.12.10-150700.4.14.1?arch=aarch64&distro=sles-15.7&upstream=libxml2-2.12.10-150700.4.14.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "40f1fc1aee4e2a38db10e41c8f4f1529fd9b33d8b47907835c23a9b27f769dc7"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-8674",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-8674 in glibc@2.38-150600.14.58.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/glibc@2.38-150600.14.58.1?arch=aarch64&distro=sles-15.7&upstream=glibc-2.38-150600.14.58.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "a1756b1af5edc171a92e79501fb96117f1904827e17e56fb588210de49847aed"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-86805",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-86805 in glibc@2.38-150600.14.58.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/glibc@2.38-150600.14.58.1?arch=aarch64&distro=sles-15.7&upstream=glibc-2.38-150600.14.58.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "8ef5599442f67f3ad4c333f2fe522535c9db847431093669ae00731d65ad99a4"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-89092",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-89092 in glibc@2.38-150600.14.58.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/glibc@2.38-150600.14.58.1?arch=aarch64&distro=sles-15.7&upstream=glibc-2.38-150600.14.58.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "0b991b3b347f464c7e82c03735dd2153b8fc11b35e51005b36fad4418fef8631"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-8932",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-8932 in curl@8.14.1-150700.7.26.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/curl@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "42a1d9c8148544f67eb485a8edc7b1487838a1accab7dc16c31d0a5f236c2323"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-8932",
+          "level": "error",
+          "message": {
+            "text": "CVE-2026-8932 in libcurl4@8.14.1-150700.7.26.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libcurl4@8.14.1-150700.7.26.1?arch=aarch64&distro=sles-15.7&upstream=curl-8.14.1-150700.7.26.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "fb2e57e246419813507c16d4b3d07a8fde467dc64badcf38402ef47cc980bcef"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-93990",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-93990 in libexpat1@2.7.1-150700.3.12.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/libexpat1@2.7.1-150700.3.12.1?arch=aarch64&distro=sles-15.7&upstream=expat-2.7.1-150700.3.12.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "b43e86594f4e748e2af23d4ceab2c34ab8660324e7069d59e1f225a55fee4294"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-95818",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-95818 in glibc@2.38-150600.14.58.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/glibc@2.38-150600.14.58.1?arch=aarch64&distro=sles-15.7&upstream=glibc-2.38-150600.14.58.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "e8184244f530db10a1d03a2c1953a1aeb136da6c65136bba1638a71164e03150"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "CVE-2026-97399",
+          "level": "warning",
+          "message": {
+            "text": "CVE-2026-97399 in glibc@2.38-150600.14.58.1 [MEDIUM]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/lib/sysimage/rpm/Packages.db"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/sles/glibc@2.38-150600.14.58.1?arch=aarch64&distro=sles-15.7&upstream=glibc-2.38-150600.14.58.1.src.rpm",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "fd406044d18d61695e35c88303268bcc5bdc65b99923a23b3904d671380da38e"
+          },
+          "properties": {
+            "security-severity": "5.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype"
+            ]
+          }
+        },
+        {
+          "ruleId": "GO-2026-5932",
+          "level": "note",
+          "message": {
+            "text": "GO-2026-5932 in golang.org/x/crypto@v0.56.0 [UNKNOWN] — exception exceptions/GO-2026-5932.yaml expired 2026-09-10"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/opt/stackstate-agent/bin/agent/process-agent"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:golang/golang.org/x/crypto@v0.56.0",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "5fe7f8e2269cc26b99c8125e3c8fd87fd8c27112dcc11193a80a46988a344e26"
+          },
+          "properties": {
+            "security-severity": "0.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "grype",
+              "trivy"
+            ],
+            "image-pipeline.status": "expired"
+          }
+        },
+        {
+          "ruleId": "SUSE-SU-2026:4414-1",
+          "level": "error",
+          "message": {
+            "text": "SUSE-SU-2026:4414-1 in libopenssl3@3.5.0-150700.5.50.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/suse/libopenssl3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "7942144bdbd943561cdeacffa3279692cab18e87ce5270691def09388458c2ce"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "trivy"
+            ]
+          }
+        },
+        {
+          "ruleId": "SUSE-SU-2026:4414-1",
+          "level": "error",
+          "message": {
+            "text": "SUSE-SU-2026:4414-1 in openssl-3@3.5.0-150700.5.50.1 [HIGH]"
+          },
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "name": "pkg:rpm/suse/openssl-3@3.5.0-150700.5.50.1?arch=aarch64&distro=sles-15.7",
+                  "kind": "package"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "ffaf0255a6fde2d1af542a6666d927df646f70e02680bfe0efcbd893677269fe"
+          },
+          "properties": {
+            "security-severity": "8.0",
+            "tags": [
+              "security",
+              "vulnerability"
+            ],
+            "image-pipeline.scanners": [
+              "trivy"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

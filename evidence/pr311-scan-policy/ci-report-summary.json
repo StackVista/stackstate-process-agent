@@ -1,0 +1,32 @@
+{
+  "amd64": {
+    "Trivy": {
+      "HIGH": 2,
+      "UNKNOWN": 1
+    },
+    "Grype": {
+      "High": 26,
+      "Medium": 68,
+      "Critical": 2,
+      "Low": 4,
+      "Unknown": 1
+    },
+    "secrets": 0,
+    "SARIF_results": 103
+  },
+  "arm64": {
+    "Trivy": {
+      "HIGH": 2,
+      "UNKNOWN": 1
+    },
+    "Grype": {
+      "High": 26,
+      "Medium": 68,
+      "Critical": 2,
+      "Low": 4,
+      "Unknown": 1
+    },
+    "secrets": 0,
+    "SARIF_results": 103
+  }
+}

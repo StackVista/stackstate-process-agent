@@ -187,7 +187,6 @@ jobs:
           TRIVY_SEVERITY: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
         with:
           image: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
-          # CVEs are reporting-only; secrets and scanner/evaluator errors still fail.
           mode: inform
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
           with-grype: true

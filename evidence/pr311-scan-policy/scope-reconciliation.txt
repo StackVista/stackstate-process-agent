@@ -1,0 +1,5 @@
+Head: 676402d9557d1d41c96ce6c96e577859f5b41e9c
+Base: 00f55972777a43e1281461cb5696e9ec09bdef34
+PASS: entire repository tree identical to current default branch
+PASS: all signed prior checkpoints remain ancestors
+PASS: no validator/helper/test additions remain

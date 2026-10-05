@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "loaded_yaml_identical": true,
+  "run_blocks_byte_identical": 8,
+  "only_change": "specified explanatory YAML comment removed",
+  "run_block_sha256": [
+    "a2f6b660fc0aaddb269823475a59328e05bf2810d4b1cec1b2ca8ad38d650ada",
+    "565b76ad1aab551e2ddd3faf89a0608f30e31933c166b1a48f15c79f4e849b11",
+    "acb2d2dd1ce7904ea74e11c5f84b88062d7caae5f94a7051718553f4f2bc2f8c",
+    "a73086d2729981869256fd220236ff11f70d05a91b08afc7acc7b785f5d366fc",
+    "86f9aecaa077f7c1b8988cf96593bc488e5dbda2d58248521a9f2aef172ee0bb",
+    "acb2d2dd1ce7904ea74e11c5f84b88062d7caae5f94a7051718553f4f2bc2f8c",
+    "acb2d2dd1ce7904ea74e11c5f84b88062d7caae5f94a7051718553f4f2bc2f8c",
+    "832cc5766a399d5e0f468caa1025de07c8428a302b597143c16bf5ab85580f26"
+  ]
+}

@@ -1,3 +1,17 @@
+# Scope reconciliation — October 5 operator direction
+
+PR #311 is DRAFT at signed head `676402d9557d1d41c96ce6c96e577859f5b41e9c`. No policy change is needed: default branch `00f55972777a43e1281461cb5696e9ec09bdef34` already uses `mode: inform` for both scanners. The entire final repository tree equals the default branch; GitHub reports zero changed files. Signed checkpoints `4bc4594d` and `cdb51224` remain ancestors; a signed forward commit removed the policy PR's report hardening. No force push, closure, merge, tag, release or deployment occurred.
+
+Normal exact-head CI: https://github.com/StackVista/stackstate-process-agent/actions/runs/37288761647 (see live run for current state). Actionlint passed; zizmor found zero issues. Prior successful master CI https://github.com/StackVista/stackstate-process-agent/actions/runs/36998783077 is reusable for the identical source tree. `scope-reconciliation.txt` records tree equality/history checks. `equivalence.json` separately proves the intermediate comment removal preserved loaded YAML and all eight raw run blocks.
+
+The operator superseded the caller-validator correction request. The uncommitted hardening attempt was withdrawn; no helpers, validator steps, tests or scaffolding remain in the product diff. Earlier validation evidence below is historical and does not describe the final product change.
+
+Separate hardening evidence: [reviewer 48ff4fd2](https://omnigent.tooling.stackstate.io/c/48ff4fd2480e50c3b600cc77ed043a5e) reproduced acceptance of malformed `Secrets: {}`, concatenated secret-report JSON documents and Grype `{"matches":[]}` without its scanner envelope through the pinned action and prior caller guard. Kafka #13 at `6fc19f8df4c7a7afe8818bb168d20bc687da56cf` supplies accepted behavior if independently authorized hardening resumes. These defects are outside this mode-switch PR; this withdrawal does not claim they are fixed. Clean Trivy reports can legitimately omit `Results`.
+
+Policy intake https://github.com/StackVista/stackstate-process-agent/issues/310 remains open in Project 4 pending operator reconciliation. Closed CVE https://github.com/StackVista/cve-reporter/issues/69 remains closed. Fresh focused review should assess the zero-diff draft and retained policy, not the withdrawn validator proposal.
+
+---
+
 # Process-agent reporting-only policy validation
 
 Product PR: https://github.com/StackVista/stackstate-process-agent/pull/311

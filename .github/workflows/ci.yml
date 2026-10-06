@@ -182,7 +182,7 @@ jobs:
           grep -F '/probe.sh' <<< "${healthcheck}"
 
       - name: Scan image with VEX-aware Trivy and Grype
-        uses: StackVista/image-pipeline/.github/actions/scan-image@6284a6fc006a7cc46a7f00d02c50d5f21b117b63
+        uses: StackVista/image-pipeline/.github/actions/scan-image@ec325c73909d0d00420121bbde6754b964e80ac3 # main
         with:
           image: ${{ env.IMAGE }}:${{ steps.image.outputs.tag }}-${{ matrix.arch }}
           mode: inform

@@ -17,6 +17,27 @@ env:
   IMAGE: quay.io/stackstate/stackstate-k8s-process-agent
 
 jobs:
+  workflow-security-lint:
+    name: Workflow security lint (Zizmor)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Audit workflows, composite actions, and Dependabot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # renovate: datasource=pypi depName=zizmor
+          ZIZMOR_VERSION: 1.31.1
+        run: |
+          set -euo pipefail
+          pipx run --spec "zizmor==${ZIZMOR_VERSION}" zizmor --collect=workflows,actions,dependabot --strict-collection .
+
   build-and-test:
     name: Prebuild, generated-code check, build, and unit tests (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
@@ -203,7 +224,9 @@ jobs:
 
   publish-image:
     name: Publish and sign commit image (${{ matrix.arch }})
-    needs: image-smoke-and-scan
+    needs:
+      - workflow-security-lint
+      - image-smoke-and-scan
     if: >-
       (github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository) ||
@@ -314,6 +337,7 @@ jobs:
   ci-success:
     name: Process-agent CI
     needs:
+      - workflow-security-lint
       - build-and-test
       - image-smoke-and-scan
       - publish-image
@@ -346,7 +370,7 @@ jobs:
       failure() &&
       github.ref == 'refs/heads/master' &&
       github.event_name == 'push'
-    uses: ./.github/workflows/cerberus-notify.yml
+    uses: $/.github/workflows/cerberus-notify.yml
     with:
       suite: build
     secrets:

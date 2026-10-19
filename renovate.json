@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>StackVista/renovate-config",
+    "github>StackVista/renovate-config:go",
+    "github>StackVista/renovate-config:docker",
+    "github>StackVista/renovate-config:automerge"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/ci\\.yml$/"],
+      "matchStrings": [
+        "(?<depName>(?:quay\\.io/stackstate/datadog_build_(?:system-probe|deb)_(?:x64|arm64)|registry\\.suse\\.com/bci/bci-micro)):(?<currentValue>[^\\s@]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

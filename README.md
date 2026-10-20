@@ -7,6 +7,8 @@
 
 ## Build the process agent
 
+Renovate excludes Datadog dependencies, including their forks and build images, even for security fixes. Updatecli owns their controlled updates.
+
 If you want to use a custom version of `datadog-agent-upstream-for-process-agent` use the following script before invoking the build command.
 
 ```bash

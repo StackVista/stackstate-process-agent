@@ -3,7 +3,7 @@ version: '2.4'
 
 services:
   zookeeper:
-    image: quay.io/stackstate/zookeeper:3.6.1-focal-20210827-r37
+    image: quay.io/stackstate/zookeeper:3.6.1-focal-20210827-r37@sha256:f24f7fffb48918c27684b5a53eb3feff294c92c35bd606645fb497be3e609522
     ports:
       - 2181:2181
     mem_limit: 1G
@@ -16,7 +16,7 @@ services:
       retries: 3
 
   kafka:
-    image: quay.io/stackstate/kafka:2.8.1-focal-20210827-r90.20220103.1605
+    image: quay.io/stackstate/kafka:2.8.1-focal-20210827-r90.20220103.1605@sha256:a9a2649249bd3959e7edeffe12aea6d100bf4d93b348e1bfa95fb7fab3501489
     user: root
     ports:
       - 9092:9092
@@ -78,7 +78,7 @@ services:
     mem_limit: 1G
 
   simulator:
-    image: "stackstate/simulator:latest"
+    image: "stackstate/simulator:latest@sha256:3b2bc3009b5ecd9b3c8a75a05fb0dfb4133f4e09f1aa1574289a403f6968f854"
     ports:
       - 7078:7078
     entrypoint: record -p 7078 -t tpl.json

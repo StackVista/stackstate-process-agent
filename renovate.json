@@ -1,10 +1,19 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>StackVista/renovate-config",
+    "github>StackVista/renovate-config#f5d8a69a238645b13ddedc25457daced35834d98",
     "github>StackVista/renovate-config:go",
     "github>StackVista/renovate-config:docker",
     "github>StackVista/renovate-config:automerge"
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": [
+        "/(^|[/.])datadog(hq)?([/._-]|$)/i",
+        "github.com/StackVista/sketches-go"
+      ],
+      "enabled": false
+    }
   ],
   "customManagers": [
     {

@@ -9,7 +9,7 @@
   "packageRules": [
     {
       "matchDepNames": [
-        "/(^|[/.])datadog(hq)?([/._-]|$)/i",
+        "/datadog/i",
         "github.com/StackVista/sketches-go"
       ],
       "enabled": false

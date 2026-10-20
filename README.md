@@ -7,7 +7,7 @@
 
 ## Build the process agent
 
-Renovate excludes routine Datadog updates, including their forks and build images. Datadog security fixes open PRs for manual review, without automerge. Updatecli owns their controlled updates.
+Renovate excludes Datadog dependencies, including their forks and build images, even for security fixes. Updatecli owns their controlled updates.
 
 If you want to use a custom version of `datadog-agent-upstream-for-process-agent` use the following script before invoking the build command.
 

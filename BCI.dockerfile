@@ -26,7 +26,9 @@ RUN zypper -n --gpg-auto-import-keys --installroot /chroot refresh && \
     zypper -n --gpg-auto-import-keys --installroot /chroot update && \
     zypper -n --installroot /chroot install util-linux libudev1 ca-certificates curl wget xz iproute2 conntrack-tools \
       'libacl1>=2.4.0-150000.4.6.1' 'libattr1>=2.6.0-150000.4.3.1' \
-      'libpcre2-8-0>=10.42-150600.3.3.1' 'glibc>=2.38-150600.14.58.1' \
+      'libpcre2-8-0>=10.42-150600.3.3.1' 'glibc>=2.38-150600.14.61.1' \
+      'libexpat1>=2.8.5-150700.3.15.1' \
+      'libopenssl3>=3.5.0-150700.5.53.2' 'openssl-3>=3.5.0-150700.5.53.2' \
       'glib2-tools>=2.78.6-150600.4.41.1' 'libgio-2_0-0>=2.78.6-150600.4.41.1' \
       'libglib-2_0-0>=2.78.6-150600.4.41.1' 'libgmodule-2_0-0>=2.78.6-150600.4.41.1' \
       'libgobject-2_0-0>=2.78.6-150600.4.41.1' && \

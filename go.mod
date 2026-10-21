@@ -16,23 +16,23 @@ replace github.com/google/gopacket v1.1.19 => github.com/DataDog/gopacket v0.0.0
 replace (
 	github.com/benesch/cgosymbolizer => github.com/benesch/cgosymbolizer v0.0.0-20190515212042-bec6fe6e597b
 	// next line until pr https://github.com/ianlancetaylor/cgosymbolizer/pull/8 is merged
-	github.com/ianlancetaylor/cgosymbolizer => github.com/ianlancetaylor/cgosymbolizer v0.0.0-20170921033129-f5072df9c550
+	github.com/ianlancetaylor/cgosymbolizer => github.com/ianlancetaylor/cgosymbolizer v0.0.0-20260903193033-d2f22a62e960
 )
 
 replace k8s.io/cri-api => k8s.io/cri-api v0.25.5
 
 // Internal deps fix copied from datadog-agent-upstream (should be updated on update)
 replace (
-	github.com/coreos/go-systemd => github.com/coreos/go-systemd v0.0.0-20180202092358-40e2722dffea
+	github.com/coreos/go-systemd => github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/spf13/cast => github.com/DataDog/cast v1.8.0
 	github.com/ugorji/go => github.com/ugorji/go v1.1.7
 )
 
 // Internal deps fix version
 replace (
-	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
+	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 	github.com/DataDog/sketches-go => github.com/StackVista/sketches-go v1.2.0-pre
-	github.com/cihub/seelog => github.com/cihub/seelog v0.0.0-20151216151435-d2c6e5aa9fbf // v2.6
+	github.com/cihub/seelog => github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // v2.6
 	github.com/docker/distribution => github.com/docker/distribution v2.7.1-0.20190104202606-0ac367fd6bee+incompatible
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 	github.com/iovisor/gobpf => github.com/StackVista/gobpf v0.1.2
@@ -45,7 +45,7 @@ require (
 	github.com/DataDog/sketches-go v1.4.6
 	github.com/DataDog/zstd v1.5.6
 	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20250224145616-f9b4a1fa7d2b
+	github.com/StackVista/stackstate-receiver-go-client v0.0.0-20261021065957-0eec368dd97e
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gogo/protobuf v1.3.2

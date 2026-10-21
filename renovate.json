@@ -1,10 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>StackVista/renovate-config#005e342f15c5481932542b5552b23cdd21e624a9",
-    "github>StackVista/renovate-config:go#005e342f15c5481932542b5552b23cdd21e624a9",
-    "github>StackVista/renovate-config:docker#005e342f15c5481932542b5552b23cdd21e624a9",
-    "github>StackVista/renovate-config:automerge#005e342f15c5481932542b5552b23cdd21e624a9"
+    "github>StackVista/renovate-config#v1.1.0",
+    "github>StackVista/renovate-config:go#v1.1.0",
+    "github>StackVista/renovate-config:docker#v1.1.0",
+    "github>StackVista/renovate-config:automerge#v1.1.0"
   ],
   "packageRules": [
     {
@@ -16,7 +16,7 @@
     },
     {
       "matchManagers": [
-        "custom.regex",
+        "renovate-config",
         "github-actions"
       ],
       "matchPackageNames": [
@@ -37,23 +37,6 @@
         "(?<depName>(?:quay\\.io/stackstate/datadog_build_(?:system-probe|deb)_(?:x64|arm64)|registry\\.suse\\.com/bci/bci-micro)):(?<currentValue>[^\\s@]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
       "datasourceTemplate": "docker"
-    },
-    {
-      "customType": "regex",
-      "description": "Track the release behind shared Renovate preset SHA pins.",
-      "managerFilePatterns": [
-        "/(^|/)renovate\\.json$/"
-      ],
-      "matchStringsStrategy": "recursive",
-      "matchStrings": [
-        "^[\\s\\S]*\"description\"\\s*:\\s*\"Renovate release (?<currentValue>v[0-9]+\\.[0-9]+\\.[0-9]+)\"[\\s\\S]*$",
-        "^[\\s\\S]*?(?:local|github)>StackVista/renovate-config(?:(?::|//)[^\"#]+)?#(?<currentDigest>[a-f0-9]{40})[\\s\\S]*$"
-      ],
-      "depNameTemplate": "StackVista/renovate-config",
-      "datasourceTemplate": "github-tags",
-      "versioningTemplate": "semver",
-      "autoReplaceStringTemplate": "{{{replace '((?:local|github)>StackVista/renovate-config(?:(?::|//)[^\"#]+)?#)[a-f0-9]{40}' (replace 'SHA' newDigest '$1SHA') (replace '(\"description\"\\s*:\\s*\"Renovate release )v[0-9]+\\.[0-9]+\\.[0-9]+' (replace 'VERSION' newValue '$1VERSION') replaceString)}}}"
     }
-  ],
-  "description": "Renovate release v1.0.0"
+  ]
 }

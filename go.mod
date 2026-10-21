@@ -165,7 +165,7 @@ require (
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.13.0 // indirect
 	k8s.io/client-go v0.35.3
 	k8s.io/kube-openapi v0.0.0-20260330154417-16be699c7b31 // indirect
-	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
+	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.23.3 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )

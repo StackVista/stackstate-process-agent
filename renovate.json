@@ -13,6 +13,20 @@
         "github.com/StackVista/sketches-go"
       ],
       "enabled": false
+    },
+    {
+      "matchManagers": [
+        "custom.regex",
+        "github-actions"
+      ],
+      "matchPackageNames": [
+        "StackVista/renovate-config"
+      ],
+      "groupName": "Renovate configuration",
+      "groupSlug": "renovate-config",
+      "separateMajorMinor": false,
+      "separateMinorPatch": false,
+      "automerge": false
     }
   ],
   "customManagers": [
@@ -23,6 +37,23 @@
         "(?<depName>(?:quay\\.io/stackstate/datadog_build_(?:system-probe|deb)_(?:x64|arm64)|registry\\.suse\\.com/bci/bci-micro)):(?<currentValue>[^\\s@]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
       "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Track the release behind shared Renovate preset SHA pins.",
+      "managerFilePatterns": [
+        "/(^|/)renovate\\.json$/"
+      ],
+      "matchStringsStrategy": "recursive",
+      "matchStrings": [
+        "^[\\s\\S]*\"description\"\\s*:\\s*\"Renovate release (?<currentValue>v[0-9]+\\.[0-9]+\\.[0-9]+)\"[\\s\\S]*$",
+        "^[\\s\\S]*?(?:local|github)>StackVista/renovate-config(?:(?::|//)[^\"#]+)?#(?<currentDigest>[a-f0-9]{40})[\\s\\S]*$"
+      ],
+      "depNameTemplate": "StackVista/renovate-config",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver",
+      "autoReplaceStringTemplate": "{{{replace '((?:local|github)>StackVista/renovate-config(?:(?::|//)[^\"#]+)?#)[a-f0-9]{40}' (replace 'SHA' newDigest '$1SHA') (replace '(\"description\"\\s*:\\s*\"Renovate release )v[0-9]+\\.[0-9]+\\.[0-9]+' (replace 'VERSION' newValue '$1VERSION') replaceString)}}}"
     }
-  ]
+  ],
+  "description": "Renovate release v1.0.0"
 }

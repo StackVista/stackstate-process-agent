@@ -1,11 +1,11 @@
-FROM registry.suse.com/bci/bci-micro:15.7@sha256:62a5e3d2574139c4334217e2f342960e3c03ac8b8c7a956504829e4cd79d9e97 AS final
+FROM registry.suse.com/bci/bci-micro:15.7@sha256:f1427da6f40791aa5a9f73bb339674970ea93a2b158adc81bc99bcd1b7899a74 AS final
 ARG LONG_ARCH="x86_64"
 ARG SHORT_ARCH="amd64"
 ARG EBPF_SUBFOLDER="x86_64"
 RUN : # No-op command to create an explicit layer - this fixes a weird buildkit/buildx bug on macos arm
 
 # Temporary build stage image
-FROM registry.suse.com/bci/bci-base:15.7@sha256:b9d19a145a6a7832291fcaf354c61b9d229e38dc4b47ea90e885d9dc02079beb AS chroot-builder
+FROM registry.suse.com/bci/bci-base:15.7@sha256:9b8660b8c83ddb0154fa62fac5681484e6cde1e4ce507704e7f4b232e2b1f108 AS chroot-builder
 # Install system packages using builder image that has zypper
 COPY --from=final / /chroot/
 

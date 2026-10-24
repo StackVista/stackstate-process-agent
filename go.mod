@@ -25,7 +25,7 @@ replace k8s.io/cri-api => k8s.io/cri-api v0.25.5
 replace (
 	github.com/coreos/go-systemd => github.com/coreos/go-systemd v0.0.0-20180202092358-40e2722dffea
 	github.com/spf13/cast => github.com/DataDog/cast v1.8.0
-	github.com/ugorji/go => github.com/ugorji/go v1.1.7
+	github.com/ugorji/go => github.com/ugorji/go v1.2.14
 )
 
 // Internal deps fix version
@@ -34,8 +34,8 @@ replace (
 	github.com/DataDog/sketches-go => github.com/StackVista/sketches-go v1.2.0-pre
 	github.com/cihub/seelog => github.com/cihub/seelog v0.0.0-20151216151435-d2c6e5aa9fbf // v2.6
 	github.com/docker/distribution => github.com/docker/distribution v2.7.1-0.20190104202606-0ac367fd6bee+incompatible
-	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
-	github.com/iovisor/gobpf => github.com/StackVista/gobpf v0.1.2
+	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.7.1
+	github.com/iovisor/gobpf => github.com/StackVista/gobpf v0.2.0
 	github.com/spf13/viper => github.com/DataDog/viper v1.7.1
 )
 
@@ -156,7 +156,7 @@ require (
 	golang.org/x/tools v0.50.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/grpc v1.83.2
+	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -179,7 +179,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/log v0.62.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/shirou/gopsutil/v4 v4.26.9
-	go.opentelemetry.io/obi v0.14.0
+	go.opentelemetry.io/obi v0.15.2
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.47.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.47.0

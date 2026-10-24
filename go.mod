@@ -25,7 +25,7 @@ replace k8s.io/cri-api => k8s.io/cri-api v0.25.5
 replace (
 	github.com/coreos/go-systemd => github.com/coreos/go-systemd v0.0.0-20180202092358-40e2722dffea
 	github.com/spf13/cast => github.com/DataDog/cast v1.8.0
-	github.com/ugorji/go => github.com/ugorji/go v1.1.7
+	github.com/ugorji/go => github.com/ugorji/go v1.1.14
 )
 
 // Internal deps fix version
@@ -34,7 +34,7 @@ replace (
 	github.com/DataDog/sketches-go => github.com/StackVista/sketches-go v1.2.0-pre
 	github.com/cihub/seelog => github.com/cihub/seelog v0.0.0-20151216151435-d2c6e5aa9fbf // v2.6
 	github.com/docker/distribution => github.com/docker/distribution v2.7.1-0.20190104202606-0ac367fd6bee+incompatible
-	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
+	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.2
 	github.com/iovisor/gobpf => github.com/StackVista/gobpf v0.1.2
 	github.com/spf13/viper => github.com/DataDog/viper v1.7.1
 )

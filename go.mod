@@ -19,7 +19,7 @@ replace (
 	github.com/ianlancetaylor/cgosymbolizer => github.com/ianlancetaylor/cgosymbolizer v0.0.0-20170921033129-f5072df9c550
 )
 
-replace k8s.io/cri-api => k8s.io/cri-api v0.25.5
+replace k8s.io/cri-api => k8s.io/cri-api v0.25.16
 
 // Internal deps fix copied from datadog-agent-upstream (should be updated on update)
 replace (
@@ -160,10 +160,10 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.35.4
-	k8s.io/apimachinery v0.35.4
+	k8s.io/api v0.35.9
+	k8s.io/apimachinery v0.35.9
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.13.0 // indirect
-	k8s.io/client-go v0.35.4
+	k8s.io/client-go v0.35.9
 	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098 // indirect
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3
 	sigs.k8s.io/controller-runtime v0.23.3 // indirect
@@ -186,7 +186,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
-	k8s.io/kubelet v0.31.2
+	k8s.io/kubelet v0.31.14
 )
 
 require (
@@ -549,7 +549,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.35.0 // indirect
 	k8s.io/apiserver v0.35.0 // indirect
 	k8s.io/component-base v0.35.0 // indirect
-	k8s.io/cri-api v0.31.2 // indirect
+	k8s.io/cri-api v0.31.14 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-aggregator v0.31.2 // indirect
 	k8s.io/metrics v0.31.2 // indirect

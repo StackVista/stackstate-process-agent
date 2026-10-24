@@ -570,7 +570,7 @@ require (
 
 // cilium/ebpf's tool dependencies select Docker 28, which is incompatible with the DataDog Trivy fork.
 replace (
-	github.com/docker/cli => github.com/docker/cli v27.4.0+incompatible
+	github.com/docker/cli => github.com/docker/cli v29.2.0+incompatible
 	github.com/docker/docker => github.com/docker/docker v27.4.0+incompatible
 	github.com/docker/go-connections v0.7.0 => github.com/docker/go-connections v0.5.0
 )

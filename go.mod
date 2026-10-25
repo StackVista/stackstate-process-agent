@@ -474,6 +474,7 @@ require (
 	github.com/sigstore/rekor v1.5.2 // indirect
 	github.com/sigstore/sigstore v1.10.6 // indirect
 	github.com/sigstore/timestamp-authority v1.2.2 // indirect
+	github.com/sigstore/timestamp-authority/v2 v2.0.3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/skydive-project/go-debouncer v1.0.0 // indirect
 	github.com/spdx/tools-golang v0.5.5 // indirect

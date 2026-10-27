@@ -100,6 +100,10 @@ type NetworkTracerConfig struct {
 	MaxHTTPObservationsBuffered int
 	// Protocols to disable, mostly for debugging
 	DisabledProtocols []string
+	// Packet inspections allowed on a connection with an unrecognised protocol, with and without an observed
+	// handshake. Zero selects the eBPF default.
+	ClassificationHandshakeBudget uint16
+	ClassificationMidStreamBudget uint16
 	// Pod correlation configuration
 	PodCorrelation PodCorrelationConfig
 }
@@ -551,6 +555,14 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if maxObs, err := strconv.Atoi(os.Getenv("STS_HTTP_OBSERVATIONS_BUFFER_SIZE")); err == nil && maxObs != 0 {
 		c.NetworkTracer.MaxHTTPObservationsBuffered = maxObs
+	}
+
+	if budget, err := strconv.ParseUint(os.Getenv("STS_PROTOCOL_CLASSIFICATION_HANDSHAKE_BUDGET"), 10, 16); err == nil {
+		c.NetworkTracer.ClassificationHandshakeBudget = uint16(budget)
+	}
+
+	if budget, err := strconv.ParseUint(os.Getenv("STS_PROTOCOL_CLASSIFICATION_MID_STREAM_BUDGET"), 10, 16); err == nil {
+		c.NetworkTracer.ClassificationMidStreamBudget = uint16(budget)
 	}
 
 	if v := os.Getenv("STS_DISABLED_PROTOCOLS"); v != "" {

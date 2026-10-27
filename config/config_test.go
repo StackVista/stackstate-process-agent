@@ -652,6 +652,17 @@ func TestEnvOverrides(t *testing.T) {
 	assert.Equal(true, slices.Contains(agentConfig.NetworkTracer.DisabledProtocols, HTTPProtocolName))
 }
 
+func TestEnvClassificationBudgets(t *testing.T) {
+	t.Setenv("STS_PROTOCOL_CLASSIFICATION_HANDSHAKE_BUDGET", "32")
+	t.Setenv("STS_PROTOCOL_CLASSIFICATION_MID_STREAM_BUDGET", "70000")
+
+	agentConfig, _ := NewAgentConfig(nil)
+	tracerCfg := TracerConfig(agentConfig)
+
+	assert.Equal(t, uint16(32), tracerCfg.ProtocolClassificationHandshakeBudget)
+	assert.Equal(t, uint16(0), tracerCfg.ProtocolClassificationMidStreamBudget, "out-of-range value keeps the eBPF default")
+}
+
 func TestEnvSiteConfig(t *testing.T) {
 	assert := assert.New(t)
 	for _, tc := range []struct {

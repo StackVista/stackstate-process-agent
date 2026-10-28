@@ -50,9 +50,9 @@ func TracerConfig(cfg *AgentConfig) *tracerConfig.Config {
 		MaxDNSStatsBuffered: 75000,
 		DNSTimeout:          15 * time.Second,
 
-		ProtocolClassificationEnabled:         cfg.NetworkTracer.EnableProtocolInspection,
-		ProtocolClassificationHandshakeBudget: cfg.NetworkTracer.ClassificationHandshakeBudget,
-		ProtocolClassificationMidStreamBudget: cfg.NetworkTracer.ClassificationMidStreamBudget,
+		ProtocolClassificationEnabled:              cfg.NetworkTracer.EnableProtocolInspection,
+		ProtocolClassificationHandshakeMaxSegments: cfg.NetworkTracer.ClassificationHandshakeMaxSegments,
+		ProtocolClassificationMidStreamMaxSegments: cfg.NetworkTracer.ClassificationMidStreamMaxSegments,
 
 		EnableHTTPMonitoring:  cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, HTTPProtocolName),
 		EnableHTTP2Monitoring: cfg.NetworkTracer.EnableProtocolInspection && !slices.Contains(cfg.NetworkTracer.DisabledProtocols, HTTP2ProtocolName),

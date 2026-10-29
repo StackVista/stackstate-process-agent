@@ -2,7 +2,7 @@
 # Actual docker image construction #
 ####################################
 
-FROM ubuntu:jammy-20261020@sha256:6646fdd4b7f66b5be8ba824b8dedb8ae51daf2627af4a2e34127a3def0f1fc0c
+FROM ubuntu:jammy-20261020@sha256:076e7bf82319619f28dd0aa9c02ab34b055ad37100395b4f49a2ffba04fb5e11
 LABEL maintainer="StackState <info@stackstate.com>"
 ARG LONG_ARCH="x86_64"
 ARG SHORT_ARCH="amd64"

@@ -282,7 +282,7 @@ jobs:
           description: Process agent collecting per-process and per-container telemetry for SUSE Observability.
           component: stackstate-k8s-process-agent
           dockerfile: BCI.dockerfile
-          base-name: registry.suse.com/bci/bci-micro:15.7@sha256:f1427da6f40791aa5a9f73bb339674970ea93a2b158adc81bc99bcd1b7899a74
+          base-name: registry.suse.com/bci/bci-micro:16.1@sha256:ba09336dfddefaf2c6587d521481d11591c239a11e2d409530bb008763910ed4
 
       - name: Build, publish, and sign architecture image
         uses: StackVista/image-pipeline/.github/actions/push-single-arch@6284a6fc006a7cc46a7f00d02c50d5f21b117b63

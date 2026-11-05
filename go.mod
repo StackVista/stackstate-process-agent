@@ -54,7 +54,7 @@ require (
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/sys v0.49.0
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -158,7 +158,6 @@ require (
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.35.10
 	k8s.io/apimachinery v0.35.10
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.13.0 // indirect
@@ -185,6 +184,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
+	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/kubelet v0.31.14
 )
 

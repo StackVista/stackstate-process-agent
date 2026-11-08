@@ -177,7 +177,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/util/filesystem v0.62.2
 	github.com/DataDog/datadog-agent/pkg/util/log v0.62.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/shirou/gopsutil/v4 v4.26.9
+	github.com/shirou/gopsutil/v4 v4.26.10
 	go.opentelemetry.io/obi v0.14.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.47.0
@@ -344,7 +344,7 @@ require (
 	github.com/docker/cli v29.4.3+incompatible // indirect
 	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
-	github.com/ebitengine/purego v0.11.1 // indirect
+	github.com/ebitengine/purego v0.11.2 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect

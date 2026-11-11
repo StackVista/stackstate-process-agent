@@ -1,4 +1,4 @@
-FROM registry.suse.com/bci/bci-micro:15.7@sha256:f1427da6f40791aa5a9f73bb339674970ea93a2b158adc81bc99bcd1b7899a74 AS final
+FROM registry.suse.com/bci/bci-micro:16.1@sha256:a4a51144c8731ff7499143e7799aaab329d6cd01af88b5f660935d6852486f83 AS final
 ARG LONG_ARCH="x86_64"
 ARG SHORT_ARCH="amd64"
 ARG EBPF_SUBFOLDER="x86_64"

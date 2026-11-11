@@ -5,7 +5,7 @@ ARG EBPF_SUBFOLDER="x86_64"
 RUN : # No-op command to create an explicit layer - this fixes a weird buildkit/buildx bug on macos arm
 
 # Temporary build stage image
-FROM registry.suse.com/bci/bci-base:15.7@sha256:79595412dc8da75bac1a5f9cc75c7d579523dbeeb6fc594d10b22967819760c3 AS chroot-builder
+FROM registry.suse.com/bci/bci-base:16.1@sha256:8aaf5e2d072fa1e93f79a34b491e32b90c7ba12c5e93a614e63b28e83036e9e9 AS chroot-builder
 # Install system packages using builder image that has zypper
 COPY --from=final / /chroot/
 

@@ -53,7 +53,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/sys v0.49.0
+	golang.org/x/sys v0.50.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -145,14 +145,14 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/xor-gate/ar v0.0.0-20170530204233-5c72ae81e2b7 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
-	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
-	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.51.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
 	google.golang.org/grpc v1.83.2
@@ -539,10 +539,11 @@ require (
 	go4.org/netipx v0.0.0-20220812043211-3cc044ffd68d // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20231121144256-b99613f794b6 // indirect
 	golang.org/x/arch v0.31.0 // indirect
+	golang.org/x/crypto/openpgp v0.1.0-deprecated // indirect
 	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260209203927-2842357ff358 // indirect
 	golang.org/x/lint v0.0.0-20241112194109-818c5a804067 // indirect
-	golang.org/x/term v0.47.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260928230214-8a89bd6388cc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect

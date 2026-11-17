@@ -821,11 +821,11 @@ func TestRateCalculation(t *testing.T) {
 	now := time.Now()
 	prev := now.Add(-1 * time.Second)
 	var empty time.Time
-	assert.True(t, floatEquals(calculateRate(5, 1, prev), 4))
-	assert.True(t, floatEquals(calculateRate(5, 1, prev.Add(-2*time.Second)), float32(1.33333333)))
-	assert.True(t, floatEquals(calculateRate(5, 1, now), 0))
-	assert.True(t, floatEquals(calculateRate(5, 0, prev), 5))
-	assert.True(t, floatEquals(calculateRate(5, 1, empty), 0))
+	assert.True(t, floatEquals(calculateRate(5, 1, prev, now), 4))
+	assert.True(t, floatEquals(calculateRate(5, 1, prev.Add(-2*time.Second), now), float32(1.33333333)))
+	assert.True(t, floatEquals(calculateRate(5, 1, now, now), 0))
+	assert.True(t, floatEquals(calculateRate(5, 0, prev, now), 5))
+	assert.True(t, floatEquals(calculateRate(5, 1, empty, now), 0))
 }
 
 func TestProcessCache(t *testing.T) {

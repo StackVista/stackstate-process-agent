@@ -400,6 +400,8 @@ func (p *ProcessCheck) fmtProcesses(
 	var totalMemUsage uint64
 	totalCPUUsage = 0.0
 	totalMemUsage = 0
+	// Shared so per-process rates use the same elapsed seconds.
+	now := time.Now()
 
 	for _, fp := range procs {
 		// Hide blacklisted args if the Scrubber is enabled
@@ -412,7 +414,7 @@ func (p *ProcessCheck) fmtProcesses(
 			command := formatCommand(fp)
 			memory := formatMemory(fp)
 			cpu := formatCPU(fp, fp.CpuTime, processCache.ProcessMetrics.CPUTime, syst2, syst1)
-			ioStat := formatIO(fp, processCache.ProcessMetrics.IOStat, lastRun)
+			ioStat := formatIO(fp, processCache.ProcessMetrics.IOStat, lastRun, now)
 			proc := &ProcessCommon{
 				Pid:           fp.Pid,
 				Identifier:    createProcessID(fp.Pid, fp.CreateTime),

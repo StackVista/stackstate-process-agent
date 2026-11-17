@@ -200,13 +200,13 @@ func formatCommand(fp *process.FilledProcess) *model.Command {
 	}
 }
 
-func formatIO(fp *process.FilledProcess, lastIO *process.IOCountersStat, before time.Time) *model.IOStat {
+func formatIO(fp *process.FilledProcess, lastIO *process.IOCountersStat, before, now time.Time) *model.IOStat {
 	// This will be nil for Mac
 	if fp.IOStat == nil {
 		return &model.IOStat{}
 	}
 
-	diff := time.Now().Unix() - before.Unix()
+	diff := now.Unix() - before.Unix()
 	if before.IsZero() || diff <= 0 {
 		return nil
 	}
@@ -214,22 +214,22 @@ func formatIO(fp *process.FilledProcess, lastIO *process.IOCountersStat, before 
 	var readRate float32
 	readRate = -1
 	if fp.IOStat.ReadCount != 0 {
-		readRate = calculateRate(fp.IOStat.ReadCount, lastIO.ReadCount, before)
+		readRate = calculateRate(fp.IOStat.ReadCount, lastIO.ReadCount, before, now)
 	}
 	var writeRate float32
 	writeRate = -1
 	if fp.IOStat.WriteCount != 0 {
-		writeRate = calculateRate(fp.IOStat.WriteCount, lastIO.WriteCount, before)
+		writeRate = calculateRate(fp.IOStat.WriteCount, lastIO.WriteCount, before, now)
 	}
 	var readBytesRate float32
 	readBytesRate = -1
 	if fp.IOStat.ReadBytes != 0 {
-		readBytesRate = calculateRate(fp.IOStat.ReadBytes, lastIO.ReadBytes, before)
+		readBytesRate = calculateRate(fp.IOStat.ReadBytes, lastIO.ReadBytes, before, now)
 	}
 	var writeBytesRate float32
 	writeBytesRate = -1
 	if fp.IOStat.WriteBytes != 0 {
-		writeBytesRate = calculateRate(fp.IOStat.WriteBytes, lastIO.WriteBytes, before)
+		writeBytesRate = calculateRate(fp.IOStat.WriteBytes, lastIO.WriteBytes, before, now)
 	}
 	return &model.IOStat{
 		ReadRate:       readRate,
@@ -248,8 +248,7 @@ func calculateRateF64(cur, prev float64, before time.Time) float64 {
 	return (cur - prev) / float64(diff)
 }
 
-func calculateRate(cur, prev uint64, before time.Time) float32 {
-	now := time.Now()
+func calculateRate(cur, prev uint64, before, now time.Time) float32 {
 	diff := now.Unix() - before.Unix()
 	if before.IsZero() || diff <= 0 {
 		return 0

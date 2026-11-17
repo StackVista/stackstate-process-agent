@@ -19,7 +19,7 @@ env:
 jobs:
   workflow-security-lint:
     name: Workflow security lint (Zizmor)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -310,7 +310,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository) ||
       ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/master')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       id-token: write
@@ -342,7 +342,7 @@ jobs:
       - publish-image
       - merge-multiarch-manifest
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions: {}
     steps:
       - name: Verify all required jobs succeeded

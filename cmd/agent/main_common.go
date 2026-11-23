@@ -15,7 +15,6 @@ import (
 	"github.com/DataDog/datadog-agent/comp/core/telemetry/telemetryimpl"
 	workloadmeta "github.com/DataDog/datadog-agent/comp/core/workloadmeta/impl"
 	"github.com/DataDog/datadog-agent/pkg/pidfile"
-	"github.com/DataDog/datadog-agent/pkg/process/util"
 	containers "github.com/DataDog/datadog-agent/pkg/process/util/containers"
 	"github.com/StackVista/stackstate-process-agent/config"
 	"github.com/StackVista/stackstate-process-agent/pkg/debug"
@@ -135,15 +134,6 @@ func runAgent(exit chan bool) {
 	fwd := transactionforwarder.NewTransactionalForwarder(client, manager)
 	batcher := transactionbatcher.NewTransactionalBatcher(
 		cfg.HostName, cfg.BatcherMaxBufferSize, fwd, manager, cfg.BatcherLogPayloads)
-
-	// update docker socket path in info
-	dockerSock, err := util.GetDockerSocketPath()
-	if err != nil {
-		log.Debugf("Docker is not available on this host")
-	}
-	// we shouldn't quit because docker is not required. If no docker socket is available,
-	// we just pass down empty string
-	updateDockerSocket(dockerSock)
 
 	log.Debug("Running process-agent with DEBUG logging enabled")
 

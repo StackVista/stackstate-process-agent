@@ -24,7 +24,6 @@ var (
 	infoNotRunningTmpl  *template.Template
 	infoTmpl            *template.Template
 	infoErrorTmpl       *template.Template
-	infoDockerSocket    string
 	infoLastCollectTime string
 	infoProcCount       int
 	infoContainerCount  int
@@ -41,8 +40,7 @@ const (
   Uptime: {{.Status.Uptime}} seconds
   Mem alloc: {{.Status.MemStats.Alloc}} bytes
 
-  Last collection time: {{.Status.LastCollectTime}}{{if ne .Status.DockerSocket ""}}
-  Docker socket: {{.Status.DockerSocket}}{{end}}
+  Last collection time: {{.Status.LastCollectTime}}
   Number of processes: {{.Status.ProcessCount}}
   Number of containers: {{.Status.ContainerCount}}
   Queue length: {{.Status.QueueSize}}
@@ -80,18 +78,6 @@ func publishVersion() interface{} {
 		BuildDate: BuildDate,
 		GoVersion: GoVersion,
 	}
-}
-
-func publishDockerSocket() interface{} {
-	infoMutex.RLock()
-	defer infoMutex.RUnlock()
-	return infoDockerSocket
-}
-
-func updateDockerSocket(path string) {
-	infoMutex.Lock()
-	defer infoMutex.Unlock()
-	infoDockerSocket = path
 }
 
 func publishLastCollectTime() interface{} {
@@ -210,7 +196,6 @@ type StatusInfo struct {
 	MemStats        struct{ Alloc uint64 } `json:"memstats"`
 	Version         infoVersion            `json:"version"`
 	Config          config.AgentConfig     `json:"config"`
-	DockerSocket    string                 `json:"docker_socket"`
 	LastCollectTime string                 `json:"last_collect_time"`
 	ProcessCount    int                    `json:"process_count"`
 	ContainerCount  int                    `json:"container_count"`
@@ -234,7 +219,6 @@ func initInfo(conf *config.AgentConfig) error {
 		expvar.NewInt("pid").Set(int64(os.Getpid()))
 		expvar.Publish("uptime", expvar.Func(publishUptime))
 		expvar.Publish("version", expvar.Func(publishVersion))
-		expvar.Publish("docker_socket", expvar.Func(publishDockerSocket))
 		expvar.Publish("last_collect_time", expvar.Func(publishLastCollectTime))
 		expvar.Publish("process_count", expvar.Func(publishProcCount))
 		expvar.Publish("container_count", expvar.Func(publishContainerCount))

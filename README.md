@@ -48,9 +48,9 @@ To run without errors the process-agent needs the `test-server`. Start the `test
 ```bash
 rake test
 # or if you want to use the go command directly
-go test -tags 'docker kubelet kubeapiserver linux cri containerd linux_bpf' $(go list ./...)
+go test -tags 'kubelet kubeapiserver linux linux_bpf' $(go list ./...)
 # To run a specific test in verbose mode
-go test -v -run TestPostgresAggregation -tags 'docker kubelet kubeapiserver linux cri containerd linux_bpf' $(go list ./...)
+go test -v -run TestPostgresAggregation -tags 'kubelet kubeapiserver linux linux_bpf' $(go list ./...)
 ```
 
 ## Build the docker image

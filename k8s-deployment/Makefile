@@ -129,7 +129,7 @@ deploy-e2e-tests:
 .PHONY: run-e2e-tests
 run-e2e-tests:
 	@echo "🚀 Running end-to-end tests..."
-	go test -count=1 -tags 'docker kubelet kubeapiserver linux cri containerd linux_bpf k8s_e2e' ./tests -v
+	go test -count=1 -tags 'kubelet kubeapiserver linux linux_bpf k8s_e2e' ./tests -v
 
 .PHONY: clean-e2e-tests
 clean-e2e-tests:

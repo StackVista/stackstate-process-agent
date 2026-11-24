@@ -24,7 +24,6 @@ Processes and Containers Agent (v 0.99.0)
   Mem alloc: 2096792 bytes
 
   Last collection time: 2017-09-28 07:10:16
-  Docker socket: /var/run/docker.sock
   Number of processes: 84
   Number of containers: 0
   Queue length: 0

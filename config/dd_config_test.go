@@ -15,9 +15,7 @@ func TestConfigLoading(t *testing.T) {
 	pkgconfigsetup.InitConfig(conf)
 	conf.SetConfigFile("")
 
-	expectedSocketPath := "/var/run/cri.sock"
 	expectedKubeletHost := "http://localhost:10255"
-	t.Setenv("DD_CRI_SOCKET_PATH", expectedSocketPath)
 	t.Setenv("DD_KUBERNETES_KUBELET_HOST", expectedKubeletHost)
 	t.Setenv("DD_KUBELET_TLS_VERIFY", "true")
 	// Workaround to use only env var for the config
@@ -26,7 +24,6 @@ func TestConfigLoading(t *testing.T) {
 	if _, err := pkgconfigsetup.LoadWithoutSecret(conf, []string{}); err != nil {
 		t.Fatal(err.Error())
 	}
-	assert.Equal(t, expectedSocketPath, conf.GetString("cri_socket_path"))
 	assert.Equal(t, expectedKubeletHost, conf.GetString("kubernetes_kubelet_host"))
 	assert.Equal(t, "true", conf.GetString("kubelet_tls_verify"))
 }

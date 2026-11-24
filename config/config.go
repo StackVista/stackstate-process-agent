@@ -178,7 +178,6 @@ type AgentConfig struct {
 	CheckHealthStateMessageLimit int
 
 	// Containers
-	CriSocketPath      string
 	ContainerBlacklist []string
 	ContainerWhitelist []string
 
@@ -691,10 +690,6 @@ func mergeEnvironmentVariables(c *AgentConfig) *AgentConfig {
 
 	if v := os.Getenv("STS_KUBERNETES_KUBELET_HOST"); v != "" {
 		c.KubernetesKubeletHost = v
-	}
-
-	if v := os.Getenv("STS_CRI_SOCKET_PATH"); v != "" {
-		c.CriSocketPath = v
 	}
 
 	if enabled, _ := isAffirmative(os.Getenv("STS_HTTP_STATS_PER_PATH")); enabled {
